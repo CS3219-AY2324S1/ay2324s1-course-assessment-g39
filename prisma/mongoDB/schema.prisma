@@ -1,0 +1,30 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+    output = "../../node_modules/@prisma-db-mongo/client"
+}
+
+datasource db {
+    provider = "mongodb"
+    url      = env("MONGO_URL")
+}
+
+model Question {
+    id        String   @id @default(cuid()) @map("_id")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    title     String
+    body      String
+    answers   Answer[]
+}
+
+model Answer {
+    id        String   @id @default(cuid()) @map("_id")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    body      String
+    question  Question @relation(fields: [questionId], references: [id])
+    questionId String
+}

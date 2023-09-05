@@ -7,11 +7,12 @@ This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3
 
 ## Quickstart
 
-Initlialize a local Postgres DB and corresponding `.env` file. Then:
+Start Docker engine and initialize the `.env` file. Then:
 
 ```bash
     yarn
-    yarn prisma db push
+    yarn docker:up
+    yarn prisma:push # run this whenever you change the schema
     yarn dev
 ```
 
