@@ -5,7 +5,9 @@
 
 This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
 
-## Build
+## Quickstart
+
+Initlialize a local Postgres DB and corresponding `.env` file. Then:
 
 ```bash
     yarn
