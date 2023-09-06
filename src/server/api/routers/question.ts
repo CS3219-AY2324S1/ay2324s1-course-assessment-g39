@@ -6,17 +6,10 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 
-export const exampleRouter = createTRPCRouter({
-  hello: publicProcedure
-    .input(z.object({ text: z.string() }))
-    .query(({ input }) => {
-      return {
-        greeting: `Hello ${input.text}`,
-      };
-    }),
 
+export const questionRouter = createTRPCRouter({
   getAll: publicProcedure.query(({ ctx }) => {
-    return ctx.prisma.example.findMany();
+    return ctx.prismaMongo.question.findMany();
   }),
 
   getSecretMessage: protectedProcedure.query(() => {

@@ -17,14 +17,14 @@ model Question {
     updatedAt DateTime @updatedAt
     title     String
     body      String
-    answers   Answer[]
+    // answers   Answer[]
 }
 
-model Answer {
-    id        String   @id @default(cuid()) @map("_id")
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    body      String
-    question  Question @relation(fields: [questionId], references: [id])
-    questionId String
-}
+// model Answer {
+//     id        String   @id @default(cuid()) @map("_id")
+//     createdAt DateTime @default(now())
+//     updatedAt DateTime @updatedAt
+//     body      String
+//     question  Question @relation(fields: [questionId], references: [id])
+//     questionId String
+// }
