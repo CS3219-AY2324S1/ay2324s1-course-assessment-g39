@@ -6,7 +6,7 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 
-import { prisma } from '~/server/db';
+import { prismaPostgres as prisma } from '~/server/db';
 
 
 const userObject = z.object({

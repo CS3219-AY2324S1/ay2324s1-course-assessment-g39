@@ -44,5 +44,3 @@ yarn-error.log*
 # db
 data/mongo/**
 data/postgres/**
-!data/postgres/.gitkeep
-!data/mongo/.gitkeep

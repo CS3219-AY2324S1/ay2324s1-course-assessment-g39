@@ -16,6 +16,8 @@ Start Docker engine and initialize the `.env` file. Then:
     yarn dev
 ```
 
+Note: If you want persistent data, create directories `./data/postgres` and `./data/mongo`.
+
 Note: if you encounter authentication errors with `prisma:push` change the database ports or delete your local installations.
 
 ## What's next? How do I make an app with this?
