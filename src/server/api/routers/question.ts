@@ -38,7 +38,7 @@ export const questionRouter = createTRPCRouter({
     }
   }),
 
-  updateOne: protectedProcedure.input(questionUpdateObject).mutation(async ({ ctx, input }) => {
+  updateOne: publicProcedure.input(questionUpdateObject).mutation(async ({ ctx, input }) => {
     const { id, ...remainder } = input;
     await ctx.prismaMongo.question.update({
       where: {
@@ -51,7 +51,7 @@ export const questionRouter = createTRPCRouter({
     }
   }),
 
-  deleteOne: protectedProcedure.input(
+  deleteOne: publicProcedure.input(
     z.object({
       id: z.string(),
     }),
