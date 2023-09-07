@@ -7,11 +7,14 @@ import {
 } from "~/server/api/trpc";
 
 import { prismaPostgres as prisma } from '~/server/db';
-
+import { hashPassword } from "~/server/auth";
+import bcrypt from 'bcrypt'
 
 const userObject = z.object({
   name: z.string(),
-  email: z.string()
+  email: z.string(),
+  password: z.string(),
+  image: z.string().nullable()
 });
 
 const userUpdateObject = z.object({
@@ -26,9 +29,12 @@ export const userRouter = createTRPCRouter({
   create: publicProcedure
     .input(userObject)
     .mutation(async ({ input }) => {
+      const { password, ...values } = input;
+      const passwordHash = await hashPassword(password);
       await prisma.user.create({
         data: {
-          ...input
+          ...values,
+          password: passwordHash
         }
       })
       return {
