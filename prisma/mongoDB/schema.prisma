@@ -17,6 +17,8 @@ model Question {
     updatedAt DateTime @updatedAt
     title     String
     body      String
+    difficulty Int
+    category  String
     // answers   Answer[]
 }
 

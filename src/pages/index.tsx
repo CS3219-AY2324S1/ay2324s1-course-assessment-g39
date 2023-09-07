@@ -1,3 +1,4 @@
+import { type ChangeEvent, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Head from "next/head";
 import Link from "next/link";
@@ -6,6 +7,19 @@ import { api } from "~/utils/api";
 
 export default function Home() {
   const questions = api.question.getAll.useQuery();
+  const [dummyQuestion, setDummyQuestion] = useState({
+    title: "",
+    body: "",
+    difficulty: "",
+    category: "",
+  });
+  const [newData, setNewData] = useState(false);
+
+  const StyledInputCell = ({ value }: { value: string }) => (
+    <td className="border px-4 py-2">
+      <input className="bg-transparent outline-none border-0" type="text" value={value} />
+    </td>
+  )
 
   return (
     <>
@@ -19,28 +33,37 @@ export default function Home() {
           <h1 className="text-5xl font-extrabold tracking-tight text-[var(--txt-3)] sm:text-[5rem]">
             Peer<span className="text-[var(--txt-1)]">Prep</span>
           </h1>
+          {newData && <button>Add Question</button>}
           <table className="table-auto text-[var(--txt-3)]">
             <thead>
-              <tr>ID</tr>
-              <tr>Title</tr>
-              <tr>Description</tr>
-              <tr>Categories</tr>
-              <tr>Difficulty</tr>
+              <tr>
+                <th className="px-4 py-2">Title</th>
+                <th className="px-4 py-2">Body</th>
+                <th className="px-4 py-2">Difficulty</th>
+                <th className="px-4 py-2">Category</th>
+              </tr>
             </thead>
             <tbody>
               {questions.data?.map((question) => (
                 <tr key={question.id}>
-                  <td>{question.id}</td>
-                  <td>{question.title}</td>
-                  <td>{question.body}</td>
-                  <td>Temp</td>
-                  <td>Temp</td>
+                  <td className="border px-4 py-2">{question.title}</td>
+                  <td className="border px-4 py-2">{question.body}</td>
+                  <td className="border px-4 py-2">{question.difficulty}</td>
+                  <td className="border px-4 py-2">{question.category}</td>
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <StyledInputCell value={dummyQuestion.title}  />
+                <StyledInputCell value={dummyQuestion.body}  />
+                <StyledInputCell value={dummyQuestion.difficulty}  />
+                <StyledInputCell value={dummyQuestion.category}  />
+              </tr>
+            </tfoot>
           </table>
         </div>
-      </main>
+      </main >
     </>
   );
 }
