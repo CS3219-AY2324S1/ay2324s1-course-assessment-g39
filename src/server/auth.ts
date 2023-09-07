@@ -50,14 +50,31 @@ declare module "next-auth" {
  * @see https://next-auth.js.org/configuration/options
  */
 export const authOptions: NextAuthOptions = {
+  session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
+  secret: process.env.NEXT_AUTH_SECRET,
   callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
-      },
-    }),
+    jwt: async ({ token, user }) => {
+      if (user !== null) {
+        token = {
+          ...token,
+          ...user,
+        }
+      }
+      return await token;
+    },
+    session: async ({ session, token, user }) => {
+      if (token !== null && token.id !== null) {
+        session = {
+          ...session,
+          user: {
+            ...token,
+            ...session.user,
+            id: token.id as string
+          }
+        }
+      }
+      return await session;
+    },
   },
   adapter: PrismaAdapter(prisma as PrismaClient),
   providers: [
