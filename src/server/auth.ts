@@ -79,8 +79,10 @@ export const authOptions: NextAuthOptions = {
       // Add logic here to look up the user from the credentials supplied
      
       if (!req.body || !req.body.email || !req.body.password) return null;
+      
       const user = await prisma.user.findUnique({ where: { email: req.body.email } });
       if (!user) return null;
+      if (!user.password) return null;
       const pw = req?.body?.password;
       if (user && bcrypt.compareSync(pw, user.password)) {
         // Any object returned will be saved in `user` property of the JWT
