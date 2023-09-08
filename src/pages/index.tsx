@@ -1,10 +1,7 @@
-import { type ChangeEvent, useState, type HTMLInputTypeAttribute, type HTMLAttributes, type InputHTMLAttributes, type DetailedHTMLProps, useRef, type ButtonHTMLAttributes } from "react";
-import { signIn, signOut, useSession } from "next-auth/react";
 import Head from "next/head";
-import Link from "next/link";
+import { useRef, useState, type ButtonHTMLAttributes, type DetailedHTMLProps, type HTMLAttributes, type InputHTMLAttributes } from "react";
 
 import { api } from "~/utils/api";
-import { set } from "zod";
 
 interface Question {
   id: string;
@@ -33,15 +30,19 @@ const StyledInput = ({ span, highlight, ...others }: {
   highlight?: boolean
 } & DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) =>
   <input
-    className="outline-none border-[#444] min-w-0 p-2"
+    className="outline-none tb-border min-w-0 p-2"
     style={{
       flex: span ? `${span} ${span} 0%` : '1 1 0%',
-      borderWidth: '0 1px 1px 0',
-      backgroundColor: highlight ? 'var(--bg-3)' : 'var(--bg-1)',
+      backgroundColor: highlight ? 'var(--bg-3)' : 'transparent',
+      ...others.style
     }}
     {...others}
   />
 
+const StyledCheckbox = (props: DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) => <div className="checkbox tb-border">
+  <input type="checkbox" {...props} />
+  <span className="checkmark" />
+</div>
 
 const StyledButton = (props: ButtonHTMLAttributes<HTMLButtonElement>) => <button className="self-start rounded-md al bg-white/10 flex-[2_2_0%] py-1 mt-2 font-bold text-white no-underline transition hover:bg-white/20" style={{ opacity: props.disabled ? 0.3 : 1 }} value="Add Question" {...props} />
 
@@ -51,6 +52,7 @@ const QuestionRow = ({ question, onQuestionChange, highlight, ...others }: {
   highlight?: boolean,
 } & HTMLAttributes<HTMLDivElement>) => {
   return <div {...others}>
+    <StyledCheckbox />
     <StyledInput name="title" value={question.title.value} onChange={(e) => {
       onQuestionChange({
         ...question, title: { value: e.target.value, edited: true }
@@ -83,8 +85,11 @@ export default function Home() {
 
   const utils = api.useContext();
   const [dummyQuestion, setDummyQuestion] = useState(baseQuestion);
+
   const [newData, setNewData] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+
   const [questions, setQuestions] = useState<Map<string, Editable<Question>>>(new Map());
   const changedQuestions = useRef(new Set<string>());
 
@@ -160,16 +165,17 @@ export default function Home() {
             Peer<span className="text-[var(--txt-1)]">Prep</span>
           </h1>
 
-          {/* 2 - 4 - 1 - 2 */}
+          {/* x - 2 - 4 - 1 - 2 */}
           <div className="text-[var(--txt-3)] flex-1 flex flex-col rounded overflow-hidden">
             <div className="flex font-bold bg-black">
-              <div className="flex-[2_2_0%] p-2 border-r-[1px] border-[#333]">title</div>
-              <div className="flex-[4_4_0%] p-2 border-r-[1px] border-[#333]">body</div>
-              <div className="flex-1 p-2 border-r-[1px] border-[#333]">difficulty</div>
-              <div className="flex-[2_2_0%] p-2 border-r-[1px] border-[#333]">category</div>
+              <StyledCheckbox />
+              <div className="flex-[2_2_0%] p-2 tb-border">titleS</div>
+              <div className="flex-[4_4_0%] p-2 tb-border">body</div>
+              <div className="flex-1 p-2 tb-border">difficulty</div>
+              <div className="flex-[2_2_0%] p-2 tb-border">category</div>
             </div>
             {Array.from(questions).map(([id, question]) => (
-              <QuestionRow key={id} question={question} onQuestionChange={(q) => saveUpdatedQuestion(id, q)} className="bg-[var(--bg-1)] flex font-mono" highlight />
+              <QuestionRow key={id} question={question} onQuestionChange={(q) => saveUpdatedQuestion(id, q)} className="bg-[var(--bg-1)] flex font-mono hover:bg-[var(--bg-2)] active:bg-[var(--bg-2)]" highlight />
             ))}
             <QuestionRow question={dummyQuestion} onQuestionChange={saveNewQuestion} className="bg-[var(--bg-1)] flex mt-4 font-mono" />
             <div className="flex-1 flex gap-2">

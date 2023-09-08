@@ -12,6 +12,8 @@
     --txt-4: #e2c08d
     --txt-5: #5e9f75
 
+    --check: #1c84da
+
 input[type=number]
     -moz-appearance: textfield
     appearance: textfield
@@ -21,3 +23,47 @@ input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button
     -webkit-appearance: none
     margin: 0
+
+.tb-border
+    border: solid #444
+    border-width: 0 1px 1px 0
+
+.checkbox
+    aspect-ratio: 1
+    display: flex
+    align-items: center
+    justify-content: center
+    position: relative
+
+    span
+        content: ''
+        position: absolute
+        background-color: var(--bg-1)
+        height: 50%
+        aspect-ratio: 1
+        border-radius: 0.25rem
+        transition: background-color 0.2s ease-in-out
+        pointer-events: none
+
+        &::after
+            content: ''
+            position: absolute
+            visibility: hidden
+            width: 35%
+            height: 70%
+            top: 10%
+            left: 35%
+            border: solid var(--txt-3)
+            border-width: 0 3px 3px 0
+            transform: rotate(45deg)
+
+    input[type=checkbox]
+        height: 50%
+        aspect-ratio: 1
+        opacity: 0
+
+        &:checked + span
+            background-color: var(--check)
+            &::after
+                visibility: visible
+
