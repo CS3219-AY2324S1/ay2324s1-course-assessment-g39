@@ -49,13 +49,6 @@ input[type=number]::-webkit-outer-spin-button
             content: ''
             position: absolute
             visibility: hidden
-            width: 35%
-            height: 70%
-            top: 10%
-            left: 35%
-            border: solid var(--txt-3)
-            border-width: 0 3px 3px 0
-            transform: rotate(45deg)
 
     input[type=checkbox]
         height: 50%
@@ -66,4 +59,22 @@ input[type=number]::-webkit-outer-spin-button
             background-color: var(--check)
             &::after
                 visibility: visible
+                border: solid var(--txt-3)
+                width: 35%
+                height: 70%
+                top: 10%
+                left: 35%
+                border-width: 0 3px 3px 0
+                transform: rotate(45deg)
+
+        &:indeterminate + span
+            background-color: var(--check)
+            &::after
+                visibility: visible
+                background-color: var(--txt-3)
+                width: 50%
+                height: 50%
+                top: 25%
+                left: 25%
+                border-radius: 0.15rem
 

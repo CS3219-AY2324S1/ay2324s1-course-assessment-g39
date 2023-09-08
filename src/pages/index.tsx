@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { useRef, useState, type ButtonHTMLAttributes, type DetailedHTMLProps, type HTMLAttributes, type InputHTMLAttributes } from "react";
+import { useRef, useState, type ButtonHTMLAttributes, type DetailedHTMLProps, type HTMLAttributes, type InputHTMLAttributes, useCallback } from "react";
 
 import { api } from "~/utils/api";
 
@@ -11,19 +11,28 @@ interface Question {
   category: string;
 }
 
-const baseQuestion = {
-  title: { value: "", edited: false, },
-  body: { value: "", edited: false, },
-  difficulty: { value: 0, edited: false, },
-  category: { value: "", edited: false, },
-}
 
-type Editable<R> = {
-  [Property in keyof R as Exclude<Property, "id" | "createdAt" | "updatedAt">]: {
-    value: R[Property],
-    edited: boolean,
+type Editable<R> = R & {
+  edits: {
+    [K in keyof R]: R[K]
   }
 }
+
+const baseQuestion = {
+  id: "",
+  title: "",
+  body: "",
+  difficulty: 0,
+  category: "",
+  edits: {
+    id: "",
+    title: "",
+    body: "",
+    difficulty: 0,
+    category: "",
+  }
+} as Editable<Question>;
+
 
 const StyledInput = ({ span, highlight, ...others }: {
   span?: number,
@@ -39,59 +48,74 @@ const StyledInput = ({ span, highlight, ...others }: {
     {...others}
   />
 
-const StyledCheckbox = (props: DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) => <div className="checkbox tb-border">
-  <input type="checkbox" {...props} />
-  <span className="checkmark" />
-</div>
-
-const StyledButton = (props: ButtonHTMLAttributes<HTMLButtonElement>) => <button className="self-start rounded-md al bg-white/10 flex-[2_2_0%] py-1 mt-2 font-bold text-white no-underline transition hover:bg-white/20" style={{ opacity: props.disabled ? 0.3 : 1 }} value="Add Question" {...props} />
-
-const QuestionRow = ({ question, onQuestionChange, highlight, ...others }: {
-  question: Editable<Question>,
-  onQuestionChange: (q: Editable<Question>) => void,
-  highlight?: boolean,
-} & HTMLAttributes<HTMLDivElement>) => {
-  return <div {...others}>
-    <StyledCheckbox />
-    <StyledInput name="title" value={question.title.value} onChange={(e) => {
-      onQuestionChange({
-        ...question, title: { value: e.target.value, edited: true }
-      })
-    }} span={2} highlight={highlight && question.title.edited} />
-    <StyledInput name="body" value={question.body.value} onChange={(e) => onQuestionChange({
-      ...question, body: { value: e.target.value, edited: true }
-    })} span={4} highlight={highlight && question.body.edited} />
-    <StyledInput name="difficulty" type="number" value={question.difficulty.value} onChange={(e) => onQuestionChange({
-      ...question, difficulty: { value: Number(e.target.value), edited: true }
-    })} highlight={highlight && question.difficulty.edited} />
-    <StyledInput name="category" value={question.category.value} onChange={(e) => onQuestionChange({
-      ...question, category: { value: e.target.value, edited: true }
-    })} span={2} highlight={highlight && question.category.edited} />
+const StyledCheckbox = ({ indeterminate, ...others }: { indeterminate?: boolean } & DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) => {
+  const setInd = useCallback((el: HTMLInputElement) => {
+    if (el) {
+      el.indeterminate = indeterminate ?? false;
+    }
+  }, [indeterminate]);
+  return <div className="checkbox tb-border">
+    <input type="checkbox" ref={setInd} {...others} />
+    <span className="checkmark" />
   </div>
 }
 
-const makeEditable = <T extends { id: string }>(l: T[]) => new Map(l.map((q) => (
-  [q.id, Object.fromEntries(
-    Object.entries(q)
-      .map(([k, v]) => (
-        k === 'id' ?
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          [k, v] : [k, { value: v, edited: false }]
-      ))
-  ) as Editable<T>]
-)));
+const StyledButton = (props: ButtonHTMLAttributes<HTMLButtonElement>) => <button className="self-start rounded-md al bg-white/10 flex-[2_2_0%] py-1 mt-2 font-bold text-white no-underline transition hover:bg-white/20" style={{ opacity: props.disabled ? 0.3 : 1 }} value="Add Question" {...props} />
+
+const makeEditable = <T,>(l: T[]) => l.map((q) => (
+  { ...q, edits: { ...q } } as Editable<T>
+));
+
+const QuestionRow = ({
+  question,
+  onQuestionChange,
+  onQuestionDelete,
+  highlight,
+  checked,
+  indeterminate,
+  ...others
+}: {
+  question: Editable<Question>,
+  onQuestionChange: (q: Question) => void,
+  onQuestionDelete?: () => void,
+  highlight?: boolean,
+  checked?: boolean
+  indeterminate?: boolean
+} & HTMLAttributes<HTMLDivElement>) => {
+  return <div {...others}>
+    {onQuestionDelete ?
+      <StyledCheckbox onChange={onQuestionDelete} checked={checked} indeterminate={indeterminate} /> :
+      <div className="aspect-square p-2 tb-border" />
+    }
+
+    <StyledInput name="title" value={question.edits.title} onChange={(e) => {
+      onQuestionChange({ ...question.edits, title: e.target.value }
+      )
+    }} span={2} highlight={highlight && question.title !== question.edits.title} />
+
+    <StyledInput name="body" value={question.edits.body} onChange={(e) => onQuestionChange({ ...question.edits, body: e.target.value }
+    )} span={4} highlight={highlight && question.body !== question.edits.body} />
+
+    <StyledInput name="difficulty" value={question.edits.difficulty} onChange={(e) => onQuestionChange({ ...question.edits, difficulty: Number(e.target.value) }
+    )} type="number" highlight={highlight && question.difficulty !== question.edits.difficulty} />
+
+    <StyledInput name="category" value={question.edits.category} onChange={(e) => onQuestionChange({ ...question.edits, category: e.target.value }
+    )} span={2} highlight={highlight && question.category !== question.edits.category} />
+  </div>
+}
+
+const hasChanges = (q: Question) => Object.entries(q).some(([k, v]) => v !== baseQuestion[k as keyof Question]);
 
 export default function Home() {
 
   const utils = api.useContext();
   const [dummyQuestion, setDummyQuestion] = useState(baseQuestion);
 
-  const [newData, setNewData] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-
-  const [questions, setQuestions] = useState<Map<string, Editable<Question>>>(new Map());
-  const changedQuestions = useRef(new Set<string>());
+  const [questions, setQuestions] = useState<Editable<Question>[]>([]);
+  const changedQuestions = useRef(new Set<number>());
+  const [deletedQuestions, setDeletedQuestions] = useState(new Set<number>());
 
   api.question.getAll.useQuery(undefined, {
     onSuccess: (data) => {
@@ -101,12 +125,12 @@ export default function Home() {
   });
   const q_mutuation = api.question.addOne.useMutation({
     onSuccess: async () => {
-      setNewData(false);
       setIsEditing(false);
       setDummyQuestion(baseQuestion);
       await utils.question.getAll.invalidate();
     }
   });
+
   const q_update_mutuation = api.question.updateOne.useMutation({
     onSuccess: async () => {
       setIsEditing(false);
@@ -114,43 +138,62 @@ export default function Home() {
     }
   });
 
-  const saveNewQuestion = (q: typeof baseQuestion) => {
-    setDummyQuestion(q);
-    setNewData(true);
+  const q_delete_mutuation = api.question.deleteOne.useMutation({
+    onSuccess: async () => {
+      setIsEditing(false);
+      await utils.question.getAll.invalidate();
+    }
+  });
+
+  const saveNewQuestion = (q: Question) => {
+    setDummyQuestion(prev => ({ ...prev, edits: { ...prev.edits, ...q } }));
   }
 
   const createNewQuestion = () => {
-    const newQuestion = Object.fromEntries(
-      Object.entries(dummyQuestion)
-        .map(([k, v]) => (
-          k === 'id' ?
-            [k, v] : [k, v.value]
-        ))
-    ) as Question;
-    q_mutuation.mutate(newQuestion);
+    if (!hasChanges(dummyQuestion)) return;
+    q_mutuation.mutate(dummyQuestion.edits);
   };
 
-  const saveUpdatedQuestion = (id: string, q: Editable<Question>) => {
-    console.log(changedQuestions.current);
+  const saveUpdatedQuestion = (i: number, q: Question) => {
     setIsEditing(true);
-    changedQuestions.current.add(id);
-    setQuestions(new Map(questions.set(id, q)));
+    changedQuestions.current.add(i);
+    setQuestions(prev => prev.map((prevQ, j) => j === i ? { ...prevQ, edits: { ...prevQ.edits, ...q } } : prevQ));
   }
 
   const updateQuestions = () => {
-    changedQuestions.current.forEach((id) => {
-      const q = questions.get(id);
-      if (!q) return;
-      const updatedQuestion = Object.fromEntries(
-        Object.entries(q)
-          .map(([k, v]) => (
-            k === 'id' ?
-              [k, v] : [k, v.value]
-          ))
-      ) as Question;
-      q_update_mutuation.mutate(updatedQuestion);
+    changedQuestions.current.forEach((i) => {
+      const q = questions[i];
+      if (!q || !hasChanges(q)) return;
+      q_update_mutuation.mutate(q.edits);
     });
+    changedQuestions.current.clear();
   };
+
+  const saveDeleteQuestion = (i: number) => {
+    if (deletedQuestions.has(i)) {
+      deletedQuestions.delete(i);
+    } else {
+      deletedQuestions.add(i);
+    }
+    setDeletedQuestions(new Set(deletedQuestions));
+  }
+
+  const toggleDeleteQuestion = () => {
+    if (deletedQuestions.size === questions.length) {
+      setDeletedQuestions(new Set());
+    } else {
+      setDeletedQuestions(new Set(questions.map((_, i) => i)));
+    }
+  }
+
+  const deleteQuestions = () => {
+    deletedQuestions.forEach((i) => {
+      const q = questions[i];
+      if (!q) return;
+      q_delete_mutuation.mutate({ id: q.id });
+    });
+    setDeletedQuestions(new Set<number>());
+  }
 
   return (
     <>
@@ -168,19 +211,27 @@ export default function Home() {
           {/* x - 2 - 4 - 1 - 2 */}
           <div className="text-[var(--txt-3)] flex-1 flex flex-col rounded overflow-hidden">
             <div className="flex font-bold bg-black">
-              <StyledCheckbox />
+              <StyledCheckbox
+                checked={deletedQuestions.size > 0 && deletedQuestions.size === questions.length}
+                indeterminate={deletedQuestions.size > 0 && deletedQuestions.size < questions.length}
+                onChange={toggleDeleteQuestion}
+              />
               <div className="flex-[2_2_0%] p-2 tb-border">titleS</div>
               <div className="flex-[4_4_0%] p-2 tb-border">body</div>
               <div className="flex-1 p-2 tb-border">difficulty</div>
               <div className="flex-[2_2_0%] p-2 tb-border">category</div>
             </div>
-            {Array.from(questions).map(([id, question]) => (
-              <QuestionRow key={id} question={question} onQuestionChange={(q) => saveUpdatedQuestion(id, q)} className="bg-[var(--bg-1)] flex font-mono hover:bg-[var(--bg-2)] active:bg-[var(--bg-2)]" highlight />
+            {questions.map((question, i) => (
+              <QuestionRow key={i} question={question}
+                onQuestionChange={(q) => saveUpdatedQuestion(i, q)}
+                onQuestionDelete={() => saveDeleteQuestion(i)}
+                className="bg-[var(--bg-1)] flex font-mono hover:bg-[var(--bg-2)] active:bg-[var(--bg-2)]" highlight checked={deletedQuestions.has(i)} />
             ))}
             <QuestionRow question={dummyQuestion} onQuestionChange={saveNewQuestion} className="bg-[var(--bg-1)] flex mt-4 font-mono" />
             <div className="flex-1 flex gap-2">
-              <StyledButton disabled={!newData} onClick={createNewQuestion}>Add Question</StyledButton>
+              <StyledButton disabled={!hasChanges(dummyQuestion)} onClick={createNewQuestion}>Add Question</StyledButton>
               <StyledButton disabled={!isEditing} onClick={updateQuestions}>Save Changes</StyledButton>
+              <StyledButton disabled={deletedQuestions.size === 0} onClick={deleteQuestions}>Delete Questions</StyledButton>
               <div className="flex-[5_5_0%]" />
             </div>
           </div>
