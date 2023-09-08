@@ -3,6 +3,12 @@ import { useRef, useState, type ButtonHTMLAttributes, type DetailedHTMLProps, ty
 
 import { api } from "~/utils/api";
 
+/* TODO:
+  body html rendering
+  Better variable names
+  Handle D-U desync
+*/
+
 interface Question {
   id: string;
   title: string;
@@ -104,28 +110,28 @@ const QuestionRow = ({
   </div>
 }
 
-const hasChanges = (q: Question) => Object.entries(q).some(([k, v]) => v !== baseQuestion[k as keyof Question]);
+const hasChanges = <T,>(q: Editable<T>) => {
+  const { edits, ...base } = q;
+  return Object.entries(base).some(([k, v]) => v !== edits[k as keyof T]);
+}
 
 export default function Home() {
 
   const utils = api.useContext();
-  const [dummyQuestion, setDummyQuestion] = useState(baseQuestion);
-
-  const [isEditing, setIsEditing] = useState(false);
 
   const [questions, setQuestions] = useState<Editable<Question>[]>([]);
-  const changedQuestions = useRef(new Set<number>());
+  const [dummyQuestion, setDummyQuestion] = useState(baseQuestion);
+  const [changedQuestions, setChangedQuestions] = useState(new Set<number>());
   const [deletedQuestions, setDeletedQuestions] = useState(new Set<number>());
 
   api.question.getAll.useQuery(undefined, {
     onSuccess: (data) => {
-      if (isEditing) return;
+      if (changedQuestions.size > 0) return;
       setQuestions(makeEditable(data ?? []));
     }
   });
   const q_mutuation = api.question.addOne.useMutation({
     onSuccess: async () => {
-      setIsEditing(false);
       setDummyQuestion(baseQuestion);
       await utils.question.getAll.invalidate();
     }
@@ -133,14 +139,13 @@ export default function Home() {
 
   const q_update_mutuation = api.question.updateOne.useMutation({
     onSuccess: async () => {
-      setIsEditing(false);
       await utils.question.getAll.invalidate();
     }
   });
 
   const q_delete_mutuation = api.question.deleteOne.useMutation({
     onSuccess: async () => {
-      setIsEditing(false);
+      setDeletedQuestions(new Set<number>());
       await utils.question.getAll.invalidate();
     }
   });
@@ -155,18 +160,18 @@ export default function Home() {
   };
 
   const saveUpdatedQuestion = (i: number, q: Question) => {
-    setIsEditing(true);
-    changedQuestions.current.add(i);
+    changedQuestions.add(i);
+    setChangedQuestions(new Set(changedQuestions));
     setQuestions(prev => prev.map((prevQ, j) => j === i ? { ...prevQ, edits: { ...prevQ.edits, ...q } } : prevQ));
   }
 
   const updateQuestions = () => {
-    changedQuestions.current.forEach((i) => {
+    changedQuestions.forEach((i) => {
       const q = questions[i];
       if (!q || !hasChanges(q)) return;
       q_update_mutuation.mutate(q.edits);
     });
-    changedQuestions.current.clear();
+    setChangedQuestions(new Set());
   };
 
   const saveDeleteQuestion = (i: number) => {
@@ -192,7 +197,6 @@ export default function Home() {
       if (!q) return;
       q_delete_mutuation.mutate({ id: q.id });
     });
-    setDeletedQuestions(new Set<number>());
   }
 
   return (
@@ -230,7 +234,7 @@ export default function Home() {
             <QuestionRow question={dummyQuestion} onQuestionChange={saveNewQuestion} className="bg-[var(--bg-1)] flex mt-4 font-mono" />
             <div className="flex-1 flex gap-2">
               <StyledButton disabled={!hasChanges(dummyQuestion)} onClick={createNewQuestion}>Add Question</StyledButton>
-              <StyledButton disabled={!isEditing} onClick={updateQuestions}>Save Changes</StyledButton>
+              <StyledButton disabled={changedQuestions.size === 0} onClick={updateQuestions}>Save Changes</StyledButton>
               <StyledButton disabled={deletedQuestions.size === 0} onClick={deleteQuestions}>Delete Questions</StyledButton>
               <div className="flex-[5_5_0%]" />
             </div>
