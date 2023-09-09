@@ -1,8 +1,9 @@
-import { useState, type HTMLAttributes, useEffect, useRef, useLayoutEffect, type ChangeEvent } from "react";
+import { useState, type HTMLAttributes, useEffect, useRef, useLayoutEffect, type ClipboardEvent } from "react";
 import { StyledCheckbox } from "./StyledCheckbox";
 import { StyledInput, StyledTextarea } from "./StyledInput";
 import { type Question } from "../types/global";
 import { parseMD } from "../utils/utils";
+import { z } from 'zod';
 
 const MIN_TEXTAREA_HEIGHT_px = 41;
 
@@ -24,9 +25,17 @@ export const QuestionRow = ({
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const onBlur = () => {
-    void (async () => setHTML(await parseMD(body)))();
+    void (async () => setHTML((await parseMD(body)).replace(/href/g, "target='_blank' rel='noopener noreferrer' href")))();
     setIsFocused(false);
   };
+
+  const handleOnPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const text = e.clipboardData.getData('text/plain');
+    if (z.string().url().safeParse(text).success) {
+      e.preventDefault();
+      textAreaRef.current?.setRangeText(`[link](${text})`);
+    }
+  }
 
   useEffect(() => {
     void (async () => setHTML(await parseMD(body)))();
@@ -57,6 +66,7 @@ export const QuestionRow = ({
         display: isFocused ? 'block' : 'none',
       }}
       onChange={(e) => onQuestionChange({ ...question, body: e.target.value })}
+      onPaste={handleOnPaste}
       value={body} span={4} highlight={body !== initialQuestion.body} ref={textAreaRef} />
 
     <div
