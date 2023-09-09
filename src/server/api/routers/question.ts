@@ -27,13 +27,14 @@ export const questionRouter = createTRPCRouter({
   }),
 
   addOne: publicProcedure.input(questionObject).mutation(async ({ ctx, input }) => {
-    await ctx.prismaMongo.question.create({
+    const q = await ctx.prismaMongo.question.create({
       data: {
         ...input,
       },
     });
     return {
       message: `Question created: ${input.title}`,
+      id: q.id,
     }
   }),
 
