@@ -9,7 +9,7 @@ new S3rver({
   directory: "./public",
   configureBuckets: [
     {
-      name: "peer-prep",
+      name: process.env.S3_BUCKET_NAME,
       configs: [fs.readFileSync("./cors.xml")],
     },
   ],

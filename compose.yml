@@ -30,5 +30,7 @@ services:
     restart: always
     ports:
       - 9000:9000
+    environment:
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME}
     volumes:
       - "./data/s3:/home/app/public/peer-prep"

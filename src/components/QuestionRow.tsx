@@ -1,10 +1,9 @@
-import { useState, type HTMLAttributes, useEffect, useRef, useLayoutEffect, type ClipboardEvent } from "react";
-import { StyledCheckbox } from "./StyledCheckbox";
-import { StyledInput, StyledTextarea } from "./StyledInput";
+import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type HTMLAttributes } from "react";
+import { smartClip } from "~/utils/smartClip";
 import { type Question } from "../types/global";
 import { parseMD } from "../utils/utils";
-import { z } from 'zod';
-import { smartClip } from "~/utils/smartClip";
+import { StyledCheckbox } from "./StyledCheckbox";
+import { StyledInput, StyledTextarea } from "./StyledInput";
 
 const MIN_TEXTAREA_HEIGHT_px = 41;
 
@@ -31,9 +30,11 @@ export const QuestionRow = ({
   };
 
   const handleOnPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    void smartClip(e).then((text) => {
-      text && textAreaRef.current?.setRangeText(text);
-    });
+    const text = smartClip(e);
+    if (text) {
+      e.preventDefault();
+      textAreaRef.current?.setRangeText(text);
+    }
   }
 
   useEffect(() => {
