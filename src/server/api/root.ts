@@ -8,6 +8,7 @@ import { createTRPCRouter } from "~/server/api/trpc";
  */
 export const appRouter = createTRPCRouter({
   question: questionRouter,
+  form: formRouter,
 });
 
 // export type definition of API

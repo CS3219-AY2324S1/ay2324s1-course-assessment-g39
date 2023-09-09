@@ -4,6 +4,7 @@ import { StyledInput, StyledTextarea } from "./StyledInput";
 import { type Question } from "../types/global";
 import { parseMD } from "../utils/utils";
 import { z } from 'zod';
+import { smartClip } from "~/utils/smartClip";
 
 const MIN_TEXTAREA_HEIGHT_px = 41;
 
@@ -30,11 +31,9 @@ export const QuestionRow = ({
   };
 
   const handleOnPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    const text = e.clipboardData.getData('text/plain');
-    if (z.string().url().safeParse(text).success) {
-      e.preventDefault();
-      textAreaRef.current?.setRangeText(`[link](${text})`);
-    }
+    void smartClip(e).then((text) => {
+      text && textAreaRef.current?.setRangeText(text);
+    });
   }
 
   useEffect(() => {
