@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type HTMLAttributes } from "react";
-import { smartClip } from "~/utils/smartClip";
+import { useSmartClip } from "~/utils/smartClip";
 import { type Question } from "../types/global";
 import { parseMD } from "../utils/utils";
 import { StyledCheckbox } from "./StyledCheckbox";
@@ -17,10 +17,21 @@ export const QuestionRow = ({
   checked?: boolean;
   indeterminate?: boolean;
 } & HTMLAttributes<HTMLDivElement>) => {
+
   const { title, body, difficulty, category } = question;
 
   const [isFocused, setIsFocused] = useState(false);
+  const [e, setE] = useState<ClipboardEvent<HTMLTextAreaElement> | null>(null);
   const [html, setHTML] = useState('');
+
+  // useSmartClip({
+  //   e, onFound: (text) => {
+  //     if (text) {
+  //       e?.preventDefault();
+  //       textAreaRef.current?.setRangeText(text);
+  //     }
+  //   }
+  // })
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -30,11 +41,11 @@ export const QuestionRow = ({
   };
 
   const handleOnPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
-    const text = smartClip(e);
-    if (text) {
-      e.preventDefault();
-      textAreaRef.current?.setRangeText(text);
-    }
+    // setE(e);
+    // console.log(e);
+    void navigator.clipboard.read().then((data) => {
+      console.log(data);
+    })
   }
 
   useEffect(() => {
