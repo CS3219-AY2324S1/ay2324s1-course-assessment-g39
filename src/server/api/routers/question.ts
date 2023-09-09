@@ -22,9 +22,30 @@ const questionUpdateObject = z.object({
 });
 
 export const questionRouter = createTRPCRouter({
-  getAll: publicProcedure.query(({ ctx }) => {
-    return ctx.prismaMongo.question.findMany();
+
+  getAllIds: publicProcedure.query(({ ctx }) => {
+    return ctx.prismaMongo.question.findMany({
+      select: {
+        id: true,
+      },
+    });
   }),
+
+  getOne: publicProcedure.input(
+    z.object({
+      id: z.string(),
+    }),
+  ).query(({ ctx, input }) => {
+    return ctx.prismaMongo.question.findUnique({
+      where: {
+        id: input.id,
+      },
+    });
+  }),
+
+  // getAll: publicProcedure.query(({ ctx }) => {
+  //   return ctx.prismaMongo.question.findMany();
+  // }),
 
   addOne: publicProcedure.input(questionObject).mutation(async ({ ctx, input }) => {
     await ctx.prismaMongo.question.create({

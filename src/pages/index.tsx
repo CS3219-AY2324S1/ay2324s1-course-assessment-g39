@@ -1,27 +1,13 @@
 import Head from "next/head";
-import { type } from "os";
-import { useRef, useState, type ButtonHTMLAttributes, type DetailedHTMLProps, type HTMLAttributes, type InputHTMLAttributes, useCallback } from "react";
+import { useState } from "react";
 
 import { api } from "~/utils/api";
-
-/* TODO:
-  body html rendering
-  Better variable names
-  Handle D-U desync
-*/
-
-const makeMap = <T, K extends keyof T & string>(l: T[], k: K) => new Map(l.map((q) => (
-  [q[k], q]
-)));
-
-interface Question {
-  title: string;
-  body: string;
-  difficulty: number;
-  category: string;
-}
-
-type QuestionMap = Map<string, Question>;
+import { makeMap } from "./utils/utils";
+import { type Question, type QuestionMap } from "./global";
+import { StyledCheckbox } from "./StyledCheckbox";
+import { StyledButton } from "./StyledButton";
+import { QuestionRow } from "./QuestionRow";
+import { equals } from "./utils/utils";
 
 const baseQuestion: Question = {
   title: "",
@@ -29,78 +15,6 @@ const baseQuestion: Question = {
   difficulty: 0,
   category: "",
 }
-
-
-const StyledInput = ({ span, highlight, ...others }: {
-  span?: number,
-  highlight?: boolean
-} & DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) =>
-  <input
-    className="outline-none tb-border min-w-0 p-2"
-    style={{
-      flex: span ? `${span} ${span} 0%` : '1 1 0%',
-      backgroundColor: highlight ? 'var(--bg-3)' : 'transparent',
-      ...others.style
-    }}
-    {...others}
-  />
-
-const StyledCheckbox = ({ indeterminate, ...others }: { indeterminate?: boolean } & DetailedHTMLProps<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>) => {
-  const setInd = useCallback((el: HTMLInputElement) => {
-    if (el) {
-      el.indeterminate = indeterminate ?? false;
-    }
-  }, [indeterminate]);
-  return <div className="checkbox tb-border">
-    <input type="checkbox" ref={setInd} {...others} />
-    <span className="checkmark" />
-  </div>
-}
-
-const StyledButton = (props: ButtonHTMLAttributes<HTMLButtonElement>) => <button className="self-start rounded-md al bg-white/10 flex-[2_2_0%] py-1 mt-2 font-bold text-white no-underline transition hover:bg-white/20" style={{ opacity: props.disabled ? 0.3 : 1 }} value="Add Question" {...props} />
-
-const QuestionRow = ({
-  question,
-  initialQuestion,
-  onQuestionChange,
-  onQuestionDelete,
-  highlight,
-  checked,
-  indeterminate,
-  ...others
-}: {
-  question: Question,
-  initialQuestion?: Question,
-  onQuestionChange: (q: Question) => void,
-  onQuestionDelete?: () => void,
-  highlight?: boolean,
-  checked?: boolean
-  indeterminate?: boolean
-} & HTMLAttributes<HTMLDivElement>) => {
-  const highlightable = highlight && initialQuestion;
-  return <div {...others}>
-
-    {onQuestionDelete ?
-      <StyledCheckbox onChange={onQuestionDelete} checked={checked} indeterminate={indeterminate} /> :
-      <div className="aspect-square p-2 tb-border" />
-    }
-
-    <StyledInput name="title" value={question.title} onChange={(e) => {
-      onQuestionChange({ ...question, title: e.target.value }
-      )
-    }} span={2} highlight={highlightable && question.title !== initialQuestion.title} />
-
-    <StyledInput name="body" value={question.body} onChange={(e) => onQuestionChange({ ...question, body: e.target.value }
-    )} span={4} highlight={highlightable && question.body !== initialQuestion.body} />
-
-    <StyledInput name="difficulty" value={question.difficulty} onChange={(e) => onQuestionChange({ ...question, difficulty: parseInt(e.target.value) }
-    )} type="number" min="0" max="5" highlight={highlightable && question.difficulty !== initialQuestion.difficulty} />
-
-    <StyledInput name="category" value={question.category} onChange={(e) => onQuestionChange({ ...question, category: e.target.value })} span={2} highlight={highlightable && question.category !== initialQuestion.category} />
-  </div>
-}
-
-const equals = <T extends object>(q1: T, q2: T) => Object.entries(q1).every(([k, v]) => q2[k as keyof T] === v);
 
 export default function Home() {
 
@@ -111,15 +25,25 @@ export default function Home() {
   const [changedQuestions, setChangedQuestions] = useState(new Set<string>());
   const [deletedQuestions, setDeletedQuestions] = useState(new Set<string>());
 
-  const rawQuestions = makeMap(api.question.getAll.useQuery(undefined, {
-    onSuccess: (data) => {
-      const mappedData = data.map((q) => ({
-        id: q.id,
-        ...(changedQuestions.has(q.id) ? questions.get(q.id) ?? q : q)
-      }));
-      setQuestions(makeMap(mappedData, 'id'));
-    }
-  }).data ?? [], 'id');
+  // const rawQuestions = makeMap(api.question.getAll.useQuery(undefined, {
+  //   onSuccess: (data) => {
+  //     const mappedData = data.map((q) => ({
+  //       id: q.id,
+  //       ...(changedQuestions.has(q.id) ? questions.get(q.id) ?? q : q)
+  //     }));
+  //     setQuestions(makeMap(mappedData, 'id'));
+  //   }
+  // }).data ?? [], 'id');
+
+  const rawQuestions = makeMap(api.useQueries(
+    (t) => api.question.getAllIds.useQuery().data?.map((id) => t.question.getOne(id, {
+      onSuccess: (data) => {
+        if (!data || changedQuestions.has(data.id)) return;
+        setQuestions(new Map(questions.set(data.id, data)));
+      }
+    })) ?? []
+  ).filter((q) => q.data).map((q) => q.data!), 'id');
+
 
   const hasChanges = (id: string) => {
     const q1 = rawQuestions.get(id);
@@ -127,27 +51,19 @@ export default function Home() {
     return q1 && q2 && !equals(q1, q2);
   }
 
-  const q_mutuation = api.question.addOne.useMutation({
-    onSuccess: async () => {
-      await utils.question.getAll.invalidate();
+  const addMutation = api.question.addOne.useMutation({
+    onSuccess: () => {
+      void utils.question.getAllIds.invalidate();
     }
   });
 
-  const q_update_mutuation = api.question.updateOne.useMutation({
-    onSuccess: async () => {
-      await utils.question.getAll.invalidate();
-    }
-  });
+  const updateMutation = api.question.updateOne.useMutation();
 
-  const q_delete_mutuation = api.question.deleteOne.useMutation({
-    onSuccess: async () => {
-      await utils.question.getAll.invalidate();
-    }
-  });
+  const deleteMutation = api.question.deleteOne.useMutation();
 
   const createNewQuestion = () => {
     if (equals(dummyQuestion, baseQuestion)) return;
-    q_mutuation.mutate(dummyQuestion, {
+    addMutation.mutate(dummyQuestion, {
       onSuccess: () => {
         setDummyQuestion(baseQuestion);
       }
@@ -155,14 +71,22 @@ export default function Home() {
   };
 
   const saveUpdatedQuestion = (id: string, q: Question) => {
-    setChangedQuestions(new Set(changedQuestions.add(id)));
     setQuestions(new Map(questions.set(id, q)));
+    if (!hasChanges(id)) {
+      changedQuestions.delete(id);
+    } else {
+      changedQuestions.add(id);
+    }
   }
 
   const updateQuestions = () => {
     changedQuestions.forEach((id) => {
       if (!hasChanges(id)) return;
-      q_update_mutuation.mutate({ id, ...questions.get(id) });
+      updateMutation.mutate({ id, ...questions.get(id) }, {
+        onSuccess: () => {
+          void utils.question.getOne.invalidate({ id });
+        }
+      });
     });
     setChangedQuestions(new Set());
   };
@@ -186,9 +110,17 @@ export default function Home() {
 
   const deleteQuestions = () => {
     deletedQuestions.forEach((id => {
-      if (!rawQuestions.has(id)) return;
+      if (!rawQuestions.has(id)) {
+        questions.delete(id);
+        return;
+      }
       changedQuestions.delete(id) && setChangedQuestions(new Set(changedQuestions));
-      q_delete_mutuation.mutate({ id });
+      deleteMutation.mutate({ id }, {
+        onSuccess: () => {
+          void utils.question.getAllIds.invalidate();
+          questions.delete(id);
+        }
+      });
     }));
     setDeletedQuestions(new Set());
   }
