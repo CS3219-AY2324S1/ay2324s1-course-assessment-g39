@@ -1,4 +1,5 @@
 import Head from "next/head";
+import { type } from "os";
 import { useRef, useState, type ButtonHTMLAttributes, type DetailedHTMLProps, type HTMLAttributes, type InputHTMLAttributes, useCallback } from "react";
 
 import { api } from "~/utils/api";
@@ -9,35 +10,25 @@ import { api } from "~/utils/api";
   Handle D-U desync
 */
 
+const makeMap = <T, K extends keyof T & string>(l: T[], k: K) => new Map(l.map((q) => (
+  [q[k], q]
+)));
+
 interface Question {
-  id: string;
   title: string;
   body: string;
   difficulty: number;
   category: string;
 }
 
+type QuestionMap = Map<string, Question>;
 
-type Editable<R> = R & {
-  edits: {
-    [K in keyof R]: R[K]
-  }
-}
-
-const baseQuestion = {
-  id: "",
+const baseQuestion: Question = {
   title: "",
   body: "",
   difficulty: 0,
   category: "",
-  edits: {
-    id: "",
-    title: "",
-    body: "",
-    difficulty: 0,
-    category: "",
-  }
-} as Editable<Question>;
+}
 
 
 const StyledInput = ({ span, highlight, ...others }: {
@@ -68,12 +59,9 @@ const StyledCheckbox = ({ indeterminate, ...others }: { indeterminate?: boolean 
 
 const StyledButton = (props: ButtonHTMLAttributes<HTMLButtonElement>) => <button className="self-start rounded-md al bg-white/10 flex-[2_2_0%] py-1 mt-2 font-bold text-white no-underline transition hover:bg-white/20" style={{ opacity: props.disabled ? 0.3 : 1 }} value="Add Question" {...props} />
 
-const makeEditable = <T,>(l: T[]) => l.map((q) => (
-  { ...q, edits: { ...q } } as Editable<T>
-));
-
 const QuestionRow = ({
   question,
+  initialQuestion,
   onQuestionChange,
   onQuestionDelete,
   highlight,
@@ -81,58 +69,66 @@ const QuestionRow = ({
   indeterminate,
   ...others
 }: {
-  question: Editable<Question>,
+  question: Question,
+  initialQuestion?: Question,
   onQuestionChange: (q: Question) => void,
   onQuestionDelete?: () => void,
   highlight?: boolean,
   checked?: boolean
   indeterminate?: boolean
 } & HTMLAttributes<HTMLDivElement>) => {
+  const highlightable = highlight && initialQuestion;
   return <div {...others}>
+
     {onQuestionDelete ?
       <StyledCheckbox onChange={onQuestionDelete} checked={checked} indeterminate={indeterminate} /> :
       <div className="aspect-square p-2 tb-border" />
     }
 
-    <StyledInput name="title" value={question.edits.title} onChange={(e) => {
-      onQuestionChange({ ...question.edits, title: e.target.value }
+    <StyledInput name="title" value={question.title} onChange={(e) => {
+      onQuestionChange({ ...question, title: e.target.value }
       )
-    }} span={2} highlight={highlight && question.title !== question.edits.title} />
+    }} span={2} highlight={highlightable && question.title !== initialQuestion.title} />
 
-    <StyledInput name="body" value={question.edits.body} onChange={(e) => onQuestionChange({ ...question.edits, body: e.target.value }
-    )} span={4} highlight={highlight && question.body !== question.edits.body} />
+    <StyledInput name="body" value={question.body} onChange={(e) => onQuestionChange({ ...question, body: e.target.value }
+    )} span={4} highlight={highlightable && question.body !== initialQuestion.body} />
 
-    <StyledInput name="difficulty" value={question.edits.difficulty} onChange={(e) => onQuestionChange({ ...question.edits, difficulty: Number(e.target.value) }
-    )} type="number" highlight={highlight && question.difficulty !== question.edits.difficulty} />
+    <StyledInput name="difficulty" value={question.difficulty} onChange={(e) => onQuestionChange({ ...question, difficulty: parseInt(e.target.value) }
+    )} type="number" min="0" max="5" highlight={highlightable && question.difficulty !== initialQuestion.difficulty} />
 
-    <StyledInput name="category" value={question.edits.category} onChange={(e) => onQuestionChange({ ...question.edits, category: e.target.value }
-    )} span={2} highlight={highlight && question.category !== question.edits.category} />
+    <StyledInput name="category" value={question.category} onChange={(e) => onQuestionChange({ ...question, category: e.target.value })} span={2} highlight={highlightable && question.category !== initialQuestion.category} />
   </div>
 }
 
-const hasChanges = <T,>(q: Editable<T>) => {
-  const { edits, ...base } = q;
-  return Object.entries(base).some(([k, v]) => v !== edits[k as keyof T]);
-}
+const equals = <T extends object>(q1: T, q2: T) => Object.entries(q1).every(([k, v]) => q2[k as keyof T] === v);
 
 export default function Home() {
 
   const utils = api.useContext();
 
-  const [questions, setQuestions] = useState<Editable<Question>[]>([]);
+  const [questions, setQuestions] = useState<QuestionMap>(new Map());
   const [dummyQuestion, setDummyQuestion] = useState(baseQuestion);
-  const [changedQuestions, setChangedQuestions] = useState(new Set<number>());
-  const [deletedQuestions, setDeletedQuestions] = useState(new Set<number>());
+  const [changedQuestions, setChangedQuestions] = useState(new Set<string>());
+  const [deletedQuestions, setDeletedQuestions] = useState(new Set<string>());
 
-  api.question.getAll.useQuery(undefined, {
+  const rawQuestions = makeMap(api.question.getAll.useQuery(undefined, {
     onSuccess: (data) => {
-      if (changedQuestions.size > 0) return;
-      setQuestions(makeEditable(data ?? []));
+      const mappedData = data.map((q) => ({
+        id: q.id,
+        ...(changedQuestions.has(q.id) ? questions.get(q.id) ?? q : q)
+      }));
+      setQuestions(makeMap(mappedData, 'id'));
     }
-  });
+  }).data ?? [], 'id');
+
+  const hasChanges = (id: string) => {
+    const q1 = rawQuestions.get(id);
+    const q2 = questions.get(id);
+    return q1 && q2 && !equals(q1, q2);
+  }
+
   const q_mutuation = api.question.addOne.useMutation({
     onSuccess: async () => {
-      setDummyQuestion(baseQuestion);
       await utils.question.getAll.invalidate();
     }
   });
@@ -145,58 +141,56 @@ export default function Home() {
 
   const q_delete_mutuation = api.question.deleteOne.useMutation({
     onSuccess: async () => {
-      setDeletedQuestions(new Set<number>());
       await utils.question.getAll.invalidate();
     }
   });
 
-  const saveNewQuestion = (q: Question) => {
-    setDummyQuestion(prev => ({ ...prev, edits: { ...prev.edits, ...q } }));
-  }
-
   const createNewQuestion = () => {
-    if (!hasChanges(dummyQuestion)) return;
-    q_mutuation.mutate(dummyQuestion.edits);
+    if (equals(dummyQuestion, baseQuestion)) return;
+    q_mutuation.mutate(dummyQuestion, {
+      onSuccess: () => {
+        setDummyQuestion(baseQuestion);
+      }
+    });
   };
 
-  const saveUpdatedQuestion = (i: number, q: Question) => {
-    changedQuestions.add(i);
-    setChangedQuestions(new Set(changedQuestions));
-    setQuestions(prev => prev.map((prevQ, j) => j === i ? { ...prevQ, edits: { ...prevQ.edits, ...q } } : prevQ));
+  const saveUpdatedQuestion = (id: string, q: Question) => {
+    setChangedQuestions(new Set(changedQuestions.add(id)));
+    setQuestions(new Map(questions.set(id, q)));
   }
 
   const updateQuestions = () => {
-    changedQuestions.forEach((i) => {
-      const q = questions[i];
-      if (!q || !hasChanges(q)) return;
-      q_update_mutuation.mutate(q.edits);
+    changedQuestions.forEach((id) => {
+      if (!hasChanges(id)) return;
+      q_update_mutuation.mutate({ id, ...questions.get(id) });
     });
     setChangedQuestions(new Set());
   };
 
-  const saveDeleteQuestion = (i: number) => {
-    if (deletedQuestions.has(i)) {
-      deletedQuestions.delete(i);
+  const saveDeleteQuestion = (id: string) => {
+    if (deletedQuestions.has(id)) {
+      deletedQuestions.delete(id);
     } else {
-      deletedQuestions.add(i);
+      deletedQuestions.add(id);
     }
     setDeletedQuestions(new Set(deletedQuestions));
   }
 
   const toggleDeleteQuestion = () => {
-    if (deletedQuestions.size === questions.length) {
+    if (deletedQuestions.size === questions.size) {
       setDeletedQuestions(new Set());
     } else {
-      setDeletedQuestions(new Set(questions.map((_, i) => i)));
+      setDeletedQuestions(new Set(questions.keys()));
     }
   }
 
   const deleteQuestions = () => {
-    deletedQuestions.forEach((i) => {
-      const q = questions[i];
-      if (!q) return;
-      q_delete_mutuation.mutate({ id: q.id });
-    });
+    deletedQuestions.forEach((id => {
+      if (!rawQuestions.has(id)) return;
+      changedQuestions.delete(id) && setChangedQuestions(new Set(changedQuestions));
+      q_delete_mutuation.mutate({ id });
+    }));
+    setDeletedQuestions(new Set());
   }
 
   return (
@@ -211,13 +205,12 @@ export default function Home() {
           <h1 className="text-5xl font-extrabold tracking-tight mb-12 text-[var(--txt-3)] sm:text-[5rem]">
             Peer<span className="text-[var(--txt-1)]">Prep</span>
           </h1>
-
           {/* x - 2 - 4 - 1 - 2 */}
           <div className="text-[var(--txt-3)] flex-1 flex flex-col rounded overflow-hidden">
             <div className="flex font-bold bg-black">
               <StyledCheckbox
-                checked={deletedQuestions.size > 0 && deletedQuestions.size === questions.length}
-                indeterminate={deletedQuestions.size > 0 && deletedQuestions.size < questions.length}
+                checked={deletedQuestions.size > 0 && deletedQuestions.size === questions.size}
+                indeterminate={deletedQuestions.size > 0 && deletedQuestions.size < questions.size}
                 onChange={toggleDeleteQuestion}
               />
               <div className="flex-[2_2_0%] p-2 tb-border">titleS</div>
@@ -225,15 +218,16 @@ export default function Home() {
               <div className="flex-1 p-2 tb-border">difficulty</div>
               <div className="flex-[2_2_0%] p-2 tb-border">category</div>
             </div>
-            {questions.map((question, i) => (
-              <QuestionRow key={i} question={question}
-                onQuestionChange={(q) => saveUpdatedQuestion(i, q)}
-                onQuestionDelete={() => saveDeleteQuestion(i)}
-                className="bg-[var(--bg-1)] flex font-mono hover:bg-[var(--bg-2)] active:bg-[var(--bg-2)]" highlight checked={deletedQuestions.has(i)} />
+            {[...questions.entries()].map(([id, q]) => (
+              <QuestionRow key={id} question={q}
+                initialQuestion={rawQuestions.get(id)}
+                onQuestionChange={(q) => saveUpdatedQuestion(id, q)}
+                onQuestionDelete={() => saveDeleteQuestion(id)}
+                className="bg-[var(--bg-1)] flex font-mono hover:bg-[var(--bg-2)] active:bg-[var(--bg-2)]" highlight checked={deletedQuestions.has(id)} />
             ))}
-            <QuestionRow question={dummyQuestion} onQuestionChange={saveNewQuestion} className="bg-[var(--bg-1)] flex mt-4 font-mono" />
+            <QuestionRow question={dummyQuestion} initialQuestion={baseQuestion} onQuestionChange={setDummyQuestion} className="bg-[var(--bg-1)] flex mt-4 font-mono" />
             <div className="flex-1 flex gap-2">
-              <StyledButton disabled={!hasChanges(dummyQuestion)} onClick={createNewQuestion}>Add Question</StyledButton>
+              <StyledButton disabled={equals(dummyQuestion, baseQuestion)} onClick={createNewQuestion}>Add Question</StyledButton>
               <StyledButton disabled={changedQuestions.size === 0} onClick={updateQuestions}>Save Changes</StyledButton>
               <StyledButton disabled={deletedQuestions.size === 0} onClick={deleteQuestions}>Delete Questions</StyledButton>
               <div className="flex-[5_5_0%]" />
