@@ -2,6 +2,18 @@
 @tailwind components
 @tailwind utilities
 
+@layer base
+    h1
+        @apply text-4xl
+    h2
+        @apply text-3xl
+    h3
+        @apply text-2xl
+    h4
+        @apply text-xl
+
+
+
 :root
     --bg-1: #1f1f1f
     --bg-2: #2f2f2f
@@ -29,8 +41,9 @@ input[type=number]::-webkit-outer-spin-button
     border-width: 0 1px 1px 0
 
 .checkbox
-    aspect-ratio: 1
     display: flex
+    flex: none
+    width: 2.4rem
     align-items: center
     justify-content: center
     position: relative
@@ -39,7 +52,7 @@ input[type=number]::-webkit-outer-spin-button
         content: ''
         position: absolute
         background-color: var(--bg-1)
-        height: 50%
+        width: 50%
         aspect-ratio: 1
         border-radius: 0.25rem
         transition: background-color 0.2s ease-in-out

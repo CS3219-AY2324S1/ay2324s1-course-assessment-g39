@@ -23,6 +23,6 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - ./data/mongo:/etc/mongo
+      - ./data/mongo:/data/db
       - ./.docker/mongo/rs-initiate.js:/docker-entrypoint-initdb.d/rs-initiate.js
       # - ./.docker/mongo/replica.key:/data/replica.key
