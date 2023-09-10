@@ -42,5 +42,4 @@ yarn-error.log*
 *.tsbuildinfo
 
 # db
-data/mongo/**
-data/postgres/**
+data/**
