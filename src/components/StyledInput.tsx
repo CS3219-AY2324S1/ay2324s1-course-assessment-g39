@@ -17,7 +17,7 @@ export const StyledInput = ({ span, highlight, style, ...others }: IProps & Deta
 export const StyledTextarea = forwardRef<HTMLTextAreaElement, IProps & DetailedHTMLProps<InputHTMLAttributes<HTMLTextAreaElement>, HTMLTextAreaElement>>((props, ref) => {
   const { span, highlight, style, ...others } = props;
   return <textarea
-    className="outline-none tb-border min-w-0 p-2 resize-none"
+    className="outline-none tb-border min-w-0 p-2 resize-none align-middle"
     style={{
       flex: span ? `${span} ${span} 0%` : '1 1 0%',
       backgroundColor: highlight ? 'var(--bg-3)' : 'transparent',

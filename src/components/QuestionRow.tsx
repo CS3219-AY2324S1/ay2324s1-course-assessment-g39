@@ -1,14 +1,22 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type HTMLAttributes } from "react";
-import { useSmartClip } from "~/utils/smartClip";
+import { z } from "zod";
+import { api } from "~/utils/api";
+import useDebounce from "~/utils/debounce";
 import { type Question } from "../types/global";
 import { parseMD, pasteText } from "../utils/utils";
 import { StyledCheckbox } from "./StyledCheckbox";
 import { StyledInput, StyledTextarea } from "./StyledInput";
-import { z } from "zod";
-import { api } from "~/utils/api";
-import { text } from "stream/consumers";
 
 const MIN_TEXTAREA_HEIGHT_px = 41;
+const MAX_TEXTAREA_HEIGHT_px = MIN_TEXTAREA_HEIGHT_px * 2;
+const MAX_TEXTAREA_EDITING_HEIGHT_px = MIN_TEXTAREA_HEIGHT_px * 16;
+
+enum BODY_STATE {
+  COLLAPSED,
+  EXPANDED,
+  EDITING
+}
+const { COLLAPSED, EXPANDED, EDITING } = BODY_STATE;
 
 export const QuestionRow = ({
   question, initialQuestion, onQuestionChange, onQuestionDelete, checked, indeterminate, ...others
@@ -23,7 +31,9 @@ export const QuestionRow = ({
 
   const { title, body, difficulty, category } = question;
 
-  const [isFocused, setIsFocused] = useState(false);
+  const [bodyState, setBodyState] = useState(BODY_STATE.COLLAPSED);
+  const debouncedBodyState = useDebounce(bodyState, 100);
+  const prevBodyState = useRef(bodyState);
   const [html, setHTML] = useState('');
 
   const textAreaRefs = useRef<(HTMLTextAreaElement | null)[]>([null, null, null]);
@@ -34,11 +44,6 @@ export const QuestionRow = ({
     enabled: false
   });
 
-  const onBlur = () => {
-    void (async () => setHTML((await parseMD(body))))();
-    setIsFocused(false);
-  };
-
   const processPaste = async (e: ClipboardEvent<HTMLTextAreaElement>) => {
     for (const types of e.clipboardData.types) {
       if (types === 'text/plain') {
@@ -48,6 +53,7 @@ export const QuestionRow = ({
         } else {
           pasteText(textAreaRefs.current[1], text);
         }
+        onQuestionChange({ ...question, body: textAreaRefs.current[1]!.value });
         return;
       } else if (types === 'Files') {
         const file = e.clipboardData.files[0];
@@ -68,6 +74,7 @@ export const QuestionRow = ({
               body: formData,
             });
             pasteText(textAreaRefs.current[1], `![image](${url}/${fields.key})`);
+            onQuestionChange({ ...question, body: textAreaRefs.current[1]!.value });
           }
           return;
         }
@@ -75,28 +82,62 @@ export const QuestionRow = ({
     }
   }
 
+  // const handleKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  //   if (e.ctrlKey) {
+  //     switch (e.key) {
+  //       case 'B':
+  //         e.stopPropagation();
+  //         bracket(textAreaRefs.current[1], '**');
+  //         break;
+  //       case 'I':
+  //         e.stopPropagation();
+  //         bracket(textAreaRefs.current[1], '*');
+  //         break;
+  //     }
+  //   }
+  // };
+
+  useEffect(() => {
+    void (async () => setHTML((await parseMD(body))))();
+    // eslint-disable-next-line
+  }, []);
+
+  useEffect(() => {
+    if (debouncedBodyState === EDITING && textAreaRefs.current[1] !== document.activeElement) {
+      textAreaRefs.current[1]?.focus();
+    } else if (prevBodyState.current === EDITING && debouncedBodyState !== EDITING) {
+      void (async () => setHTML((await parseMD(body))))();
+    }
+    prevBodyState.current = debouncedBodyState;
+    // eslint-disable-next-line
+  }, [debouncedBodyState]);
+
   useLayoutEffect(() => {
     textAreaRefs.current.forEach(r => {
       if (r) {
         r.style.height = `${MIN_TEXTAREA_HEIGHT_px}px`;
       }
     });
-    rendererRef.current!.style.height = `${MIN_TEXTAREA_HEIGHT_px}px`;
-
-    const height = Math.max(
+    let maxHeight = Infinity;
+    if (bodyState === COLLAPSED) {
+      maxHeight = MAX_TEXTAREA_HEIGHT_px;
+    } else if (bodyState === EDITING) {
+      maxHeight = MAX_TEXTAREA_EDITING_HEIGHT_px;
+    }
+    const height = Math.min(Math.max(
       ...textAreaRefs.current.map(r => r?.scrollHeight ?? 0),
-      rendererRef.current!.scrollHeight,
+      bodyState === EDITING ? 0 : rendererRef.current!.scrollHeight + 1,
       MIN_TEXTAREA_HEIGHT_px
-    );
+    ), maxHeight);
     textAreaRefs.current.forEach(r => {
       if (r) {
         r.style.height = `${height}px`;
       }
     });
     rendererRef.current!.style.height = `${height}px`;
-  }, [body, html, isFocused]);
+  }, [body, html, bodyState]);
 
-  return <div onBlur={onBlur} {...others}>
+  return <div {...others}>
 
     {onQuestionDelete ?
       <StyledCheckbox onChange={onQuestionDelete} checked={checked} indeterminate={indeterminate} /> :
@@ -114,23 +155,31 @@ export const QuestionRow = ({
 
     <StyledTextarea
       name="body"
+      onBlur={() => setBodyState(COLLAPSED)}
       style={{
         minHeight: `${MIN_TEXTAREA_HEIGHT_px}px`,
-        display: isFocused ? 'block' : 'none',
+        display: bodyState === EDITING ? 'block' : 'none',
       }}
       onChange={(e) => onQuestionChange({ ...question, body: e.target.value })}
+      // onKeyDown={handleKey}
       onPaste={(e) => { e.preventDefault(); void processPaste(e) }}
       value={body} span={4} highlight={body !== initialQuestion.body} ref={(r) => {
         textAreaRefs.current[1] = r;
       }} />
 
     <div
-      className="flex-[4_4_0%] tb-border p-2 font-sans [&>ul]:list-disc [&>ul]:list-inside [&>ol]:list-decimal [&>ol]:list-inside break-all"
+      onClick={() => setBodyState(EDITING)}
+      onPointerEnter={() => setBodyState(EXPANDED)}
+      onPointerLeave={() => {
+        if (debouncedBodyState === EXPANDED) {
+          setBodyState(COLLAPSED);
+        }
+      }}
+      className={`flex-[4_4_0%] tb-border p-2 font-sans [&>ul]:list-disc [&>ul]:list-inside [&>ol]:list-decimal [&>ol]:list-inside break-word relative overflow-hidden ${bodyState === COLLAPSED ? '' : 'after:content-none'} after:w-full after:h-10 after:absolute after:left-0 after:top-0 after:translate-y-full after:bg-gradient-to-b after:from-transparent after:to-[var(--bg-1)]`}
       dangerouslySetInnerHTML={{ __html: html }}
-      onClick={() => setIsFocused(true)}
       style={{
         minHeight: `${MIN_TEXTAREA_HEIGHT_px}px`,
-        display: isFocused ? 'none' : 'block',
+        display: bodyState === EDITING ? 'none' : 'block',
       }}
       ref={rendererRef}
     />

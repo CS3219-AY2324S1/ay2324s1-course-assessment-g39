@@ -59,6 +59,11 @@ export default function Questions() {
         setChangedQns(new Set(changedQns));
     }
 
+    const clearUpdated = () => {
+        setChangedQns(new Set());
+        setViewQns(new Map(questions));
+    };
+
     const pushUpdated = () => {
         changedQns.forEach((id) => {
             if (!hasChanges(id)) return;
@@ -130,7 +135,8 @@ export default function Questions() {
                             <StyledButton onClick={pushNew} style={{ backgroundColor: 'var(--txt-5)' }}>Add Question</StyledButton>
                             <StyledButton disabled={changedQns.size === 0} onClick={pushUpdated} style={{ backgroundColor: 'var(--txt-4)' }}>Save {changedQns.size > 0 ? changedQns.size : ''} Change{changedQns.size === 1 ? '' : 's'}</StyledButton>
                             <StyledButton disabled={deletedQns.size === 0} onClick={pushDeleted} style={{ backgroundColor: 'var(--txt-6)' }}>Delete {deletedQns.size > 0 ? deletedQns.size : ''}</StyledButton>
-                            <div className="flex-[6_6_0%]" />
+                            <div className="flex-[5_5_0%]" />
+                            <StyledButton disabled={changedQns.size === 0} onClick={clearUpdated}>Discard Changes</StyledButton>
                         </div>
                     </div>
                 </div>
