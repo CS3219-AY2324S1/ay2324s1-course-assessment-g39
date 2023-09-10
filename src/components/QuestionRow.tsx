@@ -105,7 +105,7 @@ export const QuestionRow = ({
   useEffect(() => {
     if (debouncedBodyState === EDITING && textAreaRefs.current[1] !== document.activeElement) {
       textAreaRefs.current[1]?.focus();
-    } else if (prevBodyState.current === EDITING && debouncedBodyState !== EDITING) {
+    } else if (debouncedBodyState !== EDITING && prevBodyState.current === EDITING) {
       void (async () => setHTML((await parseMD(body))))();
     }
     prevBodyState.current = debouncedBodyState;
@@ -168,11 +168,12 @@ export const QuestionRow = ({
       }} />
 
     <div
-      onClick={() => setBodyState(EDITING)}
-      onPointerEnter={() => setBodyState(EXPANDED)}
-      onPointerLeave={() => {
-        if (debouncedBodyState === EXPANDED) {
-          setBodyState(COLLAPSED);
+      tabIndex={0}
+      onClick={() => {
+        if (bodyState === COLLAPSED) {
+          setBodyState(EXPANDED);
+        } else if (bodyState === EXPANDED) {
+          setBodyState(EDITING);
         }
       }}
       className={`flex-[4_4_0%] tb-border p-2 font-sans [&>ul]:list-disc [&>ul]:list-inside [&>ol]:list-decimal [&>ol]:list-inside break-word relative overflow-hidden ${bodyState === COLLAPSED ? '' : 'after:content-none'} after:w-full after:h-10 after:absolute after:left-0 after:top-0 after:translate-y-full after:bg-gradient-to-b after:from-transparent after:to-[var(--bg-1)]`}
