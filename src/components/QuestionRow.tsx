@@ -111,7 +111,7 @@ export const QuestionRow = ({
     }
     const height = Math.min(Math.max(
       ...textAreaRefs.current.map(r => r?.scrollHeight ?? 0),
-      bodyState === EDITING ? 0 : rendererRef.current!.scrollHeight + 1,
+      bodyState === EDITING ? 0 : rendererRef.current!.scrollHeight,
       MIN_TEXTAREA_HEIGHT_px
     ), maxHeight);
     textAreaRefs.current.forEach(r => {
