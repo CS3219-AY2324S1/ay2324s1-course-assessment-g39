@@ -82,21 +82,6 @@ export const QuestionRow = ({
     }
   }
 
-  // const handleKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-  //   if (e.ctrlKey) {
-  //     switch (e.key) {
-  //       case 'B':
-  //         e.stopPropagation();
-  //         bracket(textAreaRefs.current[1], '**');
-  //         break;
-  //       case 'I':
-  //         e.stopPropagation();
-  //         bracket(textAreaRefs.current[1], '*');
-  //         break;
-  //     }
-  //   }
-  // };
-
   useEffect(() => {
     void (async () => setHTML((await parseMD(body))))();
     // eslint-disable-next-line
