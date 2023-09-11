@@ -36,7 +36,7 @@ export const QuestionRow = ({
   const prevBodyState = useRef(bodyState);
   const [html, setHTML] = useState('');
 
-  const textAreaRefs = useRef<(HTMLTextAreaElement | null)[]>([null, null, null]);
+  const textAreaRefs = useRef<(HTMLTextAreaElement | null)[]>([null, null, null, null]);
   const rendererRef = useRef<HTMLDivElement | null>(null);
 
   const getPresignedUrl = api.form.createPresignedUrl.useQuery(undefined, {
@@ -90,12 +90,10 @@ export const QuestionRow = ({
   useEffect(() => {
     if (debouncedBodyState === EDITING && textAreaRefs.current[1] !== document.activeElement) {
       textAreaRefs.current[1]?.focus();
-    } else if (debouncedBodyState !== EDITING && prevBodyState.current === EDITING) {
-      void (async () => setHTML((await parseMD(body))))();
     }
+    void (async () => setHTML((await parseMD(body))))();
     prevBodyState.current = debouncedBodyState;
-    // eslint-disable-next-line
-  }, [debouncedBodyState]);
+  }, [debouncedBodyState, body]);
 
   useLayoutEffect(() => {
     textAreaRefs.current.forEach(r => {
@@ -170,14 +168,16 @@ export const QuestionRow = ({
       ref={rendererRef}
     />
 
-    <StyledInput name="difficulty" value={difficulty ?? 0} onChange={(e) => onQuestionChange({ ...question, difficulty: parseInt(e.target.value) }
-    )} type="number" min="0" max="5" highlight={difficulty !== initialQuestion.difficulty} />
+    <StyledTextarea name="difficulty" value={difficulty ?? 0} onChange={(e) => onQuestionChange({ ...question, difficulty: parseInt(e.target.value) || 0 })}
+      ref={(r) => {
+        textAreaRefs.current[2] = r;
+      }} type="number" highlight={difficulty !== initialQuestion.difficulty} />
 
     <StyledTextarea name="category" value={category}
       style={{
         minHeight: `${MIN_TEXTAREA_HEIGHT_px}px`,
       }} onChange={(e) => onQuestionChange({ ...question, category: e.target.value })} span={2} highlight={category !== initialQuestion.category} ref={(r) => {
-        textAreaRefs.current[2] = r;
+        textAreaRefs.current[3] = r;
       }} />
   </div>;
 };
