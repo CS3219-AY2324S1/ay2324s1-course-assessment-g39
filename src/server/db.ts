@@ -1,5 +1,5 @@
-import { PrismaClient as PrismaClientMongo } from "@prisma/client";
-import { PrismaClient as PrismaClientPostgres } from "@prisma/client";
+import { PrismaClient as PrismaClientMongo } from "@prisma-db-mongo/client";
+import { PrismaClient as PrismaClientPostgres } from "@prisma-db-psql/client";
 import { type LogLevel } from "@prisma/client/runtime/library";
 
 import { env } from "~/env.mjs";

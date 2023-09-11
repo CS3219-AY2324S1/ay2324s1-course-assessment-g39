@@ -1,43 +1,27 @@
 import { z } from "zod";
 
-import { observable } from "@trpc/server/observable";
-
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import UserRequestHandler, {
+  type RequestResponse,
+} from "~/components/collaboration/UserRequestHandler";
 
 const userObject = z.object({
-  id: z.number(),
+  difficulty: z.number().min(0).max(5),
+  category: z.string(),
 });
 
-const userQueue: string[] = [];
+let response: RequestResponse;
 
 export const matchUsersRouter = createTRPCRouter({
-  matchSubscription: publicProcedure.subscription(({ ctx }) => {
-    return observable<string>((emit) => {
-      const { emitter } = ctx;
+  sendRequest: publicProcedure.input(userObject).mutation(async ({ input }) => {
+    const { difficulty, category } = input;
 
-      const addToQueue = () => {
-        if (ctx.session) userQueue.push(ctx.session.user.id);
-      };
+    const requestHandler = new UserRequestHandler();
 
-      emitter.on("lookForMatch", addToQueue);
-
-      const interval = setInterval(() => {
-        if (userQueue.length >= 2) {
-          const ids = userQueue.shift()?.concat(" " + userQueue.shift());
-          if (ids) emit.next(ids);
-        }
-      }, 1000);
-
-      return () => {
-        clearInterval(interval);
-        emitter.off("lookForMatch", addToQueue);
-      };
+    await requestHandler.sendRequest({ difficulty, category }).then((res) => {
+      response = res;
     });
-  }),
 
-  lookForMatch: publicProcedure.input(userObject).query(({ ctx }) => {
-    const { emitter } = ctx;
-
-    emitter.emit("lookForMatch");
+    return response;
   }),
 });

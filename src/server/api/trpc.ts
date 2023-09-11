@@ -16,11 +16,6 @@ import { ZodError } from "zod";
 import { getServerAuthSession } from "~/server/auth";
 import { prismaPostgres, prismaMongo } from "~/server/db";
 
-import { applyWSSHandler } from "@trpc/server/adapters/ws";
-import { appRouter } from "./root";
-
-import ws from "ws";
-
 /**
  * 1. CONTEXT
  *
@@ -43,16 +38,12 @@ interface CreateContextOptions {
  *
  * @see https://create.t3.gg/en/usage/trpc#-serverapitrpcts
  */
-const wss = new ws.Server({
-  port: 3001,
-});
 
 const createInnerTRPCContext = (opts: CreateContextOptions) => {
   return {
     session: opts.session,
     prismaPostgres: prismaPostgres,
     prismaMongo: prismaMongo,
-    emitter: wss,
   };
 };
 
@@ -140,22 +131,3 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
  * @see https://trpc.io/docs/procedures
  */
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
-
-const handler = applyWSSHandler({
-  wss,
-  router: appRouter,
-  createContext: createTRPCContext,
-});
-
-wss.on("connection", (ws) => {
-  console.log(`➕➕ Connection (${wss.clients.size})`);
-  ws.once("close", () => {
-    console.log(`➖➖ Connection (${wss.clients.size})`);
-  });
-});
-
-process.on("SIGTERM", () => {
-  console.log("SIGTERM");
-  handler.broadcastReconnectNotification();
-  wss.close();
-});
