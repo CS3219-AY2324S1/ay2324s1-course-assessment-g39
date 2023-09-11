@@ -1,7 +1,7 @@
 // dummy signup page -- ripped straight from https://flowbite.com/blocks/marketing/register/
 // todo: change to something reasonable / add a header or smth
 
-import { FormEvent } from "react";
+import { type FormEvent } from "react";
 import { api } from '~/utils/api';
 import { useRouter } from 'next/router'
 import { signIn } from "next-auth/react";
@@ -27,7 +27,7 @@ export default function SignUp() {
       password,
       image: null
     });
-    
+
     // signIn();
 
   }
@@ -37,7 +37,7 @@ export default function SignUp() {
       <div className="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
         <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
           <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-            Create and account
+            Create an account
           </h1>
           <form className="space-y-4 md:space-y-6" action="#" onSubmit={handleSubmit} >
             <div>
