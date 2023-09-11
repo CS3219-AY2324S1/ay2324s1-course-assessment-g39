@@ -6,11 +6,15 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 
-import { prismaPostgres as prisma } from "~/server/db";
+import { prismaPostgres as prisma } from '~/server/db';
+import { hashPassword } from "~/server/auth";
+import bcrypt from 'bcrypt'
 
 const userObject = z.object({
   name: z.string(),
   email: z.string(),
+  password: z.string().nullable(),
+  image: z.string().nullable()
 });
 
 const userUpdateObject = z.object({
@@ -22,44 +26,52 @@ const userUpdateObject = z.object({
 });
 
 export const userRouter = createTRPCRouter({
-  create: publicProcedure.input(userObject).mutation(async ({ input }) => {
-    await prisma.user.create({
-      data: {
-        ...input,
-      },
-    });
-    return {
-      message: `User created`,
-    };
-  }),
-  delete: protectedProcedure
-    .input(
-      z.object({
-        email: z.string(),
-      }),
-    )
-    .query(async ({ input }) => {
-      await prisma.user.delete({
-        where: {
-          email: input.email,
-        },
-      });
-      return {
-        message: "User deleted",
-      };
-    }),
-  update: protectedProcedure
-    .input(userUpdateObject)
+  create: publicProcedure
+    .input(userObject)
     .mutation(async ({ input }) => {
-      const { id, ...remainder } = input;
-      await prisma.user.update({
-        where: {
-          id: id,
-        },
-        data: remainder,
-      });
+      const { password, ...values } = input;
+      if (!password) {
+        return {
+          message: "Invalid password"
+        };
+      }
+      const passwordHash = await hashPassword(password);
+      await prisma.user.create({
+        data: {
+          ...values,
+          password: passwordHash
+        }
+      })
       return {
-        message: "User updated",
-      };
+        message: `User created`
+      }
     }),
+    delete: protectedProcedure
+      .input(z.object({
+        email: z.string()
+      }))
+      .query(async ({ input }) => {
+        await prisma.user.delete({
+          where: {
+            email: input.email
+          }
+        });
+        return {
+          message: "User deleted"
+        }
+      }),
+    update: protectedProcedure
+      .input(userUpdateObject)
+      .mutation(async ({ input }) => {
+        const {id, ...remainder} = input;
+        await prisma.user.update({
+          where: {
+            id: id,
+          },
+          data: remainder,
+          });
+        return {
+          message: "User updated"
+        }
+      })
 });

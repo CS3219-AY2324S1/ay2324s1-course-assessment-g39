@@ -1,4 +1,5 @@
 import { questionRouter } from "~/server/api/routers/question";
+import { userRouter } from "~/server/api/routers/user";
 import { createTRPCRouter } from "~/server/api/trpc";
 import { formRouter } from "~/server/api/routers/form";
 
@@ -10,6 +11,7 @@ import { formRouter } from "~/server/api/routers/form";
 export const appRouter = createTRPCRouter({
   question: questionRouter,
   form: formRouter,
+  user: userRouter
 });
 
 // export type definition of API
