@@ -5,7 +5,7 @@ import useDebounce from "~/utils/debounce";
 import { type Question } from "../types/global";
 import { parseMD, pasteText } from "../utils/utils";
 import { StyledCheckbox } from "./StyledCheckbox";
-import { StyledInput, StyledTextarea } from "./StyledInput";
+import { StyledTextarea } from "./StyledInput";
 
 const MIN_TEXTAREA_HEIGHT_px = 41;
 const MAX_TEXTAREA_HEIGHT_px = MIN_TEXTAREA_HEIGHT_px * 2;

@@ -3,6 +3,7 @@ import remarkGfm from "remark-gfm";
 import { unified } from "unified";
 import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
+import rehypeSanitize from "rehype-sanitize";
 
 export const makeMap = <T, K extends keyof T & string>(l: T[], k: K) =>
   new Map(l.map((q) => [q[k], q]));
@@ -11,7 +12,8 @@ export const parseMD = async (md: string) =>
   // Remove when this closes: https://github.com/orgs/remarkjs/discussions/1214
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
-  String( await unified().use(remarkParse).use(remarkGfm).use(remarkRehype)
+  String( await unified().use(remarkParse, {fragment: true}).use(remarkGfm).use(remarkRehype)
+      .use(rehypeSanitize)
       .use(rehypeStringify)
       .process(md),
   ).replace(/href/g, "target='_blank' rel='noopener noreferrer' href");
