@@ -159,11 +159,12 @@ export const QuestionRow = ({
           setBodyState(EDITING);
         }
       }}
-      className={`flex-[4_4_0%] tb-border p-2 font-sans [&>ul]:list-disc [&>ul]:list-inside [&>ol]:list-decimal [&>ol]:list-inside break-word relative overflow-hidden ${bodyState === COLLAPSED ? '' : 'after:content-none'} after:w-full after:h-10 after:absolute after:left-0 after:top-0 after:translate-y-full after:bg-gradient-to-b after:from-transparent after:to-[var(--bg-1)]`}
+      className={`flex-[4_4_0%] tb-border p-2 font-sans [&>ul]:list-disc [&>ul]:list-inside [&>ol]:list-decimal [&>ol]:list-inside break-word relative overflow-hidden ${bodyState === COLLAPSED ? '' : 'after:content-none'} after:w-full after:h-10 after:absolute after:left-0 after:top-0 after:translate-y-full after:bg-gradient-to-b after:from-transparent after:to-[inherit]`}
       dangerouslySetInnerHTML={{ __html: html }}
       style={{
         minHeight: `${MIN_TEXTAREA_HEIGHT_px}px`,
         display: bodyState === EDITING ? 'none' : 'block',
+        backgroundColor: body !== initialQuestion.body ? 'var(--bg-3)' : 'transparent',
       }}
       ref={rendererRef}
     />
