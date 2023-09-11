@@ -28,6 +28,7 @@
     "amqplib": "^0.10.3",
     "concurrently": "^8.2.1",
     "net": "^1.0.2",
+    "bcrypt": "^5.1.1",
     "next": "^13.4.13",
     "next-auth": "^4.22.4",
     "react": "18.2.0",
@@ -39,6 +40,7 @@
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.1",
+    "@types/bcrypt": "^5.0.0",
     "@types/eslint": "^8.44.2",
     "@types/node": "^18.16.0",
     "@types/react": "^18.2.20",
