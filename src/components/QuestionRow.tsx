@@ -27,14 +27,12 @@ type QuestionRowProps = {
   indeterminate?: boolean;
 } & HTMLAttributes<HTMLDivElement>;
 export const QuestionRow = (props: QuestionRowProps) => {
-  const { 
-    question, initialQuestion, 
-    onQuestionChange, onQuestionDelete, 
-    checked, indeterminate, 
-    ...others 
+  const {
+    question, initialQuestion,
+    onQuestionChange, onQuestionDelete,
+    checked, indeterminate,
+    ...others
   } = props;
-  const { title, body, difficulty, category } = question;
-
   const { title, body, difficulty, category } = question;
 
   const [bodyState, setBodyState] = useState(BODY_STATE.COLLAPSED);
