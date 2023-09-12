@@ -18,16 +18,22 @@ enum BODY_STATE {
 }
 const { COLLAPSED, EXPANDED, EDITING } = BODY_STATE;
 
-export const QuestionRow = ({
-  question, initialQuestion, onQuestionChange, onQuestionDelete, checked, indeterminate, ...others
-}: {
+type QuestionRowProps = {
   question: Question;
   initialQuestion: Question;
   onQuestionChange: (q: Question) => void;
   onQuestionDelete?: () => void;
   checked?: boolean;
   indeterminate?: boolean;
-} & HTMLAttributes<HTMLDivElement>) => {
+} & HTMLAttributes<HTMLDivElement>;
+export const QuestionRow = (props: QuestionRowProps) => {
+  const { 
+    question, initialQuestion, 
+    onQuestionChange, onQuestionDelete, 
+    checked, indeterminate, 
+    ...others 
+  } = props;
+  const { title, body, difficulty, category } = question;
 
   const { title, body, difficulty, category } = question;
 
