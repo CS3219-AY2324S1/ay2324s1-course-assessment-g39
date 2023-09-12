@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type HTMLAttributes } from "react";
 import { z } from "zod";
 import { api } from "~/utils/api";
-import useDebounce from "~/utils/debounce";
+import useDebounce from "~/hooks/useDebounce";
 import { type Question } from "../types/global";
 import { parseMD, pasteText } from "../utils/utils";
 import { StyledCheckbox } from "./StyledCheckbox";
