@@ -17,6 +17,11 @@
     "docker:down": "docker-compose down"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.4.2",
+    "@fortawesome/free-brands-svg-icons": "^6.4.2",
+    "@fortawesome/free-regular-svg-icons": "^6.4.2",
+    "@fortawesome/free-solid-svg-icons": "^6.4.2",
+    "@fortawesome/react-fontawesome": "^0.2.0",
     "@next-auth/prisma-adapter": "^1.0.7",
     "@prisma/client": "^5.1.1",
     "@t3-oss/env-nextjs": "^0.6.0",
@@ -35,7 +40,7 @@
     "react-dom": "18.2.0",
     "superjson": "^1.13.1",
     "tls": "^0.0.1",
-    "ws": "^8.14.0",
+    "ws": "^8.14.1",
     "zod": "^3.21.4"
   },
   "devDependencies": {

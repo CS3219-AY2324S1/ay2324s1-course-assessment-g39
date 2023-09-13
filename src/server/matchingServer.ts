@@ -75,7 +75,7 @@ const sendToClients = (
 };
 
 const matchRequests = (ch: amqp.Channel) => {
-  for (let i = 0; i < MAX_DIFFICULTY; i++) {
+  for (let i = 0; i <= MAX_DIFFICULTY; i++) {
     const requests = pendingRequests.get(i);
 
     if (requests && requests.length >= 2) {
@@ -101,20 +101,20 @@ amqp.connect("amqp://localhost", (err, conn) => {
   conn.createChannel((err, ch) => {
     if (err) throw err;
 
-    const queue = "request_queue";
-
-    ch.assertQueue(queue, { durable: true });
-
     ch.prefetch(1);
 
     console.log("[*] Waiting for requests.");
 
-    ch.consume(queue, (msg) => {
+    const request_queue = "request_queue";
+
+    ch.assertQueue(request_queue, { durable: true });
+
+    ch.consume(request_queue, (msg) => {
       if (!msg) return;
 
       const difficulty = msg.properties.headers.difficulty as number;
       const category = msg.properties.headers.category as string;
-      const correlationId = msg.properties.correlationId as string;
+      const id = msg.properties.headers.id as string;
       const replyTo = msg.properties.replyTo as string;
 
       if (!pendingRequests.has(difficulty)) {
@@ -123,10 +123,11 @@ amqp.connect("amqp://localhost", (err, conn) => {
 
       const requests = pendingRequests.get(difficulty);
       if (requests !== undefined)
-        requests.push({ replyTo, category, correlationId });
+        requests.push({ replyTo, category, correlationId: id });
 
-      console.log("[x] Received request: '%s'", correlationId.toString());
+      console.log("[x] Received request: '%s'", id.toString());
 
+      // Very important to acknowledge the message, otherwise it will be sent again
       ch.ack(msg);
 
       setTimeout(() => {
@@ -134,14 +135,13 @@ amqp.connect("amqp://localhost", (err, conn) => {
         if (requests) {
           const index = requests.findIndex(
             (request) =>
-              request.category === category &&
-              request.correlationId === correlationId,
+              request.category === category && request.correlationId === id,
           );
           if (index !== -1) {
             const request = requests.splice(index, 1)[0];
             if (request) {
               ch.sendToQueue(replyTo, Buffer.from("Connection timed out"), {
-                correlationId: correlationId,
+                correlationId: id,
                 headers: {
                   isSuccess: false,
                 },
@@ -152,6 +152,29 @@ amqp.connect("amqp://localhost", (err, conn) => {
       }, 30000);
     });
 
+    const cancel_queue = "cancel_queue";
+
+    ch.assertQueue(cancel_queue, { durable: true });
+
+    ch.consume(cancel_queue, (msg) => {
+      const difficulty = msg!.properties.headers.difficulty as number;
+      const category = msg!.properties.headers.category as string;
+      const id = msg!.properties.headers.id as string;
+      const replyTo = msg!.properties.replyTo as string;
+
+      removeRequest(difficulty, category, id);
+      console.log("[x] Cancelled request: '%s'", id.toString());
+      ch.sendToQueue(replyTo, Buffer.from("Cancelled request"), {
+        correlationId: id,
+        headers: {
+          isSuccess: false,
+        },
+      });
+
+      // Very important to acknowledge the message, otherwise it will be sent again
+      ch.ack(msg!);
+    });
+
     setInterval(() => matchRequests(ch), 1000);
   });
 });
@@ -160,4 +183,5 @@ type Request = {
   replyTo: string;
   category: string;
   correlationId: string;
+  isCancel?: boolean;
 };
