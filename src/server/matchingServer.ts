@@ -1,48 +1,54 @@
 import amqp from "amqplib/callback_api";
 
+import { PrismaClient as PrismaClientPostgres } from "@prisma-db-psql/client";
+
+const MIN_DIFFICULTY = 0;
 const MAX_DIFFICULTY = 5;
 
-const pendingRequests = new Map<number, Array<Request>>();
+const prismaPostgres = new PrismaClientPostgres();
 
-const removeRequest = (
+const removeRequest = async (
+  id: string,
   difficulty: number,
   category: string,
-  correlationId: string,
 ) => {
-  const requests = pendingRequests.get(difficulty);
-  if (requests) {
-    const index = requests.findIndex(
-      (request) =>
-        request.category === category &&
-        request.correlationId === correlationId,
-    );
-    if (index !== -1) {
-      return requests.splice(index, 1)[0];
-    }
-  }
+  const removedRequest = await prismaPostgres.matchRequest
+    .delete({
+      where: {
+        id,
+        difficulty,
+        category,
+      },
+    })
+    .catch(() => {
+      return undefined;
+    });
 
-  return undefined;
+  return removedRequest;
 };
 
-const sendToClients = (
+const sendToClients = async (
   difficulty: number,
   ch: amqp.Channel,
   categorizedRequests: Map<string, Array<string>>,
 ) => {
-  for (const [category, correlationIds] of categorizedRequests) {
-    console.log(correlationIds);
-    if (correlationIds.length < 2) continue;
+  for (const [category, ids] of categorizedRequests) {
+    if (ids.length < 2) continue;
 
-    const index1 = Math.floor(Math.random() * correlationIds.length);
-    const correlationId1 = correlationIds.splice(index1, 1)[0];
-    const request1 = correlationId1
-      ? removeRequest(difficulty, category, correlationId1)
+    const index1 = Math.floor(Math.random() * ids.length);
+    const id1 = ids.splice(index1, 1)[0];
+    const request1 = id1
+      ? await Promise.resolve(removeRequest(id1, difficulty, category)).then(
+          (res) => {
+            return res;
+          },
+        )
       : undefined;
 
-    const index2 = Math.floor(Math.random() * correlationIds.length);
-    const correlationId2 = correlationIds.splice(index2, 1)[0];
-    const request2 = correlationId2
-      ? removeRequest(difficulty, category, correlationId2)
+    const index2 = Math.floor(Math.random() * ids.length);
+    const id2 = ids.splice(index2, 1)[0];
+    const request2 = id2
+      ? await Promise.resolve(removeRequest(id2, difficulty, category))
       : undefined;
 
     if (request1 && request2) {
@@ -50,23 +56,23 @@ const sendToClients = (
       const replyTo2 = request2.replyTo;
 
       const msg1 = Buffer.from(
-        `You have been matched with another player: ${correlationId2}`,
+        `You have been matched with another player: ${id2}`,
       );
       const msg2 = Buffer.from(
-        `You have been matched with another player: ${correlationId1}`,
+        `You have been matched with another player: ${id1}`,
       );
 
       ch.sendToQueue(replyTo1, msg1, {
-        correlationId: correlationId1,
+        correlationId: id1,
         headers: {
-          partner: correlationId2,
+          partner: id2,
           isSuccess: true,
         },
       });
       ch.sendToQueue(replyTo2, msg2, {
-        correlationId: correlationId2,
+        correlationId: id2,
         headers: {
-          partner: correlationId1,
+          partner: id1,
           isSuccess: true,
         },
       });
@@ -74,9 +80,17 @@ const sendToClients = (
   }
 };
 
-const matchRequests = (ch: amqp.Channel) => {
-  for (let i = 0; i <= MAX_DIFFICULTY; i++) {
-    const requests = pendingRequests.get(i);
+const matchRequests = async (ch: amqp.Channel) => {
+  for (let i = MIN_DIFFICULTY; i <= MAX_DIFFICULTY; i++) {
+    const requests = await prismaPostgres.matchRequest
+      .findMany({
+        where: {
+          difficulty: i,
+        },
+      })
+      .then((res) => {
+        return res;
+      });
 
     if (requests && requests.length >= 2) {
       const categorizedRequests = requests.reduce((acc, request) => {
@@ -84,13 +98,13 @@ const matchRequests = (ch: amqp.Channel) => {
           acc.set(request.category, []);
         }
 
-        const correlationIds = acc.get(request.category);
-        if (correlationIds) correlationIds.push(request.correlationId);
+        const ids = acc.get(request.category);
+        if (ids) ids.push(request.id);
 
         return acc;
       }, new Map<string, Array<string>>());
 
-      sendToClients(i, ch, categorizedRequests);
+      await sendToClients(i, ch, categorizedRequests);
     }
   }
 };
@@ -101,14 +115,20 @@ amqp.connect("amqp://localhost", (err, conn) => {
   conn.createChannel((err, ch) => {
     if (err) throw err;
 
+    // Start with clean slate for dev
+    void Promise.resolve(prismaPostgres.matchRequest.deleteMany({}));
+
+    // https://amqp-node.github.io/amqplib/channel_api.html#channel_prefetch
     ch.prefetch(1);
 
     console.log("[*] Waiting for requests.");
 
     const request_queue = "request_queue";
 
+    // https://amqp-node.github.io/amqplib/channel_api.html#channel_assertQueue
     ch.assertQueue(request_queue, { durable: true });
 
+    // https://amqp-node.github.io/amqplib/channel_api.html#channel_consume
     ch.consume(request_queue, (msg) => {
       if (!msg) return;
 
@@ -117,13 +137,16 @@ amqp.connect("amqp://localhost", (err, conn) => {
       const id = msg.properties.headers.id as string;
       const replyTo = msg.properties.replyTo as string;
 
-      if (!pendingRequests.has(difficulty)) {
-        pendingRequests.set(difficulty, []);
-      }
-
-      const requests = pendingRequests.get(difficulty);
-      if (requests !== undefined)
-        requests.push({ replyTo, category, correlationId: id });
+      void Promise.resolve(
+        prismaPostgres.matchRequest.create({
+          data: {
+            id,
+            replyTo,
+            difficulty,
+            category,
+          },
+        }),
+      );
 
       console.log("[x] Received request: '%s'", id.toString());
 
@@ -131,15 +154,10 @@ amqp.connect("amqp://localhost", (err, conn) => {
       ch.ack(msg);
 
       setTimeout(() => {
-        const requests = pendingRequests.get(difficulty);
-        if (requests) {
-          const index = requests.findIndex(
-            (request) =>
-              request.category === category && request.correlationId === id,
-          );
-          if (index !== -1) {
-            const request = requests.splice(index, 1)[0];
-            if (request) {
+        void Promise.resolve(removeRequest(id, difficulty, category)).then(
+          (res) => {
+            if (res) {
+              // https://amqp-node.github.io/amqplib/channel_api.html#channel_sendToQueue
               ch.sendToQueue(replyTo, Buffer.from("Connection timed out"), {
                 correlationId: id,
                 headers: {
@@ -147,8 +165,8 @@ amqp.connect("amqp://localhost", (err, conn) => {
                 },
               });
             }
-          }
-        }
+          },
+        );
       }, 30000);
     });
 
@@ -162,8 +180,10 @@ amqp.connect("amqp://localhost", (err, conn) => {
       const id = msg!.properties.headers.id as string;
       const replyTo = msg!.properties.replyTo as string;
 
-      removeRequest(difficulty, category, id);
+      void Promise.resolve(removeRequest(id, difficulty, category));
+
       console.log("[x] Cancelled request: '%s'", id.toString());
+
       ch.sendToQueue(replyTo, Buffer.from("Cancelled request"), {
         correlationId: id,
         headers: {
@@ -175,13 +195,6 @@ amqp.connect("amqp://localhost", (err, conn) => {
       ch.ack(msg!);
     });
 
-    setInterval(() => matchRequests(ch), 1000);
+    setInterval(() => void matchRequests(ch), 1000);
   });
 });
-
-type Request = {
-  replyTo: string;
-  category: string;
-  correlationId: string;
-  isCancel?: boolean;
-};

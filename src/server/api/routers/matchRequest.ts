@@ -1,9 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import UserRequestHandler, {
-  type RequestResponse,
-} from "~/components/collab/UserRequestHandler";
+import UserRequestHandler from "~/components/collab/UserRequestHandler";
 
 const userObject = z.object({
   difficulty: z.number().min(0).max(5),
@@ -11,18 +9,16 @@ const userObject = z.object({
   id: z.string(),
 });
 
-let response: RequestResponse;
-
-export const matchUsersRouter = createTRPCRouter({
-  sendRequest: publicProcedure.input(userObject).mutation(async ({ input }) => {
+export const matchRequestRouter = createTRPCRouter({
+  addRequest: publicProcedure.input(userObject).mutation(async ({ input }) => {
     const { difficulty, category, id } = input;
 
     const requestHandler = new UserRequestHandler();
 
-    await requestHandler
+    const response = await requestHandler
       .sendRequest({ difficulty, category, id })
       .then((res) => {
-        response = res;
+        return res;
       });
 
     return response;
@@ -35,14 +31,14 @@ export const matchUsersRouter = createTRPCRouter({
 
       const requestHandler = new UserRequestHandler();
 
-      await requestHandler
+      const response = await requestHandler
         .cancelRequest({
           difficulty,
           category,
           id,
         })
         .then((res) => {
-          response = res;
+          return res;
         });
 
       return response;

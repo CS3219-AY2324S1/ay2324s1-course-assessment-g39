@@ -7,91 +7,119 @@ import { api } from "~/utils/api";
 import LoadingIcon from "../../components/collab/LoadingIcon";
 
 const MatchRequestPage = () => {
-  const [difficulty, setDifficulty] = useState(-1);
-  const [category, setCategory] = useState("");
-  const [id, setID] = useState("");
-  const [response, setResponse] = useState("");
-  const [statusMessage, setStatusMessage] = useState(
-    "Searching for partner...",
-  );
-  const [isWaiting, setIsWaiting] = useState(false);
-  const [requestFailed, setRequestFailed] = useState(false);
-  const [hasSetDifficulty, setHasSetDifficulty] = useState(false);
-  const [hasSetCategory, setHasSetCategory] = useState(false);
-  const [isDifficultyMissing, setIsDifficultyMissing] = useState(true);
-  const [isCategoryMissing, setIsCategoryMissing] = useState(true);
+  const [pageState, setPageState] = useState({
+    difficulty: -1,
+    category: "",
+    id: "",
+    response: "",
+    statusMessage: "Searching for partner...",
+    isWaiting: false,
+    requestFailed: false,
+    hasSetDifficulty: false,
+    hasSetCategory: false,
+    isDifficultyMissing: true,
+    isCategoryMissing: true,
+    isTimerActive: false,
+    waitingTime: 0,
+  });
+
+  const timer = useRef<NodeJS.Timer | null>(null);
+
   const difficultyMissingMessage = "Please select a difficulty";
   const categoryMissingMessage = "Please enter a category";
 
-  const [isTimerActive, setIsTimerActive] = useState(false);
-  const [waitingTime, setWaitingTime] = useState(0);
-  const timer = useRef<NodeJS.Timer | null>(null);
-
-  const addRequestMutation = api.matchUsers.sendRequest.useMutation({
+  const addRequestMutation = api.matchRequest.addRequest.useMutation({
     onSuccess: (data) => {
-      setResponse(data.msg);
-      console.log(response);
+      setPageState((prev) => ({
+        ...prev,
+        response: data.msg,
+      }));
+      console.log(data.msg);
 
       if (data.isSuccess) {
-        setStatusMessage("Found a match!");
-        setRequestFailed(false);
+        setPageState((prev) => ({
+          ...prev,
+          statusMessage: "Found a match!",
+          requestFailed: false,
+        }));
       } else {
-        setStatusMessage("Timeout. No match found.");
-        setRequestFailed(true);
+        setPageState((prev) => ({
+          ...prev,
+          statusMessage: "Timeout. No match found.",
+          requestFailed: true,
+        }));
       }
 
       clearInterval(timer.current!);
-      setIsTimerActive(false);
-      setWaitingTime(0);
+      setPageState((prev) => ({
+        ...prev,
+        isTimerActive: false,
+        waitingTime: 0,
+      }));
       timer.current = null;
     },
   });
 
-  const cancelRequestMutation = api.matchUsers.cancelRequest.useMutation({
+  const cancelRequestMutation = api.matchRequest.cancelRequest.useMutation({
     onSuccess: (data) => {
       console.log(data);
     },
   });
 
   const addRequest = () => {
-    if (isDifficultyMissing || isCategoryMissing) {
-      if (!hasSetDifficulty) setHasSetDifficulty(true);
-      if (!hasSetCategory) setHasSetCategory(true);
+    if (pageState.isDifficultyMissing || pageState.isCategoryMissing) {
+      if (!pageState.hasSetDifficulty)
+        setPageState((prev) => ({ ...prev, hasSetDifficulty: true }));
+      if (!pageState.hasSetCategory)
+        setPageState((prev) => ({ ...prev, hasSetCategory: true }));
       return;
     }
 
-    setIsWaiting(true);
-    setIsTimerActive(true);
-    setStatusMessage("Searching for partner...");
+    setPageState((prev) => ({
+      ...prev,
+      isWaiting: true,
+      isTimerActive: true,
+      statusMessage: "Searching for partner...",
+    }));
+
     // Placeholder for user id
     const randomId = window.crypto.getRandomValues(new Uint32Array(16))[0];
-    setID(
-      randomId ? randomId.toString() : window.crypto.randomUUID().toString(),
-    );
+    const requestId =
+      randomId?.toString() ?? window.crypto.randomUUID().toString();
+    setPageState((prev) => ({
+      ...prev,
+      id: requestId,
+    }));
     addRequestMutation.mutate({
-      difficulty: difficulty,
-      category: category,
-      id: randomId?.toString() ?? window.crypto.randomUUID().toString(),
+      difficulty: pageState.difficulty,
+      category: pageState.category,
+      id: requestId,
     });
   };
 
   const cancelRequest = () => {
     cancelRequestMutation.mutate({
-      difficulty: difficulty,
-      category: category,
-      id,
+      difficulty: pageState.difficulty,
+      category: pageState.category,
+      id: pageState.id,
     });
     clearInterval(timer.current!);
-    setIsTimerActive(false);
-    setWaitingTime(0);
+    setPageState((prev) => ({
+      ...prev,
+      isTimerActive: false,
+      waitingTime: 0,
+      isWaiting: false,
+    }));
     timer.current = null;
-    setIsWaiting(false);
   };
 
   useEffect(() => {
-    if (isTimerActive && !timer.current) {
+    if (pageState.isTimerActive && !timer.current) {
       timer.current = setInterval(() => {
-        setWaitingTime((prev) => prev + 1);
+        setPageState((prev) => ({
+          ...prev,
+          waitingTime: prev.waitingTime + 1,
+        }));
       }, 1000);
     }
   });
@@ -113,14 +141,21 @@ const MatchRequestPage = () => {
   ) => {
     event.preventDefault();
 
-    if (!hasSetDifficulty) setHasSetDifficulty(true);
+    if (!pageState.hasSetDifficulty)
+      setPageState((prev) => ({ ...prev, hasSetDifficulty: true }));
 
     const value = event.currentTarget.getAttribute("value");
 
-    setDifficulty(parseInt(value!));
+    setPageState((prev) => ({
+      ...prev,
+      difficulty: parseInt(value!),
+    }));
 
-    if (isDifficultyMissing) {
-      setIsDifficultyMissing(false);
+    if (pageState.isDifficultyMissing) {
+      setPageState((prev) => ({
+        ...prev,
+        isDifficultyMissing: false,
+      }));
     }
 
     const displayedDifficulty = document.querySelector(
@@ -131,9 +166,14 @@ const MatchRequestPage = () => {
   };
 
   const onCategoryChange = (value: string) => {
-    if (!hasSetCategory) setHasSetCategory(true);
-    setCategory(value);
-    setIsCategoryMissing(value ? false : true);
+    if (!pageState.hasSetCategory)
+      setPageState((prev) => ({ ...prev, hasSetCategory: true }));
+
+    setPageState((prev) => ({
+      ...prev,
+      category: value,
+      isCategoryMissing: value ? false : true,
+    }));
   };
 
   // TODO: join session
@@ -143,11 +183,11 @@ const MatchRequestPage = () => {
 
   return (
     <div className="min-h-screen bg-[#2f2f2f] text-center">
-      {isWaiting && (
-        <div className="queue-status-bar absolute left-1/2 w-80 -translate-x-1/2 justify-self-center bg-black text-white">
-          {isTimerActive && <LoadingIcon />}
-          <span>{statusMessage}</span>
-          {isTimerActive && (
+      {pageState.isWaiting && (
+        <div className="queue-status-bar absolute left-1/2 w-80 -translate-x-1/2 justify-self-center rounded-md bg-black text-white">
+          {pageState.isTimerActive && <LoadingIcon />}
+          <span>{pageState.statusMessage}</span>
+          {pageState.isTimerActive && (
             <button onClick={cancelRequest} className="h-6 w-6 rounded-full">
               <FontAwesomeIcon
                 icon={faXmark}
@@ -156,7 +196,7 @@ const MatchRequestPage = () => {
               />
             </button>
           )}
-          {!isTimerActive && requestFailed && (
+          {!pageState.isTimerActive && pageState.requestFailed && (
             <button
               onClick={addRequest}
               className="h-6 w-12 rounded-full bg-gray-500 text-white"
@@ -164,7 +204,7 @@ const MatchRequestPage = () => {
               Retry
             </button>
           )}
-          {!isTimerActive && !requestFailed && (
+          {!pageState.isTimerActive && !pageState.requestFailed && (
             <button
               onClick={joinSession}
               className="h-6 w-24 rounded-md bg-green-500 text-white"
@@ -174,9 +214,9 @@ const MatchRequestPage = () => {
           )}
         </div>
       )}
-      {isTimerActive && (
-        <div className="absolute left-1/2 top-9 w-1/6  -translate-x-1/2 justify-self-center bg-black text-white">
-          Time elapsed: {waitingTime} seconds
+      {pageState.isTimerActive && (
+        <div className="absolute left-1/2 top-9 w-1/6 -translate-x-1/2 justify-self-center rounded-md bg-black py-1 text-white">
+          Time elapsed: {pageState.waitingTime} seconds
         </div>
       )}
       <div className="absolute left-1/2 top-1/2 flex h-80 w-64 -translate-x-1/2 -translate-y-1/2 flex-col justify-evenly rounded-xl border p-5">
@@ -209,7 +249,7 @@ const MatchRequestPage = () => {
             </ul>
           </div>
 
-          {hasSetDifficulty && isDifficultyMissing && (
+          {pageState.hasSetDifficulty && pageState.isDifficultyMissing && (
             <span className="text-xs text-red-500">
               {difficultyMissingMessage}
             </span>
@@ -220,10 +260,10 @@ const MatchRequestPage = () => {
           <input
             className="w-full rounded-md p-2 text-center focus:outline-none"
             type="text"
-            value={category}
+            value={pageState.category}
             onChange={(e) => onCategoryChange(e.target.value)}
           />
-          {hasSetCategory && isCategoryMissing && (
+          {pageState.hasSetCategory && pageState.isCategoryMissing && (
             <span className="text-xs text-red-500">
               {categoryMissingMessage}
             </span>
@@ -231,11 +271,11 @@ const MatchRequestPage = () => {
         </div>
         <button
           className={`mt-5 rounded-md ${
-            isTimerActive ? "bg-purple-800" : "bg-purple-500"
+            pageState.isTimerActive ? "bg-purple-800" : "bg-purple-500"
           } p-2 text-lg text-white`}
           type="button"
           onClick={addRequest}
-          disabled={isTimerActive}
+          disabled={pageState.isTimerActive}
         >
           Find practice partner
         </button>
