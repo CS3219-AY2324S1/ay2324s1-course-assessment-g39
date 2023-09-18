@@ -10,9 +10,12 @@ This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3
 Start Docker engine and initialize the `.env` file. Then:
 
 ```bash
+    unzip data.zip                  # (optional) if you want to use the existing data...
+    mkdir data/{postgres,mongo,s3}  # (optional) ...or if you want to persist new data
     yarn
     yarn docker:up
-    yarn prisma:push # run this whenever you change the schema
+    yarn prisma:push                # run this whenever you change the schema
+    yarn prisma:studio              # (optional) open Prisma Studio to view/edit data
     yarn dev
 ```
 

@@ -22,7 +22,7 @@ const userUpdateObject = z.object({
   name: z.string().nullable(),
   email: z.string().nullable(),
   emailVerified: z.date().nullable(),
-  image: z.string().nullable()
+  image: z.string().nullable(),
 });
 
 export const userRouter = createTRPCRouter({
@@ -75,5 +75,3 @@ export const userRouter = createTRPCRouter({
         }
       })
 });
-
-
