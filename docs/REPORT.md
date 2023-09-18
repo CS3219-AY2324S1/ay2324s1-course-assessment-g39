@@ -2,7 +2,7 @@
 
 PeerPrep is a web application that aims to help students prepare for their interviews by providing a platform for them to practice their interview skills with their peers.
 
-It is built using the T3 Stack (TypeScript, TailwindCSS, Next.js, tRPC, Prisma, NextAuth.js) and deployed on **???**.
+It is built using the T3 Stack (TypeScript, TailwindCSS, Next.js, tRPC, Prisma, NextAuth.js), with a PostgreSQL + MongoDB + S3 database backend, and is deployed on Kubernetes.
 
 ## Appendix 1 - Requirements
 

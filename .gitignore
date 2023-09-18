@@ -11,6 +11,7 @@
 # database
 /prisma/db.sqlite
 /prisma/db.sqlite-journal
+data/**
 
 # next.js
 /.next/
@@ -23,6 +24,7 @@ next-env.d.ts
 # misc
 .DS_Store
 *.pem
+*.key
 
 # debug
 npm-debug.log*
@@ -40,7 +42,3 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-
-# db
-data/mongo/**
-data/postgres/**
