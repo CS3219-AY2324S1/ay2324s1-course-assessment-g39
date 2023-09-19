@@ -90,3 +90,105 @@ input[type=number]::-webkit-outer-spin-button
                 top: 25%
                 left: 25%
                 border-radius: 0.15rem
+
+@keyframes lds-dual-ring
+  0%
+    transform: rotate(0deg)
+  100%
+    transform: rotate(360deg)
+
+.lds-dual-ring
+  width: 16px
+  height: 16px
+
+  &:after
+    content: " "
+    display: block
+    width: 20px
+    height: 20px
+    margin: -3px
+    border-radius: 50%
+    border: 2px solid #fff
+    border-color: #{#fff} transparent #{#fff} transparent
+    animation: lds-dual-ring 1.2s linear infinite
+
+span.msg,
+span.choose
+  color: white
+  padding: 5px 0 10px
+  display: inherit
+
+/* Styling Selectbox */
+.dropdown
+  width: 100%
+  display: inline-block
+  background-color: #fff
+  border-radius: 0.375rem
+  box-shadow: 0 0 2px rgb(204, 204, 204)
+  transition: all 0.5s ease
+  position: relative
+  font-size: 14px
+  color: #474747
+  text-align: left
+
+  .select
+    cursor: pointer
+    display: block
+    padding: 10px
+    text-align: center
+
+    > i
+      font-size: 13px
+      color: #888
+      cursor: pointer
+      transition: all 0.3s ease-in-out
+      float: right
+      line-height: 20px
+
+  &:hover
+    box-shadow: 0 0 4px rgb(204, 204, 204)
+
+  &:active
+    background-color: #d0cbcb
+
+  &.active:hover,
+  &.active
+    box-shadow: 0 0 4px rgb(204, 204, 204)
+    border-radius: 2px 2px 0 0
+    background-color: #f8f8f8
+
+    .select > i
+      transform: rotate(-90deg)
+
+  .dropdown-menu
+    position: absolute
+    background-color: #fff
+    width: 100%
+    left: 0
+    margin-top: 1px
+    box-shadow: 0 1px 2px rgb(204, 204, 204)
+    border-radius: 0 1px 2px 2px
+    overflow: hidden
+    max-height: 144px
+    overflow-y: auto
+    z-index: 9
+
+    &:not(.active)
+      display: none
+
+    li
+      padding: 10px
+      transition: all 0.2s ease-in-out
+      cursor: pointer
+
+      &:hover
+        background-color: #f2f2f2
+
+      &:active
+        background-color: #e2e2e2
+
+.queue-status-bar
+  display: flex
+  justify-content: space-evenly
+  align-items: center
+  height: 5%

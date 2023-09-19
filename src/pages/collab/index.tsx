@@ -4,7 +4,7 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 
 import { api } from "~/utils/api";
 
-import LoadingIcon from "../../components/collab/LoadingIcon";
+import LoadingIcon from "~/components/LoadingIcon";
 
 const MatchRequestPage = () => {
   const [pageState, setPageState] = useState({
