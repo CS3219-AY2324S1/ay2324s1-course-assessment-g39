@@ -10,8 +10,7 @@ import DiscordProvider from "next-auth/providers/discord";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { env } from "~/env.mjs";
 import { prismaPostgres as prisma } from "~/server/db";
-import bcrypt from 'bcrypt'
-
+import bcrypt from "bcrypt";
 
 // todo: make this shared -> via some kind of env variable or smth
 export const saltRounds = 10;
@@ -19,8 +18,7 @@ export const saltRounds = 10;
 export async function hashPassword(password: string) {
   return await bcrypt
     .genSalt(saltRounds)
-    .then(salt => bcrypt.hash(password, salt));
-
+    .then((salt) => bcrypt.hash(password, salt));
 }
 
 /**
@@ -58,7 +56,7 @@ export const authOptions: NextAuthOptions = {
         token = {
           ...token,
           ...user,
-        }
+        };
       }
       return await token;
     },
@@ -69,9 +67,9 @@ export const authOptions: NextAuthOptions = {
           user: {
             ...token,
             ...session.user,
-            id: token.id as string
-          }
-        }
+            id: token.id as string,
+          },
+        };
       }
       return await session;
     },
@@ -84,35 +82,45 @@ export const authOptions: NextAuthOptions = {
     }),
     CredentialsProvider({
       name: "Email",
-    // `credentials` is used to generate a form on the sign in page.
-    // You can specify which fields should be submitted, by adding keys to the `credentials` object.
-    // e.g. domain, username, password, 2FA token, etc.
-    // You can pass any HTML attribute to the <input> tag through the object.
-    credentials: {
-      email: { label: "Email", type: "email", placeholder: "jsmith@company.com" },
-      password: { label: "Password", type: "password", placeholder: "••••••••" }
-    },
-    async authorize(credentials, req) {
-      // Add logic here to look up the user from the credentials supplied
-     
-      if (!req.body || !req.body.email || !req.body.password) return null;
-      
-      const user = await prisma.user.findUnique({ where: { email: req.body.email } });
-      if (!user) return null;
-      if (!user.password) return null;
-      const pw = req?.body?.password;
-      if (user && bcrypt.compareSync(pw, user.password)) {
-        // Any object returned will be saved in `user` property of the JWT
-        const { password, ...userData } = user;
-        return userData;
-      } else {
-        // If you return null then an error will be displayed advising the user to check their details.
-        return null
+      // `credentials` is used to generate a form on the sign in page.
+      // You can specify which fields should be submitted, by adding keys to the `credentials` object.
+      // e.g. domain, username, password, 2FA token, etc.
+      // You can pass any HTML attribute to the <input> tag through the object.
+      credentials: {
+        email: {
+          label: "Email",
+          type: "email",
+          placeholder: "jsmith@company.com",
+        },
+        password: {
+          label: "Password",
+          type: "password",
+          placeholder: "••••••••",
+        },
+      },
+      async authorize(credentials, req) {
+        // Add logic here to look up the user from the credentials supplied
 
-        // You can also Reject this callback with an Error thus the user will be sent to the error page with the error message as a query parameter
-      }
-    }
-    })
+        if (!req.body || !req.body.email || !req.body.password) return null;
+
+        const user = await prisma.user.findUnique({
+          where: { email: req.body.email },
+        });
+        if (!user) return null;
+        if (!user.password) return null;
+        const pw = req?.body?.password;
+        if (user && bcrypt.compareSync(pw, user.password)) {
+          // Any object returned will be saved in `user` property of the JWT
+          const { password, ...userData } = user;
+          return userData;
+        } else {
+          // If you return null then an error will be displayed advising the user to check their details.
+          return null;
+
+          // You can also Reject this callback with an Error thus the user will be sent to the error page with the error message as a query parameter
+        }
+      },
+    }),
     /**
      * ...add more providers here.
      *
