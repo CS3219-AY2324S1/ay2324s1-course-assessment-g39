@@ -87,13 +87,16 @@ export const userRouter = createTRPCRouter({
         },
       });
 
-      if (!user) {
+      if (!user || !user.email) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "User not found",
         });
       }
 
-      return user;
+      return {
+        ...user,
+        email: user.email,
+      };
     }),
 });

@@ -24,7 +24,7 @@ export default function Home() {
             Go to Signup
           </Link>
           <Link
-            href="/profile"
+            href="/profile/account"
             className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
           >
             User Profile
