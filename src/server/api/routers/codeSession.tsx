@@ -21,8 +21,23 @@ const updateCodeSessionObject = z.object({
 export const codeSessionRouter = createTRPCRouter({
   createSession: protectedProcedure
     .input(createSessionObject)
-    .query(({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
+      // create session + create codeSpace
+      const result = await prismaPostgres.codeSpace.create({
+        data: {
+          code: "",
+          userId: ctx.session.user.id,
+        }
+      });
       
+      const codeSession = await prismaPostgres.codeSession.create({
+        data: {
+          codeSpaceId: result.id,
+          userId: ctx.session.user.id,
+        }
+      });
+      // return session identifier
+      return codeSession;
     }),
   updateSession: protectedProcedure
     .input(updateCodeSessionObject)

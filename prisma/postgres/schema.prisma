@@ -41,16 +41,15 @@ model Account {
 }
 
 model Session {
-  id           String        @id @default(cuid())
-  sessionToken String        @unique
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  codeSession  CodeSession[]
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CodeSpace {
-  id            String
+  id            String       @default(cuid())
   userId        String
   code          String
   user          User         @relation(fields: [userId], references: [id], onDelete: NoAction)
@@ -60,15 +59,15 @@ model CodeSpace {
   @@id([id, userId])
 }
 
+// todo: Consider merging this with code space
 model CodeSession {
-  id          String
-  sessionId   String
+  id          String    @default(cuid())
   userId      String // the primary owner of the codeSession
+  name        String    @default("")
   codeSpaceId String
-  session     Session   @relation(fields: [sessionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   codeSpace   CodeSpace @relation(fields: [codeSpaceId, userId], references: [id, userId], onDelete: NoAction)
 
-  @@id([id, sessionId, userId])
+  @@id([id, userId])
   @@unique([codeSpaceId, userId]) // Can only have one code session per code space
 }
 
