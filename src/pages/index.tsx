@@ -18,10 +18,16 @@ export default function Home() {
             Go to Questions
           </Link>
           <Link
-            href="/signup/samyipsh"
+            href="/signup/"
             className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
           >
             Go to Signup
+          </Link>
+          <Link
+            href="/profile"
+            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
+          >
+            User Profile
           </Link>
         </div>
       </main>
