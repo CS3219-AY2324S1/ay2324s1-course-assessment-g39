@@ -40,6 +40,20 @@ const eventEmittors: Map<string, EventEmitter> = new Map<
 
 // temporary storage for modification -> deleted when code session ends + applied
 const codeSessionsCode: Map<string, Text> = new Map<string, Text>();
+const clientIDs: Set<string> = new Set<string>();
+
+function makeid(length: number) {
+  let result = '';
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const charactersLength = characters.length;
+  let counter = 0;
+  while (counter < length) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    counter += 1;
+  }
+  return result;
+}
+
 
 // todo: add RabbitMQ to send updates to code || add model storing the updates to code -> will process the changes periodically -> changes will be delivered to users
 // the two share the same codebase and the same changes applied with their id's, so should not have any synchronisation issues
@@ -163,21 +177,37 @@ export const codeSessionRouter = createTRPCRouter({
       const emitter = eventEmittors.get(input.codeSessionId);
       if (!emitter) {
         // session not created -> cannot subscribe
-        throw new TRPCError({
-          message: "Failed to subscribe",
-          code: "BAD_REQUEST",
-        });
+        eventEmittors.set(input.codeSessionId, new EventEmitter());
       }
-      return observable<Update>((emit) => {
-        const onAdd = (data: Update) => {
+      
+      const emiter2 = eventEmittors.get(input.codeSessionId);
+      return observable<{ clientId: string, changes: unknown }>((emit) => {
+        const onAdd = (data: { clientId: string, changes: unknown }) => {
           emit.next(data);
         };
-        emitter.on("onUpdate", onAdd);
+        
+        
+        emiter2!.on("onUpdate", onAdd);
         return () => {
-          emitter.off("onUpdate", onAdd);
+          emiter2!.off("onUpdate", onAdd);
         };
       });
     }),
+    getClientId: protectedProcedure
+      .query(() => {
+        let val = makeid(15);
+        while (clientIDs.has(val)) {
+          val = makeid(15);
+        }
+        return {
+          clientId: val,
+        }
+      }),
+    deleteClientId: protectedProcedure
+      .input(z.object({ clientId: z.string() }))
+      .query(({ input }) => {
+        clientIDs.has(input.clientId) && clientIDs.delete(input.clientId);
+      }),
   /**
    * Endpoint called to create a session.
    */
@@ -222,6 +252,11 @@ export const codeSessionRouter = createTRPCRouter({
         codeSessionId: input.codeSession,
         currentUserId: ctx.session.user.id,
       });
+      if (codeSessionsCode.has(input.codeSession)) {
+        return {
+          code: codeSessionsCode.get(input.codeSession)?.toString() ?? '',
+        };
+      }
 
       const codeSpace = await prismaPostgres.codeSpace.findUnique({
         where: {
@@ -237,9 +272,10 @@ export const codeSessionRouter = createTRPCRouter({
           message: "Code space does not exist",
         });
       }
+      
+      codeSessionsCode.set(input.codeSession, Text.of(codeSpace.code.split("\n")))
       return {
-        code: codeSpace.code,
-        codeSpaceId: codeSpace.id,
+        code: codeSpace.code
       };
     }),
   updateSession: protectedProcedure
@@ -249,14 +285,27 @@ export const codeSessionRouter = createTRPCRouter({
       await authoriseCodeSession({ codeSessionId: input.codeSessionId, currentUserId: ctx.session.user.id });
       // no polling raises the question of when should saving be done?
       const ee = eventEmittors.get(input.codeSessionId);
-      const change = ChangeSet.fromJSON(input.update.changes);
+      const change = ChangeSet.fromJSON(JSON.parse(input.update.changes));
       ee?.emit("onUpdate", {
-        change,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        changes: change.toJSON(),
         clientId: input.update.clientId
       });
-      const currCode = codeSessionsCode.get(input.codeSessionId);
-      if (!currCode) throw new TRPCError({ code: "BAD_REQUEST", message: "Code session not in memory" });
-      codeSessionsCode.set(input.codeSessionId, change.apply(currCode));
+      let currCode = codeSessionsCode.get(input.codeSessionId);
+      if (!currCode) {
+        const values = await prismaPostgres.codeSpace.findUnique({
+          where: {
+            codeSessionId: input.codeSessionId
+          },
+          select: {
+            code: true
+          }
+        });
+        if (!values) throw new TRPCError({ code: "BAD_REQUEST", message: "Failed to fetch code" });
+        codeSessionsCode.set(input.codeSessionId, Text.of(values.code.split("\n")));
+        currCode = codeSessionsCode.get(input.codeSessionId);
+      }
+      codeSessionsCode.set(input.codeSessionId, change.apply(currCode!));
       return {
         message: "Success"
       }

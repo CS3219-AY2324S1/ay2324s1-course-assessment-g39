@@ -1,50 +1,70 @@
+import type { Update } from '@codemirror/collab';
+import { ChangeSet, Text as CMText } from '@uiw/react-codemirror';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { api } from '~/utils/api';
-import useDebounce from './useDebounce';
 
-export default function useCodeSession(codeSessionId: string): [string, (v: string) => void] {
+export default function useCodeSession(codeSessionId: string): [CMText, (v: { changes: ChangeSet }) => void] {
     const { data } = useSession();
-    const [code, setCode] = useState("");
+    const [code, setCode] = useState<CMText>(CMText.of(['']));
     const [loadedCode, setLoadedCode] = useState(false);
+    const [clientId, setClientId] = useState('');
+    const deleteClientIdQuery = api.codeSession.deleteClientId.useQuery({ clientId }, { enabled: false });
+    const clientIdQuery = api.codeSession.getClientId.useQuery(undefined, { enabled: false });
+    
+    const updateSession = api.codeSession.updateSession.useMutation();
     const codeSessionQuery = api.codeSession.getSession.useQuery({
         codeSession: codeSessionId,
-    }, { enabled: data != null }); 
-    const codeSessionSubscription = api.codeSession.suscribeToSession.useSubscription({ codeSessionId });
-    
-    const [modified, setModified] = useState(false);
+    }, { enabled: data != null });
+    api.codeSession.suscribeToSession.useSubscription({ codeSessionId }, {
+        onData(update: { clientId: string, changes: any }) {
+            if (update.clientId == clientId) {
+                return;
+            }
+            const changes = ChangeSet.fromJSON(update.changes);
+            setCode(changes.apply(code));
+        },
+        async onError() {
+            await deleteClientIdQuery.refetch();
+        }
+    });
     useEffect(() => {
- 
+        async function updateClientId() {
+            const result = await clientIdQuery.refetch();
+            if (!result) return;
+            setClientId(result.data!.clientId);
+        }
+        void updateClientId();
+    }, []);
+
+    useEffect(() => {
+        
+        console.log(loadedCode);
         if (data == null) return;
-        if (!(codeSessionQuery?.data?.code)) return;
+        
+        if (!(codeSessionQuery?.data?.code != undefined)) return;
         if (loadedCode) return;
-        setCode(codeSessionQuery.data.code);
+        const text = CMText.of(codeSessionQuery.data.code.split("\n"));
+        setCode(text);
         
         setLoadedCode(true);
         
-    }, [data, codeSessionQuery]);    
+    }, [data]);    
 
 
-    const updateSession = api.codeSession.updateSession.useMutation();
-    const updateCode = (code: string) => {
+    const updateCode = (update: { changes: ChangeSet }) => {
+        
         if (!loadedCode) return;
-        setModified(true);
-        setCode(code);
+        const new_text = update.changes.apply(code);
+        console.log(update.changes.toJSON());
+        setCode(new_text);
         updateSession.mutate({
-            code: code,
-            codeSpaceId: codeSessionQuery.data!.codeSpaceId,
+            update: {
+                clientId: clientId,
+                changes: JSON.stringify(update.changes.toJSON())
+            },
+            codeSessionId
         });
     };
-    useEffect(() => {
-        if (!codeSessionQuery) return;
-        if (!codeSessionQuery.data) return;
-        if (!loadedCode) return;
-
-        // updating code 
-        updateSession.mutate({
-            code: code,
-            codeSpaceId: codeSessionQuery.data.codeSpaceId,
-        });
-    }, [code]);
     return [code, updateCode];
 }

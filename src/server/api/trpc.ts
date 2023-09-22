@@ -50,6 +50,7 @@ const createInnerTRPCContext = (opts: CreateContextOptions) => {
   };
 };
 
+// Context creator used for WS
 export const createWSTRPCContext = async (opts: 
     NodeHTTPCreateContextFnOptions<IncomingMessage, ws>
   | trpcNext.CreateNextContextOptions) => {
