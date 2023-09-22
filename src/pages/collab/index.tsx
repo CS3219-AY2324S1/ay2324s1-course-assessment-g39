@@ -17,8 +17,6 @@ const MatchRequestPage = () => {
     requestFailed: false,
     hasSetDifficulty: false,
     hasSetCategory: false,
-    isDifficultyMissing: true,
-    isCategoryMissing: true,
     isTimerActive: false,
     waitingTime: 0,
   });
@@ -27,6 +25,15 @@ const MatchRequestPage = () => {
 
   const difficultyMissingMessage = "Please select a difficulty";
   const categoryMissingMessage = "Please enter a category";
+
+  const difficultyLevels = [
+    "Very Easy",
+    "Easy",
+    "Medium",
+    "Hard",
+    "Very Hard",
+    "Insane",
+  ];
 
   const addRequestMutation = api.matchRequest.addRequest.useMutation({
     onSuccess: (data) => {
@@ -67,7 +74,7 @@ const MatchRequestPage = () => {
   });
 
   const addRequest = () => {
-    if (pageState.isDifficultyMissing || pageState.isCategoryMissing) {
+    if (pageState.difficulty == -1 || pageState.category == "") {
       if (!pageState.hasSetDifficulty)
         setPageState((prev) => ({ ...prev, hasSetDifficulty: true }));
       if (!pageState.hasSetCategory)
@@ -151,7 +158,7 @@ const MatchRequestPage = () => {
       difficulty: parseInt(value!),
     }));
 
-    if (pageState.isDifficultyMissing) {
+    if (pageState.difficulty == -1) {
       setPageState((prev) => ({
         ...prev,
         isDifficultyMissing: false,
@@ -228,28 +235,19 @@ const MatchRequestPage = () => {
               <span>Select Difficulty</span>
             </div>
             <ul className="dropdown-menu">
-              <li value={0} onClick={(event) => selectDifficulty(event)}>
-                Very Easy
-              </li>
-              <li value={1} onClick={(event) => selectDifficulty(event)}>
-                Easy
-              </li>
-              <li value={2} onClick={(event) => selectDifficulty(event)}>
-                Medium
-              </li>
-              <li value={3} onClick={(event) => selectDifficulty(event)}>
-                Hard
-              </li>
-              <li value={4} onClick={(event) => selectDifficulty(event)}>
-                Very Hard
-              </li>
-              <li value={5} onClick={(event) => selectDifficulty(event)}>
-                Insane
-              </li>
+              {difficultyLevels.map((difficulty, index) => (
+                <li
+                  key={index}
+                  value={index}
+                  onClick={(event) => selectDifficulty(event)}
+                >
+                  {difficulty}
+                </li>
+              ))}
             </ul>
           </div>
 
-          {pageState.hasSetDifficulty && pageState.isDifficultyMissing && (
+          {pageState.hasSetDifficulty && pageState.difficulty == -1 && (
             <span className="text-xs text-red-500">
               {difficultyMissingMessage}
             </span>
@@ -263,7 +261,7 @@ const MatchRequestPage = () => {
             value={pageState.category}
             onChange={(e) => onCategoryChange(e.target.value)}
           />
-          {pageState.hasSetCategory && pageState.isCategoryMissing && (
+          {pageState.hasSetCategory && pageState.category == "" && (
             <span className="text-xs text-red-500">
               {categoryMissingMessage}
             </span>

@@ -42,8 +42,8 @@ interface CreateContextOptions {
 const createInnerTRPCContext = (opts: CreateContextOptions) => {
   return {
     session: opts.session,
-    prismaPostgres: prismaPostgres,
-    prismaMongo: prismaMongo,
+    prismaPostgres,
+    prismaMongo,
   };
 };
 
