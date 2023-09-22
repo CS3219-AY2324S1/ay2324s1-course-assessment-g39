@@ -27,7 +27,7 @@ const userUpdateObject = z.object({
 });
 
 export const userRouter = createTRPCRouter({
-  create: publicProcedure.input(userObject).mutation(async ({ input }) => {
+  create: publicProcedure.input(userObject).mutation(async ({ ctx, input }) => {
     const { password, ...values } = input;
     if (!password) {
       return {
@@ -35,7 +35,7 @@ export const userRouter = createTRPCRouter({
       };
     }
     const passwordHash = await hashPassword(password);
-    await prisma.user.create({
+    await ctx.prismaPostgres.user.create({
       data: {
         ...values,
         password: passwordHash,
@@ -52,8 +52,8 @@ export const userRouter = createTRPCRouter({
         email: z.string(),
       }),
     )
-    .query(async ({ input }) => {
-      await prisma.user.delete({
+    .query(async ({ ctx, input }) => {
+      await ctx.prismaPostgres.user.delete({
         where: {
           email: input.email,
         },
@@ -65,14 +65,15 @@ export const userRouter = createTRPCRouter({
 
   update: protectedProcedure
     .input(userUpdateObject)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { id, ...remainder } = input;
-      await prisma.user.update({
+      await ctx.prismaPostgres.user.update({
         where: {
           id: id,
         },
         data: remainder,
       });
+
       return {
         message: "User updated",
       };
@@ -81,22 +82,44 @@ export const userRouter = createTRPCRouter({
   getByUsername: publicProcedure
     .input(z.object({ username: z.string() }))
     .query(async ({ ctx, input }) => {
-      const user = await prisma.user.findFirst({
+      const usersByName = await ctx.prismaPostgres.user.findMany({
+        take: 10,
         where: {
           name: input.username,
         },
       });
 
-      if (!user || !user.email) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "User not found",
-        });
-      }
+      return usersByName;
+      // if (!user || !user.email) {
+      //   throw new TRPCError({
+      //     code: "INTERNAL_SERVER_ERROR",
+      //     message: "User not found",
+      //   });
+      // }
 
-      return {
-        ...user,
-        email: user.email,
-      };
+      // return {
+      //   ...user,
+      //   email: user.email,
+      // };
     }),
+
+  getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: ctx.session.user.id,
+      },
+    });
+
+    if (!user || !user.email) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "User not found",
+      });
+    }
+
+    return {
+      ...user,
+      email: user.email,
+    };
+  }),
 });
