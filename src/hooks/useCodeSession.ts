@@ -17,6 +17,7 @@ export default function useCodeSession(codeSessionId: string): [CMText, (v: { ch
         codeSession: codeSessionId,
     }, { enabled: data != null });
     api.codeSession.suscribeToSession.useSubscription({ codeSessionId }, {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onData(update: { clientId: string, changes: any }) {
             if (update.clientId == clientId) {
                 return;

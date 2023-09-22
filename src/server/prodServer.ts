@@ -1,4 +1,3 @@
-import { createContext } from './context';
 import { appRouter } from './api/root';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
 import http from 'http';
