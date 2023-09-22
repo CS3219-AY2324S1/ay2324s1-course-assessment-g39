@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build:1-next": "cross-env NODE_ENV=production next build",
+    "build:1-next": "dotenv -v NODE_ENV=production next build",
     "build:2-server": "tsc --project tsconfig.server.json",
     "build": "run-s build:*",
     "dev": "run-p dev:*",
