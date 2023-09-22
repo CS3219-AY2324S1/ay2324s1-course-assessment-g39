@@ -10,18 +10,19 @@ import UserDenied from '~/components/UserDenied';
 export default function App() {
 
   const { data } = useSession();
-  const [code, setCode] = useCodeSession();
-  
+  // const [code, setCode] = useCodeSession();
+  const [code, setCode] = useState("");
+
 
   // save code
   useEffect(() => {
     console.log(code);
   }, [code]);
-  
+
 
   if (!data) {
     return <UserDenied />
   }
-   
+
   return <CodeMirror value={code} onChange={(val, ViewUpdate) => setCode(val)} extensions={[markdown({ base: markdownLanguage, codeLanguages: languages })]} />;
 }

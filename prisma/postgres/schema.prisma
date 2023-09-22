@@ -52,6 +52,7 @@ model CodeSpace {
   id            String       @default(cuid())
   userId        String
   code          String
+  name          String       @default("")
   user          User         @relation(fields: [userId], references: [id], onDelete: NoAction)
   codeSessionId String?
   codeSession   CodeSession?
@@ -59,28 +60,45 @@ model CodeSpace {
   @@id([id, userId])
 }
 
-// todo: Consider merging this with code space
 model CodeSession {
-  id          String    @default(cuid())
-  userId      String // the primary owner of the codeSession
-  name        String    @default("")
-  codeSpaceId String
-  codeSpace   CodeSpace @relation(fields: [codeSpaceId, userId], references: [id, userId], onDelete: NoAction)
+  // unique id for session sharing
+  id              String                @id @unique @default(cuid())
+  userId          String // the primary owner of the codeSession
+  codeSpaceId     String
+  codeSpace       CodeSpace             @relation(fields: [codeSpaceId, userId], references: [id, userId], onDelete: NoAction)
+  codeSessionAuth CodeSessionUserAuth[]
 
-  @@id([id, userId])
   @@unique([codeSpaceId, userId]) // Can only have one code session per code space
 }
 
+// temporary auth to authorise other users
+// many to many relation for session - users auth
+model CodeSessionUserAuth {
+  codeSessionId    String
+  authorisedUserId String // the user the authorisation is for
+  createdAt        DateTime    @default(now()) // to be updated on timeout
+  authUser         User        @relation(name: "auth_receiver", fields: [authorisedUserId], references: [id], onDelete: NoAction)
+  codeSession      CodeSession @relation(fields: [codeSessionId], references: [id], onDelete: NoAction)
+
+  @@id([codeSessionId, authorisedUserId])
+}
+
+// todo: 
+// model CodeChanges {
+
+// }
+
 model User {
-  id            String      @id @default(cuid())
-  name          String?
-  email         String?     @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  accounts      Account[]
-  sessions      Session[]
-  codeSpace     CodeSpace[]
+  id                  String                @id @default(cuid())
+  name                String?
+  email               String?               @unique
+  emailVerified       DateTime?
+  image               String?
+  password            String?
+  accounts            Account[]
+  sessions            Session[]
+  codeSpace           CodeSpace[]
+  codeSessionAuthRecv CodeSessionUserAuth[] @relation(name: "auth_receiver")
 }
 
 model VerificationToken {
