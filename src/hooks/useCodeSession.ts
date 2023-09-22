@@ -10,6 +10,8 @@ export default function useCodeSession(codeSessionId: string): [string, (v: stri
     const codeSessionQuery = api.codeSession.getSession.useQuery({
         codeSession: codeSessionId,
     }, { enabled: data != null }); 
+    const codeSessionSubscription = api.codeSession.suscribeToSession.useSubscription({ codeSessionId });
+    
     const [modified, setModified] = useState(false);
     useEffect(() => {
  

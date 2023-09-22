@@ -53,8 +53,8 @@ model CodeSpace {
   userId        String
   code          String
   name          String       @default("")
-  user          User         @relation(fields: [userId], references: [id], onDelete: NoAction)
-  codeSessionId String?
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeSessionId String?      @unique
   codeSession   CodeSession?
 
   @@id([id, userId])
@@ -65,7 +65,7 @@ model CodeSession {
   id              String                @id @unique @default(cuid())
   userId          String // the primary owner of the codeSession
   codeSpaceId     String
-  codeSpace       CodeSpace             @relation(fields: [codeSpaceId, userId], references: [id, userId], onDelete: NoAction)
+  codeSpace       CodeSpace             @relation(fields: [codeSpaceId, userId], references: [id, userId], onDelete: Cascade)
   codeSessionAuth CodeSessionUserAuth[]
 
   @@unique([codeSpaceId, userId]) // Can only have one code session per code space
@@ -77,8 +77,8 @@ model CodeSessionUserAuth {
   codeSessionId    String
   authorisedUserId String // the user the authorisation is for
   createdAt        DateTime    @default(now()) // to be updated on timeout
-  authUser         User        @relation(name: "auth_receiver", fields: [authorisedUserId], references: [id], onDelete: NoAction)
-  codeSession      CodeSession @relation(fields: [codeSessionId], references: [id], onDelete: NoAction)
+  authUser         User        @relation(name: "auth_receiver", fields: [authorisedUserId], references: [id], onDelete: Cascade)
+  codeSession      CodeSession @relation(fields: [codeSessionId], references: [id], onDelete: Cascade)
 
   @@id([codeSessionId, authorisedUserId])
 }
