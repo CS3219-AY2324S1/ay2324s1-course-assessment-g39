@@ -15,8 +15,7 @@ const MatchRequestPage = () => {
     statusMessage: "Searching for partner...",
     isWaiting: false,
     requestFailed: false,
-    hasSetDifficulty: false,
-    hasSetCategory: false,
+    hasSubmitted: false,
     isTimerActive: false,
     waitingTime: 0,
   });
@@ -75,10 +74,8 @@ const MatchRequestPage = () => {
 
   const addRequest = () => {
     if (pageState.difficulty == -1 || pageState.category == "") {
-      if (!pageState.hasSetDifficulty)
-        setPageState((prev) => ({ ...prev, hasSetDifficulty: true }));
-      if (!pageState.hasSetCategory)
-        setPageState((prev) => ({ ...prev, hasSetCategory: true }));
+      if (!pageState.hasSubmitted)
+        setPageState((prev) => ({ ...prev, hasSubmitted: true }));
       return;
     }
 
@@ -148,9 +145,6 @@ const MatchRequestPage = () => {
   ) => {
     event.preventDefault();
 
-    if (!pageState.hasSetDifficulty)
-      setPageState((prev) => ({ ...prev, hasSetDifficulty: true }));
-
     const value = event.currentTarget.getAttribute("value");
 
     setPageState((prev) => ({
@@ -173,9 +167,6 @@ const MatchRequestPage = () => {
   };
 
   const onCategoryChange = (value: string) => {
-    if (!pageState.hasSetCategory)
-      setPageState((prev) => ({ ...prev, hasSetCategory: true }));
-
     setPageState((prev) => ({
       ...prev,
       category: value,
@@ -247,7 +238,7 @@ const MatchRequestPage = () => {
             </ul>
           </div>
 
-          {pageState.hasSetDifficulty && pageState.difficulty == -1 && (
+          {pageState.hasSubmitted && pageState.difficulty == -1 && (
             <span className="text-xs text-red-500">
               {difficultyMissingMessage}
             </span>
@@ -261,7 +252,7 @@ const MatchRequestPage = () => {
             value={pageState.category}
             onChange={(e) => onCategoryChange(e.target.value)}
           />
-          {pageState.hasSetCategory && pageState.category == "" && (
+          {pageState.hasSubmitted && pageState.category == "" && (
             <span className="text-xs text-red-500">
               {categoryMissingMessage}
             </span>
