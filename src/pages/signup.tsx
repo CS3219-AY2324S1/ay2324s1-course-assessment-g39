@@ -4,9 +4,18 @@
 import { type FormEvent } from "react";
 import { api } from "~/utils/api";
 import { signIn } from "next-auth/react";
+import { toast } from "react-hot-toast";
 
 export default function SignUp() {
-  const createMutation = api.user.create.useMutation();
+  const createMutation = api.user.create.useMutation({
+    onError: (e) => {
+      toast.error("Failde to create account: " + e.message);
+    },
+    onSuccess: () => {
+      toast.success("Successfully created account: ");
+      signIn();
+    },
+  });
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
@@ -15,7 +24,7 @@ export default function SignUp() {
     const password = data.get("password") as string;
     const confirmPassword = data.get("confirm-password") as string;
     if (confirmPassword != password) {
-      // todo: render error message
+      toast.error("Failed to login");
       return null;
     }
     const name = data.get("name") as string;

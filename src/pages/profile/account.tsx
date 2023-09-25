@@ -13,12 +13,14 @@ import toast from "react-hot-toast";
 //
 // (D) Delete profile
 // ? View attempts
-const ProfilePage: NextPage<{ username?: string }> = ({ username }) => {
-  username = "sam";
-  if (!username) return <div>404</div>;
+const ProfilePage: NextPage = () => {
   const [isEditing, setIsEditing] = useState(false);
 
-  const { data, isLoading } = api.user.getCurrentUser.useQuery();
+  const {
+    data,
+    isLoading,
+    refetch: refetchUser,
+  } = api.user.getCurrentUser.useQuery();
 
   const {
     register,
@@ -35,6 +37,7 @@ const ProfilePage: NextPage<{ username?: string }> = ({ username }) => {
     onSuccess: () => {
       setIsEditing(false);
       toast.success(`User updated`);
+      refetchUser();
     },
     onError: (e) => {
       const errMsg = e.data?.zodError?.fieldErrors.content;
@@ -64,7 +67,7 @@ const ProfilePage: NextPage<{ username?: string }> = ({ username }) => {
         <div className="relative h-48 bg-slate-600 border-b overscroll-y-scroll w-full border-x md:max-w-2xl">
           <Image
             src={imageURL || "https://picsum.photos/300/300"}
-            alt={`${username ?? ""}'s profile pic`}
+            alt={`${name ?? ""}'s profile pic`}
             width={128}
             height={128}
             className="absolute -mb-[64px] ml-4 rounded-md border-b border-2 bottom-0 left-0 bg-black"
@@ -72,7 +75,7 @@ const ProfilePage: NextPage<{ username?: string }> = ({ username }) => {
         </div>
         <div className="h-[64px]"></div>
         <div className="p-4">
-          <div className="text-2xl font-bold">{username}</div>
+          <div className="text-2xl font-bold">{name}</div>
           <div className="pb-4">{email}</div>
         </div>
         <div className="border-b border-slate-100"></div>
@@ -102,7 +105,7 @@ const ProfilePage: NextPage<{ username?: string }> = ({ username }) => {
                 <input
                   className="text-slate-800"
                   type="text"
-                  defaultValue={username}
+                  defaultValue={name}
                   {...register("name")}
                 />
                 <div className="p-1" />

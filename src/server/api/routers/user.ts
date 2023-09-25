@@ -110,7 +110,7 @@ export const userRouter = createTRPCRouter({
       },
     });
 
-    if (!user || !user.email) {
+    if (!user || !user.email || !user.name) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "User not found",
@@ -119,6 +119,7 @@ export const userRouter = createTRPCRouter({
 
     return {
       ...user,
+      name: user.name,
       email: user.email,
     };
   }),
