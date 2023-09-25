@@ -13,7 +13,7 @@ export default function SignUp() {
     },
     onSuccess: () => {
       toast.success("Successfully created account: ");
-      signIn();
+      signIn(undefined, { callbackUrl: "/" });
     },
   });
   function handleSubmit(event: FormEvent) {

@@ -7,6 +7,8 @@ import { PageLayout } from "~/components/Layout";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import SignUp from "../signup";
+import { useRouter } from "next/router";
 
 // (U) Profile edit (name, email, imageURL)
 // -- change password
@@ -15,49 +17,73 @@ import toast from "react-hot-toast";
 // ? View attempts
 const ProfilePage: NextPage = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const router = useRouter();
 
   const {
-    data,
-    isLoading,
+    data: userData,
+    isLoading: isLoadingUserData,
     refetch: refetchUser,
+    error: errorFetchingUser,
   } = api.user.getCurrentUser.useQuery();
+  //   {
+  //   onError: () => {
+  //     toast.error("Error fetching user");
+  //     // router.push("/signup/");
+  //   },
+  // }
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm();
-  if (errors) {
-    // console.log("errors", errors);
-    // const errorMessages = Object.values(errors).map((error) => error?.message);
-    // toast.error(errorMessages.join("\n"));
+
+  const { mutate: deleteUser, isLoading: isDeletingUser } =
+    api.user.deleteUserByID.useMutation({
+      onSuccess: () => {
+        toast.success("Succesfully deleted user");
+        router.push("/");
+      },
+      onError: (e) => {
+        console.log(e);
+        toast.error(`Failed to delete user: ${e.message}`);
+      },
+    });
+
+  const { mutate: updateUser, isLoading: isSavingUserData } =
+    api.user.update.useMutation({
+      onSuccess: () => {
+        setIsEditing(false);
+        toast.success(`User updated`);
+        refetchUser();
+      },
+      onError: (e) => {
+        const errMsg = e.data?.zodError?.fieldErrors.content;
+        if (errMsg && errMsg[0]) {
+          toast.error(`Failed to post: ${errMsg[0]}`);
+        }
+      },
+    });
+
+  if (!userData) {
+    return <LoadingPage />;
+  }
+  if (errorFetchingUser) {
+    return <div>404</div>;
+    // router.push("/signup/");
   }
 
-  const { mutate, isLoading: isSavingUserData } = api.user.update.useMutation({
-    onSuccess: () => {
-      setIsEditing(false);
-      toast.success(`User updated`);
-      refetchUser();
-    },
-    onError: (e) => {
-      const errMsg = e.data?.zodError?.fieldErrors.content;
-      if (errMsg && errMsg[0]) {
-        toast.error(`Failed to post: ${errMsg[0]}`);
-      }
-    },
-  });
+  const { name, image: imageURL, email } = userData;
 
-  if (!data) return <div>no such user</div>;
-  const { name, image: imageURL, email } = data;
-
-  const onSubmit = handleSubmit((formData) => {
-    const newData = { formData, ...data };
-    if (newData != data) {
-      mutate({ ...data, ...formData });
+  const onUpdate = handleSubmit((formData) => {
+    const newData = { formData, ...userData };
+    if (newData != userData) {
+      updateUser({ ...userData, ...formData });
       console.log("formData", formData);
     }
   });
-  if (isLoading) return <LoadingPage />;
+
+  if (isLoadingUserData) return <LoadingPage />;
   return (
     <>
       <Head>
@@ -100,7 +126,7 @@ const ProfilePage: NextPage = () => {
           </div>
           {isEditing && (
             <>
-              <form className="flex flex-col items-start" onSubmit={onSubmit}>
+              <form className="flex flex-col items-start" onSubmit={onUpdate}>
                 <label>name:</label>
                 <input
                   className="text-slate-800"
@@ -131,12 +157,18 @@ const ProfilePage: NextPage = () => {
                   disabled={isSavingUserData}
                 />
                 <div className="p-4" />
-                <button className="text-neutral-400 rounded-md underline">
-                  change password
-                </button>
               </form>
+              <button className="text-neutral-400 rounded-md underline pr-2">
+                change password
+              </button>
             </>
           )}
+          <button
+            onClick={() => deleteUser({ id: userData.id })}
+            className="text-neutral-400 rounded-md underline"
+          >
+            delete account
+          </button>
         </div>
       </PageLayout>
     </>

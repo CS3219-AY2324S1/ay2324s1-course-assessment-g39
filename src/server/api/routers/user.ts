@@ -41,42 +41,33 @@ export const userRouter = createTRPCRouter({
         password: passwordHash,
       },
     });
-    return {
-      message: `User created`,
-    };
   }),
 
-  delete: protectedProcedure
+  deleteUserByID: protectedProcedure
     .input(
       z.object({
-        email: z.string(),
+        id: z.string(),
       }),
     )
-    .query(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
+      console.warn(`User id ${input.id} is trying to be deleted`);
       await ctx.prismaPostgres.user.delete({
         where: {
-          email: input.email,
+          id: input.id,
         },
       });
-      return {
-        message: "User deleted",
-      };
     }),
 
   update: protectedProcedure
     .input(userUpdateObject)
     .mutation(async ({ ctx, input }) => {
-      const { id, ...remainder } = input;
+      const { id, ...otherDetails } = input;
       await ctx.prismaPostgres.user.update({
         where: {
           id: id,
         },
-        data: remainder,
+        data: otherDetails,
       });
-
-      return {
-        message: "User updated",
-      };
     }),
 
   getByUsername: publicProcedure
