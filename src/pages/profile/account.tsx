@@ -9,12 +9,11 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import SignUp from "../signup";
 import { useRouter } from "next/router";
+import Link from "next/link";
 
-// (U) Profile edit (name, email, imageURL)
-// -- change password
-//
-// (D) Delete profile
-// ? View attempts
+// TODO:
+// - edit imageURL
+// - change password
 const ProfilePage: NextPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
@@ -25,6 +24,7 @@ const ProfilePage: NextPage = () => {
     refetch: refetchUser,
     error: errorFetchingUser,
   } = api.user.getCurrentUser.useQuery();
+
   //   {
   //   onError: () => {
   //     toast.error("Error fetching user");
@@ -65,13 +65,30 @@ const ProfilePage: NextPage = () => {
       },
     });
 
-  if (!userData) {
-    return <LoadingPage />;
-  }
   if (errorFetchingUser) {
-    return <div>404</div>;
+    return (
+      <>
+        <Head>
+          <title>Profile</title>
+        </Head>
+        <PageLayout>
+          <div className="w-full h-full flex flex-col justify-center items-center">
+            <div className="align-middle">404 User not found</div>
+            <div>
+              <button
+                className="text-neutral-400 rounded-md underline"
+                onClick={() => router.push("/signup/")}
+              >
+                Go to Signup
+              </button>
+            </div>
+          </div>
+        </PageLayout>
+      </>
+    );
     // router.push("/signup/");
   }
+  if (isLoadingUserData || !userData) return <LoadingPage />;
 
   const { name, image: imageURL, email } = userData;
 
@@ -83,7 +100,6 @@ const ProfilePage: NextPage = () => {
     }
   });
 
-  if (isLoadingUserData) return <LoadingPage />;
   return (
     <>
       <Head>
@@ -158,17 +174,30 @@ const ProfilePage: NextPage = () => {
                 />
                 <div className="p-4" />
               </form>
-              <button className="text-neutral-400 rounded-md underline pr-2">
-                change password
-              </button>
+              <div>
+                {" "}
+                <button className="text-neutral-400 rounded-md underline pr-2">
+                  change password
+                </button>
+              </div>
+              <div>
+                <button
+                  onClick={() => {
+                    if (
+                      confirm(
+                        "WARNING! All accout information will be removed on deletion. Are you sure you want to proceed?",
+                      )
+                    ) {
+                      deleteUser({ id: userData.id });
+                    }
+                  }}
+                  className="text-neutral-400 rounded-md underline"
+                >
+                  delete account
+                </button>
+              </div>
             </>
           )}
-          <button
-            onClick={() => deleteUser({ id: userData.id })}
-            className="text-neutral-400 rounded-md underline"
-          >
-            delete account
-          </button>
         </div>
       </PageLayout>
     </>
