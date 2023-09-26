@@ -37,6 +37,7 @@ const ProfilePage: NextPage = () => {
   });
 
   const { mutate: deleteUser } = api.user.deleteUserByID.useMutation({
+    retry: 3,
     onSuccess: () => {
       toast.success("Succesfully deleted user");
       void router.push("/");
@@ -58,6 +59,20 @@ const ProfilePage: NextPage = () => {
         const errMsg = e.data?.zodError?.fieldErrors.content;
         if (errMsg?.[0]) {
           toast.error(`Failed to post: ${errMsg[0]}`);
+        }
+      },
+    });
+
+  const { mutate: updatePassword, isLoading: isUpdatingPassword } =
+    api.user.updatePassword.useMutation({
+      onSuccess: () => {
+        setIsEditing(false);
+        toast.success(`Password updated`);
+      },
+      onError: (e) => {
+        const errMsg = e.data?.zodError?.fieldErrors.content;
+        if (errMsg?.[0]) {
+          toast.error(`Failed to update password: ${errMsg[0]}`);
         }
       },
     });
@@ -167,7 +182,23 @@ const ProfilePage: NextPage = () => {
               </form>
               <div>
                 {" "}
-                <button className="text-neutral-400 rounded-md underline pr-2">
+                <button
+                  onClick={() => {
+                    let pw = prompt("enter new password");
+                    // stopgap measure, need to centralize user field type def
+                    let pwVerified = z.string().min(8).safeParse(pw);
+                    if (pwVerified.success) {
+                      void updatePassword({
+                        id: userData.id,
+                        password: pwVerified.data,
+                      });
+                    } else {
+                      console.log(pwVerified);
+                      toast.error("invalid password");
+                    }
+                  }}
+                  className="text-neutral-400 rounded-md underline pr-2"
+                >
                   change password
                 </button>
               </div>
