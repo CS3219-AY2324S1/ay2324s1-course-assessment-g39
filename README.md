@@ -1,4 +1,5 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-24ddc0f5d75046c5622901739e7c5dd533143b0c8e959d652212380cedb1ea36.svg)](https://classroom.github.com/a/6BOvYMwN)
+
 # AssignmentTemplate
 
 # Create T3 App
@@ -19,9 +20,11 @@ Start Docker engine and initialize the `.env` file. Then:
     yarn dev
 ```
 
-Note: If you want persistent data, create directories `./data/postgres` and `./data/mongo`.
+Notes:
 
-Note: if you encounter authentication errors with `prisma:push` change the database ports or delete your local installations.
+- If you want persistent data, create directories `./data/postgres` and `./data/mongo`.
+- If you encounter authentication errors with `prisma:push` change the database ports or delete your local installations.
+- If postgres is running on 5432, kill the process `sudo pkill -u postgres`
 
 ## What's next? How do I make an app with this?
 

@@ -1,10 +1,6 @@
 import { z } from "zod";
 
-import {
-  createTRPCRouter,
-  publicProcedure
-} from "~/server/api/trpc";
-
+import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
 const questionObject = z.object({
   title: z.string(),
@@ -26,43 +22,49 @@ export const questionRouter = createTRPCRouter({
     return ctx.prismaMongo.question.findMany();
   }),
 
-  addOne: publicProcedure.input(questionObject).mutation(async ({ ctx, input }) => {
-    const q = await ctx.prismaMongo.question.create({
-      data: {
-        ...input,
-      },
-    });
-    return {
-      message: `Question created: ${input.title}`,
-      id: q.id,
-    }
-  }),
-
-  updateOne: publicProcedure.input(questionUpdateObject).mutation(async ({ ctx, input }) => {
-    const { id, ...remainder } = input;
-    await ctx.prismaMongo.question.update({
-      where: {
-        id: id,
-      },
-      data: remainder,
-    });
-    return {
-      message: `Question updated: ${input.title}`,
-    }
-  }),
-
-  deleteOne: publicProcedure.input(
-    z.object({
-      id: z.string(),
+  addOne: publicProcedure
+    .input(questionObject)
+    .mutation(async ({ ctx, input }) => {
+      const q = await ctx.prismaMongo.question.create({
+        data: {
+          ...input,
+        },
+      });
+      return {
+        message: `Question created: ${input.title}`,
+        id: q.id,
+      };
     }),
-  ).mutation(async ({ ctx, input }) => {
-    await ctx.prismaMongo.question.delete({
-      where: {
-        id: input.id,
-      },
-    });
-    return {
-      message: `Question deleted`,
-    }
-  }),
+
+  updateOne: publicProcedure
+    .input(questionUpdateObject)
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...remainder } = input;
+      await ctx.prismaMongo.question.update({
+        where: {
+          id: id,
+        },
+        data: remainder,
+      });
+      return {
+        message: `Question updated: ${input.title}`,
+      };
+    }),
+
+  deleteOne: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prismaMongo.question.delete({
+        where: {
+          id: input.id,
+        },
+      });
+      return {
+        message: `Question deleted`,
+      };
+    }),
 });
