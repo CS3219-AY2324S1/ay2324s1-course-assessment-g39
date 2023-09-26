@@ -1,19 +1,19 @@
-import { NextPage } from "next";
+import { type NextPage } from "next";
 import Head from "next/head";
+import Image from "next/image";
+import { useRouter } from "next/router";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import toast from "react-hot-toast";
+import { PageLayout } from "~/components/Layout";
 import { LoadingPage } from "~/components/Loading";
 import { api } from "~/utils/api";
-import Image from "next/image";
-import { PageLayout } from "~/components/Layout";
-import { useForm } from "react-hook-form";
-import { useState } from "react";
-import toast from "react-hot-toast";
-import SignUp from "../signup";
-import { useRouter } from "next/router";
-import Link from "next/link";
 
 // TODO:
 // - edit imageURL
 // - change password
+// - client-side validation using zod
+
 const ProfilePage: NextPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
@@ -28,14 +28,13 @@ const ProfilePage: NextPage = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors },
   } = useForm();
 
-  const { mutate: deleteUser, isLoading: isDeletingUser } =
+  const { mutate: deleteUser } =
     api.user.deleteUserByID.useMutation({
       onSuccess: () => {
         toast.success("Succesfully deleted user");
-        router.push("/");
+        void router.push("/");
       },
       onError: (e) => {
         console.log(e);
@@ -48,11 +47,11 @@ const ProfilePage: NextPage = () => {
       onSuccess: () => {
         setIsEditing(false);
         toast.success(`User updated`);
-        refetchUser();
+        void refetchUser();
       },
       onError: (e) => {
         const errMsg = e.data?.zodError?.fieldErrors.content;
-        if (errMsg && errMsg[0]) {
+        if (errMsg?.[0]) {
           toast.error(`Failed to post: ${errMsg[0]}`);
         }
       },
@@ -70,7 +69,7 @@ const ProfilePage: NextPage = () => {
             <div>
               <button
                 className="text-neutral-400 rounded-md underline"
-                onClick={() => router.push("/signup/")}
+                onClick={() => void router.push("/signup/")}
               >
                 Go to Signup
               </button>
@@ -101,7 +100,7 @@ const ProfilePage: NextPage = () => {
       <PageLayout>
         <div className="relative h-48 bg-slate-600 border-b overscroll-y-scroll w-full border-x md:max-w-2xl">
           <Image
-            src={imageURL || "https://picsum.photos/300/300"}
+            src={imageURL ?? "https://picsum.photos/300/300"}
             alt={`${name ?? ""}'s profile pic`}
             width={128}
             height={128}
@@ -135,7 +134,7 @@ const ProfilePage: NextPage = () => {
           </div>
           {isEditing && (
             <>
-              <form className="flex flex-col items-start" onSubmit={onUpdate}>
+              <form className="flex flex-col items-start" onSubmit={void onUpdate}>
                 <label>name:</label>
                 <input
                   className="text-slate-800"

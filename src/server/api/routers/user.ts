@@ -6,10 +6,9 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 
-import { prismaPostgres as prisma } from "~/server/db";
-import { hashPassword } from "~/server/auth";
-import bcrypt from "bcrypt";
 import { TRPCError } from "@trpc/server";
+import { hashPassword } from "~/server/auth";
+import { prismaPostgres as prisma } from "~/server/db";
 
 const userObject = z.object({
   name: z.string(),
@@ -89,7 +88,7 @@ export const userRouter = createTRPCRouter({
       },
     });
 
-    if (!user || !user.email || !user.name) {
+    if (!user?.email || !user.name) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "User not found",

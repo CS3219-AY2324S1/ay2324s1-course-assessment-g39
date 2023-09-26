@@ -1,5 +1,8 @@
 // dummy signup page -- ripped straight from https://flowbite.com/blocks/marketing/register/
 // todo: change to something reasonable / add a header or smth
+// unify style with login page
+// input validation
+
 
 import { type FormEvent } from "react";
 import { api } from "~/utils/api";
@@ -13,7 +16,7 @@ export default function SignUp() {
     },
     onSuccess: () => {
       toast.success("Successfully created account: ");
-      signIn(undefined, { callbackUrl: "/" });
+      void signIn(undefined, { callbackUrl: "/" });
     },
   });
   function handleSubmit(event: FormEvent) {
