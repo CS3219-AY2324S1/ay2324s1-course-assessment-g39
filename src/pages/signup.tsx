@@ -12,7 +12,7 @@ import { toast } from "react-hot-toast";
 export default function SignUp() {
   const createMutation = api.user.create.useMutation({
     onError: (e) => {
-      toast.error("Failde to create account: " + e.message);
+      toast.error("Failed to create account: " + e.message);
     },
     onSuccess: () => {
       toast.success("Successfully created account: ");

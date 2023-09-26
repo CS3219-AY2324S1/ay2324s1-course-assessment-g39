@@ -8,6 +8,8 @@ import toast from "react-hot-toast";
 import { PageLayout } from "~/components/Layout";
 import { LoadingPage } from "~/components/Loading";
 import { api } from "~/utils/api";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 // TODO:
 // - edit imageURL
@@ -25,22 +27,25 @@ const ProfilePage: NextPage = () => {
     error: errorFetchingUser,
   } = api.user.getCurrentUser.useQuery();
 
-  const {
-    register,
-    handleSubmit,
-  } = useForm();
+  const updateInfoSchema = z.object({
+    name: z.string().min(1, { message: "Required" }),
+    email: z.string().email(),
+  });
 
-  const { mutate: deleteUser } =
-    api.user.deleteUserByID.useMutation({
-      onSuccess: () => {
-        toast.success("Succesfully deleted user");
-        void router.push("/");
-      },
-      onError: (e) => {
-        console.log(e);
-        toast.error(`Failed to delete user: ${e.message}`);
-      },
-    });
+  const { register, handleSubmit } = useForm({
+    resolver: zodResolver(updateInfoSchema),
+  });
+
+  const { mutate: deleteUser } = api.user.deleteUserByID.useMutation({
+    onSuccess: () => {
+      toast.success("Succesfully deleted user");
+      void router.push("/");
+    },
+    onError: (e) => {
+      console.log(e);
+      toast.error(`Failed to delete user: ${e.message}`);
+    },
+  });
 
   const { mutate: updateUser, isLoading: isSavingUserData } =
     api.user.update.useMutation({
@@ -134,7 +139,7 @@ const ProfilePage: NextPage = () => {
           </div>
           {isEditing && (
             <>
-              <form className="flex flex-col items-start" onSubmit={void onUpdate}>
+              <form className="flex flex-col items-start" onSubmit={onUpdate}>
                 <label>name:</label>
                 <input
                   className="text-slate-800"
@@ -148,13 +153,7 @@ const ProfilePage: NextPage = () => {
                   className="text-slate-800"
                   type="email"
                   defaultValue={email}
-                  {...register("email", {
-                    required: "minimum 6 char long",
-                    minLength: {
-                      value: 6,
-                      message: "minimum 6 char long",
-                    },
-                  })}
+                  {...register("email")}
                 />
                 <hr />
                 <div className="p-2"></div>
