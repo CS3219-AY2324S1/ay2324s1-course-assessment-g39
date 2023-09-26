@@ -25,13 +25,6 @@ const ProfilePage: NextPage = () => {
     error: errorFetchingUser,
   } = api.user.getCurrentUser.useQuery();
 
-  //   {
-  //   onError: () => {
-  //     toast.error("Error fetching user");
-  //     // router.push("/signup/");
-  //   },
-  // }
-
   const {
     register,
     handleSubmit,

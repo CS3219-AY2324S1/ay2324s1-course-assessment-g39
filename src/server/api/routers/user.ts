@@ -50,7 +50,6 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      console.warn(`User id ${input.id} is trying to be deleted`);
       await ctx.prismaPostgres.user.delete({
         where: {
           id: input.id,
@@ -81,17 +80,6 @@ export const userRouter = createTRPCRouter({
       });
 
       return usersByName;
-      // if (!user || !user.email) {
-      //   throw new TRPCError({
-      //     code: "INTERNAL_SERVER_ERROR",
-      //     message: "User not found",
-      //   });
-      // }
-
-      // return {
-      //   ...user,
-      //   email: user.email,
-      // };
     }),
 
   getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
