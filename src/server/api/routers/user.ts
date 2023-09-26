@@ -26,20 +26,26 @@ const userUpdateObject = z.object({
 });
 
 export const userRouter = createTRPCRouter({
-  create: publicProcedure.input(userObject).mutation(async ({ ctx, input }) => {
-    if (!ctx.session?.user) {
-      return;
-    }
-
-    const { password, ...values } = input;
-    const passwordHash = await hashPassword(password);
-    await ctx.prismaPostgres.user.create({
-      data: {
-        ...values,
-        password: passwordHash,
-      },
-    });
-  }),
+  create: publicProcedure
+    .input(userObject)
+    .mutation(async ({ input }) => {
+      const { password, ...values } = input;
+      if (!password) {
+        return {
+          message: "Invalid password"
+        };
+      }
+      const passwordHash = await hashPassword(password);
+      await prisma.user.create({
+        data: {
+          ...values,
+          password: passwordHash
+        }
+      })
+      return {
+        message: `User created`
+      }
+    }),
 
   deleteUserByID: protectedProcedure
     .input(
@@ -51,6 +57,9 @@ export const userRouter = createTRPCRouter({
       await ctx.prismaPostgres.user.delete({
         where: { id: input.id },
       });
+      return {
+        message: "User deleted"
+      }
     }),
 
   update: protectedProcedure
