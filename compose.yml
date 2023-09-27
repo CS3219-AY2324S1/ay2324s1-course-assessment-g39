@@ -34,3 +34,17 @@ services:
       S3_BUCKET_NAME: ${S3_BUCKET_NAME}
     volumes:
       - "./data/s3:/home/app/public/peer-prep"
+  rabbitmq:
+    image: rabbitmq:3.11.23-management-alpine
+    container_name: "rabbitmq-dev"
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - ./data:/var/lib/rabbitmq/
+      - ./data:/var/log/rabbitmq
+    networks:
+      - rabbitmq_go_net
+networks:
+  rabbitmq_go_net:
+    driver: bridge
