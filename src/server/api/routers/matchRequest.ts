@@ -83,6 +83,24 @@ export const matchRequestRouter = createTRPCRouter({
   addRequest: publicProcedure.input(userObject).mutation(async ({ input }) => {
     const { difficulty, category, id } = input;
 
+    const existingRequest = await prismaPostgres.matchRequest
+      .findFirst({
+        where: {
+          id: id,
+        },
+      })
+      .then((req) => {
+        return req;
+      });
+
+    if (existingRequest) {
+      return {
+        msg: "Request already exists",
+        partner: "",
+        isSuccess: false,
+      };
+    }
+
     const requestHandler = new UserRequestHandler();
 
     const response = await requestHandler
@@ -157,12 +175,8 @@ const sendToClients = async (
       const replyTo1 = request1.replyTo;
       const replyTo2 = request2.replyTo;
 
-      const msg1 = Buffer.from(
-        `You have been matched with another player: ${id2}`,
-      );
-      const msg2 = Buffer.from(
-        `You have been matched with another player: ${id1}`,
-      );
+      const msg1 = Buffer.from("Found match!");
+      const msg2 = Buffer.from("Found match!");
 
       ch.sendToQueue(replyTo1, msg1, {
         correlationId: id1,
@@ -211,67 +225,73 @@ const matchRequests = async (ch: amqp.Channel) => {
   }
 };
 
-amqp.connect("amqp://localhost", (err, conn) => {
-  if (err) throw err;
-
-  conn.createChannel((err, ch) => {
+void Promise.resolve(
+  amqp.connect("amqp://localhost", (err, conn) => {
     if (err) throw err;
 
-    // Start with clean slate for dev
-    void Promise.resolve(prismaPostgres.matchRequest.deleteMany({}));
+    conn.createChannel((err, ch) => {
+      if (err) throw err;
 
-    // https://amqp-node.github.io/amqplib/channel_api.html#channel_prefetch
-    ch.prefetch(1);
+      // Start with clean slate for dev
+      void Promise.resolve(prismaPostgres.matchRequest.deleteMany({}));
 
-    console.log("[*] Waiting for requests.");
+      // https://amqp-node.github.io/amqplib/channel_api.html#channel_prefetch
+      ch.prefetch(1);
 
-    const request_queue = "request_queue";
+      console.log("[*] Waiting for requests.");
 
-    // https://amqp-node.github.io/amqplib/channel_api.html#channel_assertQueue
-    ch.assertQueue(request_queue, { durable: true });
+      const request_queue = "request_queue";
 
-    // https://amqp-node.github.io/amqplib/channel_api.html#channel_consume
-    ch.consume(request_queue, (msg) => {
-      if (!msg) return;
+      // https://amqp-node.github.io/amqplib/channel_api.html#channel_assertQueue
+      ch.assertQueue(request_queue, { durable: true });
 
-      const difficulty = msg.properties.headers.difficulty as number;
-      const category = msg.properties.headers.category as string;
-      const id = msg.properties.headers.id as string;
-      const replyTo = msg.properties.replyTo as string;
+      // https://amqp-node.github.io/amqplib/channel_api.html#channel_consume
+      ch.consume(request_queue, (msg) => {
+        if (!msg) return;
 
-      void Promise.resolve(
-        prismaPostgres.matchRequest.create({
-          data: {
-            id,
-            replyTo,
-            difficulty,
-            category,
-          },
-        }),
-      );
+        const difficulty = msg.properties.headers.difficulty as number;
+        const category = msg.properties.headers.category as string;
+        const id = msg.properties.headers.id as string;
+        const replyTo = msg.properties.replyTo as string;
 
-      console.log("[x] Received request: '%s'", id.toString());
-
-      // Very important to acknowledge the message, otherwise it will be sent again
-      ch.ack(msg);
-
-      setTimeout(() => {
-        void Promise.resolve(removeRequest(id, difficulty, category)).then(
-          (res) => {
-            if (res) {
-              // https://amqp-node.github.io/amqplib/channel_api.html#channel_sendToQueue
-              ch.sendToQueue(replyTo, Buffer.from("Connection timed out"), {
-                correlationId: id,
-                headers: {
-                  isSuccess: false,
-                },
-              });
-            }
-          },
+        void Promise.resolve(
+          prismaPostgres.matchRequest.create({
+            data: {
+              id,
+              replyTo,
+              difficulty,
+              category,
+            },
+          }),
         );
-      }, 30000);
-    });
 
-    setInterval(() => void matchRequests(ch), 1000);
-  });
-});
+        console.log("[x] Received request: '%s'", id.toString());
+
+        // Very important to acknowledge the message, otherwise it will be sent again
+        ch.ack(msg);
+
+        setTimeout(() => {
+          void Promise.resolve(removeRequest(id, difficulty, category)).then(
+            (res) => {
+              if (res) {
+                // https://amqp-node.github.io/amqplib/channel_api.html#channel_sendToQueue
+                ch.sendToQueue(
+                  replyTo,
+                  Buffer.from("Timeout. No match found."),
+                  {
+                    correlationId: id,
+                    headers: {
+                      isSuccess: false,
+                    },
+                  },
+                );
+              }
+            },
+          );
+        }, 30000);
+      });
+
+      setInterval(() => void matchRequests(ch), 1000);
+    });
+  }),
+);

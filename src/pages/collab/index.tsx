@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { toast } from "react-hot-toast";
+import { getSession } from "next-auth/react";
+import { useRouter } from "next/router";
+import Head from "next/head";
 
 import { api } from "~/utils/api";
 
+import { LoadingPage } from "~/components/Loading";
+import { PageLayout } from "~/components/Layout";
 import LoadingIcon from "~/components/LoadingIcon";
 
 const MatchRequestPage = () => {
@@ -21,6 +27,31 @@ const MatchRequestPage = () => {
   });
 
   const timer = useRef<NodeJS.Timer | null>(null);
+
+  useEffect(() => {
+    if (pageState.isTimerActive && !timer.current) {
+      timer.current = setInterval(() => {
+        setPageState((prev) => ({
+          ...prev,
+          waitingTime: prev.waitingTime + 1,
+        }));
+      }, 1000);
+    }
+  });
+
+  useEffect(() => {
+    const handleBeforeTabClose = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+
+      return (event.returnValue = "Are you sure you want to exit?");
+    };
+
+    window.addEventListener("beforeunload", handleBeforeTabClose);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeTabClose);
+    };
+  });
 
   const difficultyMissingMessage = "Please select a difficulty";
   const categoryMissingMessage = "Please enter a category";
@@ -45,13 +76,13 @@ const MatchRequestPage = () => {
       if (data.isSuccess) {
         setPageState((prev) => ({
           ...prev,
-          statusMessage: "Found a match!",
+          statusMessage: data.msg,
           requestFailed: false,
         }));
       } else {
         setPageState((prev) => ({
           ...prev,
-          statusMessage: "Timeout. No match found.",
+          statusMessage: data.msg,
           requestFailed: true,
         }));
       }
@@ -79,25 +110,29 @@ const MatchRequestPage = () => {
       return;
     }
 
-    setPageState((prev) => ({
-      ...prev,
-      isWaiting: true,
-      isTimerActive: true,
-      statusMessage: "Searching for partner...",
-    }));
+    void Promise.resolve(getSession()).then((session) => {
+      if (!session?.user) {
+        toast.error("You must be logged in to use this feature");
+        return;
+      }
 
-    // Placeholder for user id
-    const randomId = window.crypto.getRandomValues(new Uint32Array(16))[0];
-    const requestId =
-      randomId?.toString() ?? window.crypto.randomUUID().toString();
-    setPageState((prev) => ({
-      ...prev,
-      id: requestId,
-    }));
-    addRequestMutation.mutate({
-      difficulty: pageState.difficulty,
-      category: pageState.category,
-      id: requestId,
+      setPageState((prev) => ({
+        ...prev,
+        isWaiting: true,
+        isTimerActive: true,
+        statusMessage: "Searching for partner...",
+      }));
+
+      setPageState((prev) => ({
+        ...prev,
+        id: session.user.id,
+      }));
+
+      addRequestMutation.mutate({
+        difficulty: pageState.difficulty,
+        category: pageState.category,
+        id: session.user.id,
+      });
     });
   };
 
@@ -116,17 +151,6 @@ const MatchRequestPage = () => {
     }));
     timer.current = null;
   };
-
-  useEffect(() => {
-    if (pageState.isTimerActive && !timer.current) {
-      timer.current = setInterval(() => {
-        setPageState((prev) => ({
-          ...prev,
-          waitingTime: prev.waitingTime + 1,
-        }));
-      }, 1000);
-    }
-  });
 
   const onDifficultySelect = () => {
     const difficultyDropdownMenu = document.querySelector(
@@ -177,6 +201,45 @@ const MatchRequestPage = () => {
   // TODO: join session
   const joinSession = () => {
     console.log("join session");
+  };
+
+  const router = useRouter();
+  const {
+    data: userData,
+    isLoading: isLoadingUserData,
+    error: errorFetchingUser,
+  } = api.user.getCurrentUser.useQuery();
+
+  if (errorFetchingUser) {
+    return (
+      <>
+        <Head>
+          <title>Profile</title>
+        </Head>
+        <PageLayout>
+          <div className="w-full h-full flex flex-col justify-center items-center">
+            <div className="align-middle">404 User not found</div>
+            <div>
+              <button
+                className="text-neutral-400 rounded-md underline"
+                onClick={() => void router.push("/signup/")}
+              >
+                Go to Signup
+              </button>
+            </div>
+          </div>
+        </PageLayout>
+      </>
+    );
+    // router.push("/signup/");
+  }
+
+  if (isLoadingUserData || !userData) return <LoadingPage />;
+
+  // Remove current request immediately so that the user doesn't need to wait for timeout to send another request
+  window.onunload = () => {
+    // Only remove request for current page, not other pages with the same user
+    if (pageState.isTimerActive) void Promise.resolve(cancelRequest());
   };
 
   return (
