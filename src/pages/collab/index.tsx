@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-hot-toast";
-import { getSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 
 import { api } from "~/utils/api";
 
-import { LoadingPage } from "~/components/Loading";
 import { PageLayout } from "~/components/Layout";
 import LoadingIcon from "~/components/LoadingIcon";
 
@@ -65,6 +64,9 @@ const MatchRequestPage = () => {
     "Insane",
   ];
 
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
   const addRequestMutation = api.matchRequest.addRequest.useMutation({
     onSuccess: (data) => {
       setPageState((prev) => ({
@@ -110,29 +112,27 @@ const MatchRequestPage = () => {
       return;
     }
 
-    void Promise.resolve(getSession()).then((session) => {
-      if (!session?.user) {
-        toast.error("You must be logged in to use this feature");
-        return;
-      }
+    if (!session?.user) {
+      toast.error("You must be logged in to use this feature");
+      return;
+    }
 
-      setPageState((prev) => ({
-        ...prev,
-        isWaiting: true,
-        isTimerActive: true,
-        statusMessage: "Searching for partner...",
-      }));
+    setPageState((prev) => ({
+      ...prev,
+      isWaiting: true,
+      isTimerActive: true,
+      statusMessage: "Searching for partner...",
+    }));
 
-      setPageState((prev) => ({
-        ...prev,
-        id: session.user.id,
-      }));
+    setPageState((prev) => ({
+      ...prev,
+      id: session.user.id,
+    }));
 
-      addRequestMutation.mutate({
-        difficulty: pageState.difficulty,
-        category: pageState.category,
-        id: session.user.id,
-      });
+    addRequestMutation.mutate({
+      difficulty: pageState.difficulty,
+      category: pageState.category,
+      id: session.user.id,
     });
   };
 
@@ -203,14 +203,7 @@ const MatchRequestPage = () => {
     console.log("join session");
   };
 
-  const router = useRouter();
-  const {
-    data: userData,
-    isLoading: isLoadingUserData,
-    error: errorFetchingUser,
-  } = api.user.getCurrentUser.useQuery();
-
-  if (errorFetchingUser) {
+  if (status !== "authenticated") {
     return (
       <>
         <Head>
@@ -233,8 +226,6 @@ const MatchRequestPage = () => {
     );
     // router.push("/signup/");
   }
-
-  if (isLoadingUserData || !userData) return <LoadingPage />;
 
   // Remove current request immediately so that the user doesn't need to wait for timeout to send another request
   window.onunload = () => {
