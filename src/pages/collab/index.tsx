@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-hot-toast";
@@ -6,6 +6,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 
+import { Client } from "@stomp/stompjs";
+import type { Message } from "@stomp/stompjs";
 import { api } from "~/utils/api";
 
 import { PageLayout } from "~/components/Layout";
@@ -27,6 +29,33 @@ const MatchRequestPage = () => {
 
   const timer = useRef<NodeJS.Timer | null>(null);
 
+  const amqpClient = useMemo(() => {
+    const client = new Client({
+      brokerURL: "ws://localhost:15674/ws",
+      onConnect: () => {
+        client.subscribe("/topic/broadcast", (message: Message) =>
+          console.log(`Received: ${message.body}`),
+        );
+
+        console.log("Connected to RabbitMQ");
+      },
+      onDisconnect: () => {
+        client.unsubscribe("/topic/broadcast");
+      },
+      onWebSocketError: (event: Event) => {
+        console.error("WebSocket error: ", event);
+      },
+      onStompError: (frame) => {
+        console.error("Broker reported error: " + frame.headers.message);
+        console.error("Additional details: " + frame.body);
+      },
+    });
+
+    return client;
+  }, []);
+
+  amqpClient.activate();
+
   useEffect(() => {
     if (pageState.isTimerActive && !timer.current) {
       timer.current = setInterval(() => {
@@ -36,7 +65,41 @@ const MatchRequestPage = () => {
         }));
       }, 1000);
     }
-  });
+  }, [pageState.isTimerActive]);
+
+  useEffect(() => {
+    if (pageState.isTimerActive) {
+      if (pageState.waitingTime >= 30) {
+        void Promise.resolve(
+          amqpClient.publish({
+            destination: "/queue/cancel_request_queue",
+            headers: {
+              id: pageState.id,
+            },
+          }),
+        );
+        setPageState((prev) => ({
+          ...prev,
+          statusMessage: "Timeout. No match found.",
+          requestFailed: true,
+          isTimerActive: false,
+          waitingTime: 0,
+        }));
+        clearInterval(timer.current!);
+        timer.current = null;
+      } else {
+        amqpClient.publish({
+          destination: "/queue/check_status",
+          body: pageState.id,
+        });
+      }
+    }
+  }, [
+    amqpClient,
+    pageState.id,
+    pageState.isTimerActive,
+    pageState.waitingTime,
+  ]);
 
   useEffect(() => {
     const handleBeforeTabClose = (event: BeforeUnloadEvent) => {
@@ -124,24 +187,26 @@ const MatchRequestPage = () => {
       statusMessage: "Searching for partner...",
     }));
 
-    setPageState((prev) => ({
-      ...prev,
-      id: session.user.id,
-    }));
+    if (!pageState.id)
+      setPageState((prev) => ({
+        ...prev,
+        id: session.user.id,
+      }));
 
-    addRequestMutation.mutate({
-      difficulty: pageState.difficulty,
-      category: pageState.category,
-      id: session.user.id,
-    });
+    if (amqpClient.connected) {
+      console.log("connected");
+      amqpClient.publish({
+        destination: "/queue/add_request_queue",
+        headers: {
+          id: session.user.id,
+          difficulty: pageState.difficulty.toString(),
+          category: pageState.category,
+        },
+      });
+    }
   };
 
   const cancelRequest = () => {
-    cancelRequestMutation.mutate({
-      difficulty: pageState.difficulty,
-      category: pageState.category,
-      id: pageState.id,
-    });
     clearInterval(timer.current!);
     setPageState((prev) => ({
       ...prev,
@@ -150,6 +215,12 @@ const MatchRequestPage = () => {
       isWaiting: false,
     }));
     timer.current = null;
+    amqpClient.publish({
+      destination: "/queue/cancel_request_queue",
+      headers: {
+        id: pageState.id,
+      },
+    });
   };
 
   const onDifficultySelect = () => {
@@ -231,6 +302,8 @@ const MatchRequestPage = () => {
   window.onunload = () => {
     // Only remove request for current page, not other pages with the same user
     if (pageState.isTimerActive) void Promise.resolve(cancelRequest());
+
+    if (amqpClient.connected) void Promise.resolve(amqpClient.deactivate());
   };
 
   return (
