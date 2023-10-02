@@ -8,7 +8,6 @@ import Head from "next/head";
 
 import { Client } from "@stomp/stompjs";
 import type { Message } from "@stomp/stompjs";
-import { api } from "~/utils/api";
 
 import { PageLayout } from "~/components/Layout";
 import LoadingIcon from "~/components/LoadingIcon";
@@ -18,7 +17,6 @@ const MatchRequestPage = () => {
     difficulty: -1,
     category: "",
     id: "",
-    response: "",
     statusMessage: "Searching for partner...",
     isWaiting: false,
     requestFailed: false,
@@ -33,14 +31,34 @@ const MatchRequestPage = () => {
     const client = new Client({
       brokerURL: "ws://localhost:15674/ws",
       onConnect: () => {
-        client.subscribe("/topic/broadcast", (message: Message) =>
-          console.log(`Received: ${message.body}`),
-        );
+        client.subscribe("/exchange/broadcast", (message: Message) => {
+          const msg = message.body;
+          const headerData = message.headers;
 
-        console.log("Connected to RabbitMQ");
+          console.log(msg);
+          console.log(headerData);
+
+          if (headerData.isSuccess === "true") {
+            setPageState((prev) => ({
+              ...prev,
+              statusMessage: msg,
+              requestFailed: false,
+            }));
+
+            clearInterval(timer.current!);
+            setPageState((prev) => ({
+              ...prev,
+              isTimerActive: false,
+              waitingTime: 0,
+            }));
+            timer.current = null;
+
+            // TODO: Give user a way to connect to the coding session
+          }
+        });
       },
       onDisconnect: () => {
-        client.unsubscribe("/topic/broadcast");
+        client.unsubscribe("/exchange/broadcast");
       },
       onWebSocketError: (event: Event) => {
         console.error("WebSocket error: ", event);
@@ -90,7 +108,9 @@ const MatchRequestPage = () => {
       } else {
         amqpClient.publish({
           destination: "/queue/check_status",
-          body: pageState.id,
+          headers: {
+            id: pageState.id,
+          },
         });
       }
     }
@@ -129,44 +149,6 @@ const MatchRequestPage = () => {
 
   const router = useRouter();
   const { data: session, status } = useSession();
-
-  const addRequestMutation = api.matchRequest.addRequest.useMutation({
-    onSuccess: (data) => {
-      setPageState((prev) => ({
-        ...prev,
-        response: data.msg,
-      }));
-      console.log(data.msg);
-
-      if (data.isSuccess) {
-        setPageState((prev) => ({
-          ...prev,
-          statusMessage: data.msg,
-          requestFailed: false,
-        }));
-      } else {
-        setPageState((prev) => ({
-          ...prev,
-          statusMessage: data.msg,
-          requestFailed: true,
-        }));
-      }
-
-      clearInterval(timer.current!);
-      setPageState((prev) => ({
-        ...prev,
-        isTimerActive: false,
-        waitingTime: 0,
-      }));
-      timer.current = null;
-    },
-  });
-
-  const cancelRequestMutation = api.matchRequest.cancelRequest.useMutation({
-    onSuccess: (data) => {
-      console.log(data);
-    },
-  });
 
   const addRequest = () => {
     if (pageState.difficulty == -1 || pageState.category == "") {

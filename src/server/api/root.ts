@@ -1,7 +1,6 @@
 import { questionRouter } from "~/server/api/routers/question";
 import { userRouter } from "~/server/api/routers/user";
 import { createTRPCRouter } from "~/server/api/trpc";
-import { matchRequestRouter } from "./routers/matchRequest";
 import { formRouter } from "~/server/api/routers/form";
 
 /**
@@ -10,10 +9,9 @@ import { formRouter } from "~/server/api/routers/form";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
-  matchRequest: matchRequestRouter,
   question: questionRouter,
   form: formRouter,
-  user: userRouter
+  user: userRouter,
 });
 
 // export type definition of API
