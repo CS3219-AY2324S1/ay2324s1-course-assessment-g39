@@ -58,6 +58,7 @@ amqp.connect("amqp://localhost", (err, conn) => {
       const id = msg.properties.headers.id as string;
       const difficulty = parseInt(msg.properties.headers.difficulty as string);
       const category = msg.properties.headers.category as string;
+      const requestId = msg.properties.headers.requestId as string;
 
       void Promise.resolve(
         findRequest(id).then((res) => {
@@ -72,12 +73,18 @@ amqp.connect("amqp://localhost", (err, conn) => {
               }),
             );
           } else {
-            ch.publish(broadcast, "", Buffer.from("Request already exists"), {
-              headers: {
-                id,
-                isSuccess: false,
+            ch.publish(
+              broadcast,
+              "",
+              Buffer.from("Request already exists for the current user"),
+              {
+                headers: {
+                  id,
+                  exists: "true",
+                  requestId,
+                },
               },
-            });
+            );
           }
         }),
       );

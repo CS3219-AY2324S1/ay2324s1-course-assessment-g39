@@ -31,34 +31,10 @@ const MatchRequestPage = () => {
     const client = new Client({
       brokerURL: "ws://localhost:15674/ws",
       onConnect: () => {
-        client.subscribe("/exchange/broadcast", (message: Message) => {
-          const msg = message.body;
-          const headerData = message.headers;
-
-          console.log(msg);
-          console.log(headerData);
-
-          if (headerData.isSuccess === "true") {
-            setPageState((prev) => ({
-              ...prev,
-              statusMessage: msg,
-              requestFailed: false,
-            }));
-
-            clearInterval(timer.current!);
-            setPageState((prev) => ({
-              ...prev,
-              isTimerActive: false,
-              waitingTime: 0,
-            }));
-            timer.current = null;
-
-            // TODO: Give user a way to connect to the coding session
-          }
-        });
+        console.log("Client connected to amqp");
       },
       onDisconnect: () => {
-        client.unsubscribe("/exchange/broadcast");
+        console.log("Client disconnected from amqp");
       },
       onWebSocketError: (event: Event) => {
         console.error("WebSocket error: ", event);
@@ -176,13 +152,64 @@ const MatchRequestPage = () => {
       }));
 
     if (amqpClient.connected) {
-      console.log("connected");
+      const requestId = crypto.randomUUID();
+
+      amqpClient.subscribe("/exchange/broadcast", (message: Message) => {
+        const msg = message.body;
+        const headerData = message.headers;
+
+        console.log(msg);
+        console.log(headerData);
+
+        if (
+          headerData.isSuccess === "true" &&
+          headerData.id === session.user.id
+        ) {
+          setPageState((prev) => ({
+            ...prev,
+            statusMessage: msg,
+            requestFailed: false,
+          }));
+
+          clearInterval(timer.current!);
+          setPageState((prev) => ({
+            ...prev,
+            isTimerActive: false,
+            waitingTime: 0,
+          }));
+          timer.current = null;
+
+          amqpClient.unsubscribe("/exchange/broadcast");
+
+          // TODO: Give user a way to connect to the coding session
+        } else if (
+          headerData.exists === "true" &&
+          headerData.id === session.user.id &&
+          headerData.requestId === requestId
+        ) {
+          setPageState((prev) => ({
+            ...prev,
+            statusMessage: msg,
+            requestFailed: true,
+          }));
+
+          clearInterval(timer.current!);
+          setPageState((prev) => ({
+            ...prev,
+            isTimerActive: false,
+            waitingTime: 0,
+          }));
+          timer.current = null;
+        }
+      });
+
       amqpClient.publish({
         destination: "/queue/add_request_queue",
         headers: {
           id: session.user.id,
           difficulty: pageState.difficulty.toString(),
           category: pageState.category,
+          requestId,
         },
       });
     }
@@ -281,7 +308,7 @@ const MatchRequestPage = () => {
   }
 
   // Remove current request immediately so that the user doesn't need to wait for timeout to send another request
-  window.onunload = () => {
+  window.onpagehide = () => {
     // Only remove request for current page, not other pages with the same user
     if (pageState.isTimerActive) void Promise.resolve(cancelRequest());
 
