@@ -13,11 +13,11 @@ if pgrep -x "postgres" &> /dev/null; then
   sudo pkill -u postgres
 fi
 
-# Run the other commands
+# Run other commands
+yarn
 yarn docker:up
 yarn prisma:studio &
-yarn dev -- -p 3000 &
-sleep 3
+yarn dev -- -p 3000
 
 # Open the localhost URL in the default web browser
 open http://localhost:3000 
