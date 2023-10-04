@@ -31,10 +31,10 @@ const MatchRequestPage = () => {
     const client = new Client({
       brokerURL: "ws://localhost:15674/ws",
       onConnect: () => {
-        console.log("Client connected to amqp");
+        console.log("Client connected to stomp");
       },
       onDisconnect: () => {
-        console.log("Client disconnected from amqp");
+        console.log("Client disconnected from stomp");
       },
       onWebSocketError: (event: Event) => {
         console.error("WebSocket error: ", event);
@@ -81,13 +81,6 @@ const MatchRequestPage = () => {
         }));
         clearInterval(timer.current!);
         timer.current = null;
-      } else {
-        amqpClient.publish({
-          destination: "/queue/check_status",
-          headers: {
-            id: pageState.id,
-          },
-        });
       }
     }
   }, [
@@ -154,54 +147,56 @@ const MatchRequestPage = () => {
     if (amqpClient.connected) {
       const requestId = crypto.randomUUID();
 
-      amqpClient.subscribe("/exchange/broadcast", (message: Message) => {
-        const msg = message.body;
-        const headerData = message.headers;
+      const subscription = amqpClient.subscribe(
+        "/exchange/broadcast",
+        (message: Message) => {
+          const msg = message.body;
+          const headerData = message.headers;
 
-        console.log(msg);
-        console.log(headerData);
+          console.log(msg);
+          console.log(headerData);
 
-        if (
-          headerData.isSuccess === "true" &&
-          headerData.id === session.user.id
-        ) {
-          setPageState((prev) => ({
-            ...prev,
-            statusMessage: msg,
-            requestFailed: false,
-          }));
+          if (
+            headerData.partnerOne === session.user.id ||
+            headerData.partnerTwo === session.user.id
+          ) {
+            setPageState((prev) => ({
+              ...prev,
+              statusMessage: msg,
+              requestFailed: false,
+            }));
 
-          clearInterval(timer.current!);
-          setPageState((prev) => ({
-            ...prev,
-            isTimerActive: false,
-            waitingTime: 0,
-          }));
-          timer.current = null;
+            clearInterval(timer.current!);
+            setPageState((prev) => ({
+              ...prev,
+              isTimerActive: false,
+              waitingTime: 0,
+            }));
+            timer.current = null;
 
-          amqpClient.unsubscribe("/exchange/broadcast");
+            subscription.unsubscribe();
 
-          // TODO: Give user a way to connect to the coding session
-        } else if (
-          headerData.exists === "true" &&
-          headerData.id === session.user.id &&
-          headerData.requestId === requestId
-        ) {
-          setPageState((prev) => ({
-            ...prev,
-            statusMessage: msg,
-            requestFailed: true,
-          }));
+            // TODO: Give user a way to connect to the coding session
+          } else if (
+            headerData.id === session.user.id &&
+            headerData.requestId === requestId
+          ) {
+            setPageState((prev) => ({
+              ...prev,
+              statusMessage: msg,
+              requestFailed: true,
+            }));
 
-          clearInterval(timer.current!);
-          setPageState((prev) => ({
-            ...prev,
-            isTimerActive: false,
-            waitingTime: 0,
-          }));
-          timer.current = null;
-        }
-      });
+            clearInterval(timer.current!);
+            setPageState((prev) => ({
+              ...prev,
+              isTimerActive: false,
+              waitingTime: 0,
+            }));
+            timer.current = null;
+          }
+        },
+      );
 
       amqpClient.publish({
         destination: "/queue/add_request_queue",

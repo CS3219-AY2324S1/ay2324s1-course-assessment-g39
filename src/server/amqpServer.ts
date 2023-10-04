@@ -64,13 +64,31 @@ amqp.connect("amqp://localhost", (err, conn) => {
         findRequest(id).then((res) => {
           if (!res) {
             void Promise.resolve(
-              prismaPostgres.matchRequest.create({
-                data: {
-                  id,
-                  difficulty,
-                  category,
-                },
-              }),
+              prismaPostgres.matchRequest
+                .create({
+                  data: {
+                    id,
+                    difficulty,
+                    category,
+                  },
+                })
+                .then((request) => {
+                  void Promise.resolve(findMatchingRequest(request)).then(
+                    (matchRes) => {
+                      if (matchRes) {
+                        void Promise.resolve(removeRequest(request));
+                        void Promise.resolve(removeRequest(matchRes));
+
+                        ch.publish(broadcast, "", Buffer.from("Found match!"), {
+                          headers: {
+                            partnerOne: id,
+                            partnerTwo: matchRes.id,
+                          },
+                        });
+                      }
+                    },
+                  );
+                }),
             );
           } else {
             ch.publish(
@@ -80,7 +98,6 @@ amqp.connect("amqp://localhost", (err, conn) => {
               {
                 headers: {
                   id,
-                  exists: "true",
                   requestId,
                 },
               },
@@ -101,65 +118,13 @@ amqp.connect("amqp://localhost", (err, conn) => {
 
       void Promise.resolve(
         findRequest(id).then((res) => {
-          console.log("deleting");
           if (res) {
-            console.log("confirming delete");
             void Promise.resolve(
               prismaPostgres.matchRequest.delete({
                 where: {
                   id,
                 },
               }),
-            );
-          }
-        }),
-      );
-
-      ch.ack(msg);
-    });
-
-    const status_queue = "check_status";
-    ch.assertQueue(status_queue, { durable: true });
-    ch.consume(status_queue, (msg) => {
-      if (!msg) return;
-
-      const id = msg.properties.headers.id as string;
-
-      void Promise.resolve(
-        findRequest(id).then((res) => {
-          if (res) {
-            void Promise.resolve(findMatchingRequest(res)).then((matchRes) => {
-              if (matchRes) {
-                void Promise.resolve(removeRequest(res));
-                void Promise.resolve(removeRequest(matchRes));
-
-                ch.publish(broadcast, "", Buffer.from("Found match!"), {
-                  headers: {
-                    partnerOne: id,
-                    partnerTwo: matchRes.id,
-                    isSuccess: "true",
-                  },
-                });
-              } else {
-                ch.publish(broadcast, "", Buffer.from("No match found"), {
-                  headers: {
-                    id,
-                    isSuccess: "false",
-                  },
-                });
-              }
-            });
-          } else {
-            ch.publish(
-              broadcast,
-              "",
-              Buffer.from("Request does not exist. Please try again."),
-              {
-                headers: {
-                  id,
-                  isSuccess: false,
-                },
-              },
             );
           }
         }),
