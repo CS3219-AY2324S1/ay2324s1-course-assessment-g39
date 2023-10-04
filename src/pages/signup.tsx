@@ -14,25 +14,16 @@ const SignUp = () => {
   const { data: session } = useSession();
   const isLoggedIn = !!session;
 
-  const handleLogIn = async () => {
-    if (isLoggedIn) {
-      const confirmLogOut = confirm(
-        `You are logged in as  ${session.user.email}. You have to log out before you can log in again. Log out?`,
-      );
-      if (confirmLogOut) {
-        await signOut().then(() => signIn(undefined, { callbackUrl: "/" }));
-      }
-    }
-  };
-
   const createMutation = api.user.create.useMutation({
     onError: (e) => {
       console.log(e);
+      // follow convention to provide generic error message
+      // to prevent malicious actors to derive db data (eg. email exists)
       toast.error("Failed to create account\n Please try again later");
     },
     onSuccess: async () => {
       toast.success("Successfully created account: ");
-      if (!isLoggedIn) {
+      if (confirm("Sign In?")) {
         await signIn("credentials", { callbackUrl: "/" });
       }
     },

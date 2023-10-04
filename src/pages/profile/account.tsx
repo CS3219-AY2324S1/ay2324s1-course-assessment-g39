@@ -25,13 +25,6 @@ const ProfilePage: NextPage = () => {
 
   const router = useRouter();
 
-  //   const {
-  //     data: userData,
-  //     isLoading: isLoadingUserData,
-  //     refetch: refetchUser,
-  //     error: errorFetchingUser,
-  //   } = api.user.getCurrentUser.useQuery();
-
   const updateInfoSchema = z.object({
     name: z.string().min(1, { message: "Required" }),
     email: z.string().email(),
