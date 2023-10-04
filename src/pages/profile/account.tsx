@@ -10,6 +10,7 @@ import { LoadingPage } from "~/components/Loading";
 import { api } from "~/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { signOut } from "next-auth/react";
 
 // TODO:
 // - edit imageURL
@@ -85,7 +86,7 @@ const ProfilePage: NextPage = () => {
         </Head>
         <PageLayout>
           <div className="w-full h-full flex flex-col justify-center items-center">
-            <div className="align-middle">404 User not found</div>
+            <div>404 User not found</div>
             <div>
               <button
                 className="text-neutral-400 rounded-md underline"
@@ -127,7 +128,17 @@ const ProfilePage: NextPage = () => {
             className="absolute -mb-[64px] ml-4 rounded-md border-b border-2 bottom-0 left-0 bg-black"
           />
         </div>
-        <div className="h-[64px]"></div>
+        {/* spacer */}
+        <div className="h-[64px] relative">
+          <div className="absolute m-2 p-2 top-0 right-0">
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="text-neutral-400 rounded-md underline"
+            >
+              log out
+            </button>
+          </div>
+        </div>{" "}
         <div className="p-4">
           <div className="text-2xl font-bold">{name}</div>
           <div className="pb-4">{email}</div>

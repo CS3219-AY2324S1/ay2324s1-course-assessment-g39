@@ -3,22 +3,41 @@
 // unify style with login page
 // input validation
 
-
-import { type FormEvent } from "react";
+import type { FormEvent } from "react";
 import { api } from "~/utils/api";
-import { signIn } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
+import Head from "next/head";
+import { PageLayout } from "~/components/Layout";
 
-export default function SignUp() {
+const SignUp = () => {
+  const { data: session } = useSession();
+  const isLoggedIn = !!session;
+
+  const handleLogIn = async () => {
+    if (isLoggedIn) {
+      const confirmLogOut = confirm(
+        `You are logged in as  ${session.user.email}. You have to log out before you can log in again. Log out?`,
+      );
+      if (confirmLogOut) {
+        await signOut().then(() => signIn(undefined, { callbackUrl: "/" }));
+      }
+    }
+  };
+
   const createMutation = api.user.create.useMutation({
     onError: (e) => {
-      toast.error("Failed to create account: " + e.message);
+      console.log(e);
+      toast.error("Failed to create account\n Please try again later");
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Successfully created account: ");
-      void signIn(undefined, { callbackUrl: "/" });
+      if (!isLoggedIn) {
+        await signIn("credentials", { callbackUrl: "/" });
+      }
     },
   });
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const form = event.target as HTMLFormElement;
@@ -27,7 +46,7 @@ export default function SignUp() {
     const password = data.get("password") as string;
     const confirmPassword = data.get("confirm-password") as string;
     if (confirmPassword != password) {
-      toast.error("Failed to login");
+      toast.error("Passwords do not match");
       return null;
     }
     const name = data.get("name") as string;
@@ -37,9 +56,30 @@ export default function SignUp() {
       password,
       image: null,
     });
-
-    // signIn();
   }
+
+  if (isLoggedIn)
+    return (
+      <>
+        <Head>
+          <title>Profile</title>
+        </Head>
+        <PageLayout>
+          <div className="w-full h-full flex flex-col justify-center items-center">
+            <div>Logged in as: {session.user.email}</div>
+            <div>
+              To access the SignUp page,{" "}
+              <button
+                className="px-1 text-neutral-400 rounded-md underline"
+                onClick={() => signOut({ callbackUrl: "/signup" })}
+              >
+                log out
+              </button>
+            </div>
+          </div>
+        </PageLayout>
+      </>
+    );
 
   return (
     <section className="bg-gray-50 dark:bg-gray-900">
@@ -137,7 +177,7 @@ export default function SignUp() {
               <p className="text-sm font-light text-gray-500 dark:text-gray-400">
                 Already have an account?{" "}
                 <a
-                  onClick={() => void signIn()}
+                  onClick={() => void signIn(undefined, { callbackUrl: "/" })}
                   className="font-medium text-primary-600 hover:underline dark:text-primary-500"
                 >
                   Login here
@@ -149,4 +189,6 @@ export default function SignUp() {
       </div>
     </section>
   );
-}
+};
+
+export default SignUp;

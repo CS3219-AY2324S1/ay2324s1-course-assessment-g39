@@ -26,26 +26,24 @@ const userUpdateObject = z.object({
 });
 
 export const userRouter = createTRPCRouter({
-  create: publicProcedure
-    .input(userObject)
-    .mutation(async ({ input }) => {
-      const { password, ...values } = input;
-      if (!password) {
-        return {
-          message: "Invalid password"
-        };
-      }
-      const passwordHash = await hashPassword(password);
+  create: publicProcedure.input(userObject).mutation(async ({ input }) => {
+    const { password, ...values } = input;
+    const passwordHash = await hashPassword(password);
+    try {
       await prisma.user.create({
         data: {
           ...values,
-          password: passwordHash
-        }
-      })
-      return {
-        message: `User created`
-      }
-    }),
+          password: passwordHash,
+        },
+      });
+    } catch (e) {
+      // throws generic error to prevent malicious actors from determining which emails are in the databse
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "An internal error occurred. Please try again later.",
+      });
+    }
+  }),
 
   deleteUserByID: protectedProcedure
     .input(
@@ -58,8 +56,8 @@ export const userRouter = createTRPCRouter({
         where: { id: input.id },
       });
       return {
-        message: "User deleted"
-      }
+        message: "User deleted",
+      };
     }),
 
   update: protectedProcedure
