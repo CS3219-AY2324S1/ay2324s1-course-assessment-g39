@@ -69,7 +69,7 @@ model VerificationToken {
 
 model MatchRequest {
     id          String  @id
-    replyTo     String  @unique
+    name        String?
     difficulty  Int
     category    String
 }

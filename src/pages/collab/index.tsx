@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -17,7 +20,7 @@ const MatchRequestPage = () => {
     category: "",
     id: "",
     response: "",
-    statusMessage: "Searching for partner...",
+    statusMessage: "",
     isWaiting: false,
     requestFailed: false,
     hasSubmitted: false,
@@ -67,35 +70,24 @@ const MatchRequestPage = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
 
+  const utils = api.useContext();
+
+  api.matchRequest.subscribeToRequests.useSubscription(undefined, {
+    onData(request) {
+      console.log(request);
+      void Promise.resolve(utils.matchRequest.invalidate());
+    },
+    onError(err) {
+      console.log("Subscription error: ", err);
+      void Promise.resolve(utils.matchRequest.invalidate());
+    },
+  });
+
+  const allRequests = api.matchRequest.getRequests.useInfiniteQuery({});
+
   const addRequestMutation = api.matchRequest.addRequest.useMutation({
     onSuccess: (data) => {
-      setPageState((prev) => ({
-        ...prev,
-        response: data.msg,
-      }));
-      console.log(data.msg);
-
-      if (data.isSuccess) {
-        setPageState((prev) => ({
-          ...prev,
-          statusMessage: data.msg,
-          requestFailed: false,
-        }));
-      } else {
-        setPageState((prev) => ({
-          ...prev,
-          statusMessage: data.msg,
-          requestFailed: true,
-        }));
-      }
-
-      clearInterval(timer.current!);
-      setPageState((prev) => ({
-        ...prev,
-        isTimerActive: false,
-        waitingTime: 0,
-      }));
-      timer.current = null;
+      console.log(data);
     },
   });
 
@@ -130,17 +122,21 @@ const MatchRequestPage = () => {
     }));
 
     addRequestMutation.mutate({
+      id: session.user.id,
+      name: session.user.name!,
       difficulty: pageState.difficulty,
       category: pageState.category,
-      id: session.user.id,
     });
+
+    void Promise.resolve(allRequests.refetch());
   };
 
   const cancelRequest = () => {
     cancelRequestMutation.mutate({
+      id: pageState.id,
+      name: session!.user.name!,
       difficulty: pageState.difficulty,
       category: pageState.category,
-      id: pageState.id,
     });
     clearInterval(timer.current!);
     setPageState((prev) => ({
@@ -271,7 +267,7 @@ const MatchRequestPage = () => {
           Time elapsed: {pageState.waitingTime} seconds
         </div>
       )}
-      <div className="absolute left-1/2 top-1/2 flex h-80 w-64 -translate-x-1/2 -translate-y-1/2 flex-col justify-evenly rounded-xl border p-5">
+      <div className="absolute left-1/4 top-1/2 flex h-80 w-64 -translate-x-1/2 -translate-y-1/2 flex-col justify-evenly rounded-xl border p-5">
         <div className="difficulty-menu">
           <span className="choose">Choose Difficulty</span>
 
@@ -322,6 +318,18 @@ const MatchRequestPage = () => {
         >
           Find practice partner
         </button>
+      </div>
+      <div className="absolute left-3/4 top-1/2 flex h-80 w-1/2 -translate-x-2/3 -translate-y-1/2 flex-col justify-evenly rounded-xl border p-5">
+        <span className="absolute left-1/2 -translate-x-1/2 top-0 text-white ">
+          All requests
+        </span>
+        {allRequests.data?.pages.flat(2).map((request, index) => (
+          <div key={index} onClick={() => console.log("Join this game!")}>
+            <span className="text-white">{request.name}</span>
+            <span className="text-white">{request.difficulty}</span>
+            <span className="text-white">{request.category}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
