@@ -8,14 +8,18 @@ import { useEffect, useState } from 'react';
 
 function Editor() {
     const router = useRouter();
-    const [code, setCode] = useCodeSession(router.query.id as string);
+    const [code, setCode, loadedCode] = useCodeSession(router.query.id as string);
     const [editorState, setEditorState] = useState<EditorState>(EditorState.create());
     useEffect(() => {
         const editor = EditorState.create({
             doc: code
         });
         setEditorState(editor);
-    }, [code]);
+    }, [loadedCode]);
+
+    if (!loadedCode) {
+        return <>Loading</>;
+    }
     return <CodeMirror onChange={(_, viewUpdate) => setCode({
             changes: viewUpdate.changes
         })}

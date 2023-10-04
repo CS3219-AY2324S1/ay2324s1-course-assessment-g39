@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { api } from '~/utils/api';
 
-export default function useCodeSession(codeSessionId: string): [CMText, (v: { changes: ChangeSet }) => void] {
+export default function useCodeSession(codeSessionId: string): [CMText, (v: { changes: ChangeSet }) => void, loadedCode: boolean] {
     const { data } = useSession();
     const [code, setCode] = useState<CMText>(CMText.of(['']));
     const [loadedCode, setLoadedCode] = useState(false);
@@ -50,7 +50,7 @@ export default function useCodeSession(codeSessionId: string): [CMText, (v: { ch
         
         setLoadedCode(true);
         
-    }, [data]);    
+    }, [data, codeSessionQuery]);    
 
 
     const updateCode = (update: { changes: ChangeSet }) => {
@@ -67,5 +67,5 @@ export default function useCodeSession(codeSessionId: string): [CMText, (v: { ch
             codeSessionId
         });
     };
-    return [code, updateCode];
+    return [code, updateCode, loadedCode];
 }
