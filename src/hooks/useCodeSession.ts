@@ -15,7 +15,7 @@ export default function useCodeSession(codeSessionId: string): [CMText, (v: { ch
     const updateSession = api.codeSession.updateSession.useMutation();
     const codeSessionQuery = api.codeSession.getSession.useQuery({
         codeSession: codeSessionId,
-    }, { enabled: data != null });
+    }, { enabled: data != null && !loadedCode });
     api.codeSession.suscribeToSession.useSubscription({ codeSessionId }, {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onData(update: { clientId: string, changes: any }) {
@@ -40,7 +40,6 @@ export default function useCodeSession(codeSessionId: string): [CMText, (v: { ch
 
     useEffect(() => {
         
-        console.log(loadedCode);
         if (data == null) return;
         
         if (!(codeSessionQuery?.data?.code != undefined)) return;
@@ -57,7 +56,6 @@ export default function useCodeSession(codeSessionId: string): [CMText, (v: { ch
         
         if (!loadedCode) return;
         const new_text = update.changes.apply(code);
-        console.log(update.changes.toJSON());
         setCode(new_text);
         updateSession.mutate({
             update: {

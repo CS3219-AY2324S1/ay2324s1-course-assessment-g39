@@ -143,7 +143,6 @@ const CodeSpaceButtons = ({ onUpdate }: { onUpdate: () => void }) => {
 const CodeSpace = () => {
   const allSpaces = api.codeSession.getAllSpaces.useQuery();
     
-  console.log(allSpaces.data);
   return (
     <div className="absolute w-full h-full">
     <div className="grid w-full h-full grid-rows-6 gap-0 dark:bg-gray-900">

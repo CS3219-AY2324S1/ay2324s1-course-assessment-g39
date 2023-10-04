@@ -65,6 +65,7 @@ async function authoriseCodeSession({
   codeSessionId: string;
   currentUserId: string;
 }) {
+
   const codeSession = await prismaPostgres.codeSession.findUnique({
     where: {
       id: codeSessionId,
@@ -278,11 +279,14 @@ export const codeSessionRouter = createTRPCRouter({
         code: codeSpace.code
       };
     }),
+  // todo: protect this route from other users without using a db query
   updateSession: protectedProcedure
     .input(updateCodeSessionObject)
     .mutation(async ({ ctx, input }) => {
 
-      await authoriseCodeSession({ codeSessionId: input.codeSessionId, currentUserId: ctx.session.user.id });
+      // don't really want to use temporary storage though, it can really explode
+      // await authoriseCodeSession({ codeSessionId: input.codeSessionId, currentUserId: ctx.session.user.id });
+
       // no polling raises the question of when should saving be done?
       const ee = eventEmittors.get(input.codeSessionId);
       const change = ChangeSet.fromJSON(JSON.parse(input.update.changes));
@@ -315,20 +319,29 @@ export const codeSessionRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       await authoriseCodeSession({ codeSessionId: input.codeSessionId, currentUserId: ctx.session.user.id });
       // find unique should work though -> its supposed to be a one-to-one mapping -> tho there is a chance of none
-      const codeSpace = await prismaPostgres.codeSpace.findUnique({
+      const codeSession = await prismaPostgres.codeSession.findUnique({
         where: {
-          codeSessionId: input.codeSessionId
+          id: input.codeSessionId,
         }
-      });
-      if (!codeSpace) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Code space does not exist" });
+      })
+      
+      if (!codeSession) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Code space does not exist" });
+
       await prismaPostgres.codeSpace.update({
         where: {
-          codeSessionId: input.codeSessionId
+          id_userId: {
+            id: codeSession.codeSpaceId,
+            userId: ctx.session.user.id
+          }
         },
         data: {
           code: codeSessionsCode.get(input.codeSessionId)?.toString(),
         }
+
       })
+      return {
+        message: "Success",
+      };
     }),
   deleteSession: protectedProcedure
     .input(getCodeSessionObject)

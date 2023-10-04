@@ -54,7 +54,6 @@ model CodeSpace {
   code          String
   name          String       @default("")
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  codeSessionId String?      @unique
   codeSession   CodeSession?
 
   @@id([id, userId])
@@ -64,7 +63,7 @@ model CodeSession {
   // unique id for session sharing
   id              String                @id @unique @default(cuid())
   userId          String // the primary owner of the codeSession
-  codeSpaceId     String
+  codeSpaceId     String                @unique
   codeSpace       CodeSpace             @relation(fields: [codeSpaceId, userId], references: [id, userId], onDelete: Cascade)
   codeSessionAuth CodeSessionUserAuth[]
 
