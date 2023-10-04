@@ -21,7 +21,8 @@ const userUpdateObject = z.object({
   id: z.string(),
   name: z.string().nullable(),
   email: z.string().email().nullable(),
-  emailVerified: z.date().nullable(),
+  // TODO: add email verification
+  // emailVerified: z.date().nullable(),
   image: z.string().nullable(),
 });
 
@@ -99,24 +100,24 @@ export const userRouter = createTRPCRouter({
       return usersByName;
     }),
 
-  getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
-    const user = await prisma.user.findUnique({
-      where: {
-        id: ctx.session.user.id,
-      },
-    });
+  // getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
+  //   const user = await prisma.user.findUnique({
+  //     where: {
+  //       id: ctx.session.user.id,
+  //     },
+  //   });
 
-    if (!user?.email || !user.name) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "User not found",
-      });
-    }
+  //   if (!user?.email || !user.name) {
+  //     throw new TRPCError({
+  //       code: "INTERNAL_SERVER_ERROR",
+  //       message: "User not found",
+  //     });
+  //   }
 
-    return {
-      ...user,
-      name: user.name,
-      email: user.email,
-    };
-  }),
+  //   return {
+  //     ...user,
+  //     name: user.name,
+  //     email: user.email,
+  //   };
+  // }),
 });
