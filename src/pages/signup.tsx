@@ -24,7 +24,7 @@ const SignUp = () => {
     onSuccess: async () => {
       toast.success("Successfully created account: ");
       if (confirm("Sign In?")) {
-        await signIn("credentials", { callbackUrl: "/" });
+        await signIn(undefined, { callbackUrl: "/" });
       }
     },
   });
