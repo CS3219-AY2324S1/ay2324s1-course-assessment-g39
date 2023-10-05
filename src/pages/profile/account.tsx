@@ -6,11 +6,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/Layout";
-import { LoadingPage } from "~/components/Loading";
 import { api } from "~/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { LoadingPage } from "~/components/Loading";
 
 // TODO:
 // - edit imageURL
@@ -20,9 +20,18 @@ import { signIn, signOut, useSession } from "next-auth/react";
 
 const ProfilePage: NextPage = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const { data: session, update: updateSession } = useSession();
-  const isLoggedIn = !!session;
-
+  // session is `null` until nextauth fetches user's session data
+  const {
+    data: session,
+    update: updateSession,
+    status,
+  } = useSession({
+    required: true,
+    // defaults redirects user to sign in page if not signed in
+    // onUnauthenticated() {
+    //   signIn();
+    // },
+  });
   const router = useRouter();
 
   const updateInfoSchema = z.object({
@@ -46,22 +55,32 @@ const ProfilePage: NextPage = () => {
     },
   });
 
-  const { mutate: updateUser, isLoading: isSavingUserData } =
-    api.user.update.useMutation({
-      onSuccess: () => {
-        setIsEditing(false);
-        toast.success(`User updated`);
-        // TODO: fix refetch by updating nextAuth https://next-auth.js.org/getting-started/client#updating-the-session
-        updateSession();
-        console.log("session", session);
-      },
-      onError: (e) => {
-        const errMsg = e.data?.zodError?.fieldErrors.content;
-        if (errMsg?.[0]) {
-          toast.error(`Failed to post: ${errMsg[0]}`);
-        }
-      },
-    });
+  const {
+    mutate: updateUser,
+    isLoading: isSavingUserData,
+    variables: newUserData,
+  } = api.user.update.useMutation({
+    onSuccess: () => {
+      if (!newUserData) throw new Error("newUserData is undefined");
+
+      const { name, email, image } = newUserData;
+      const newUserDataForSession = { name, email, image };
+
+      setIsEditing(false);
+      toast.success(`User updated`);
+      // TODO: fix refetch by updating nextAuth https://next-auth.js.org/getting-started/client#updating-the-session
+      updateSession(newUserDataForSession).then((res) =>
+        console.log("res", res),
+      );
+      console.log("session", session);
+    },
+    onError: (e) => {
+      const errMsg = e.data?.zodError?.fieldErrors.content;
+      if (errMsg?.[0]) {
+        toast.error(`Failed to post: ${errMsg[0]}`);
+      }
+    },
+  });
 
   const { mutate: updatePassword, isLoading: isUpdatingPassword } =
     api.user.updatePassword.useMutation({
@@ -77,30 +96,14 @@ const ProfilePage: NextPage = () => {
       },
     });
 
-  if (!isLoggedIn) {
+  if (!session) {
     return (
       <>
         <Head>
           <title>Profile</title>
         </Head>
         <PageLayout>
-          <div className="w-full h-full flex flex-col justify-center items-center">
-            <div>User not logged in</div>
-            <div>
-              <button
-                className="p-1 text-neutral-400 rounded-md underline"
-                onClick={() => void router.push("/signup/")}
-              >
-                Sign Up
-              </button>
-              <button
-                className="p-1 text-neutral-400 rounded-md underline"
-                onClick={() => void signIn()}
-              >
-                Sign In
-              </button>
-            </div>
-          </div>
+          <LoadingPage />
         </PageLayout>
       </>
     );

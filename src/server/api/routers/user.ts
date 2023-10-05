@@ -19,8 +19,8 @@ const userObject = z.object({
 
 const userUpdateObject = z.object({
   id: z.string(),
-  name: z.string().nullable(),
-  email: z.string().email().nullable(),
+  name: z.string(),
+  email: z.string().email(),
   // TODO: add email verification
   // emailVerified: z.date().nullable(),
   image: z.string().nullable(),
