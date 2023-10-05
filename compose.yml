@@ -41,8 +41,8 @@ services:
       - 5672:5672
       - 15672:15672
     volumes:
-      - ./data:/var/lib/rabbitmq/
-      - ./data:/var/log/rabbitmq
+      - ./data/rabbitmq:/var/lib/rabbitmq/
+      - ./data/rabbitmq_log:/var/log/rabbitmq
     networks:
       - rabbitmq_go_net
 networks:
