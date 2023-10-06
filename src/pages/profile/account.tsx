@@ -21,16 +21,9 @@ import { LoadingPage } from "~/components/Loading";
 const ProfilePage: NextPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   // session is `null` until nextauth fetches user's session data
-  const {
-    data: session,
-    update: updateSession,
-    status,
-  } = useSession({
+  const { data: session, update: updateSession } = useSession({
     required: true,
     // defaults redirects user to sign in page if not signed in
-    // onUnauthenticated() {
-    //   signIn();
-    // },
   });
   const router = useRouter();
 
@@ -46,8 +39,8 @@ const ProfilePage: NextPage = () => {
   const { mutate: deleteUser } = api.user.deleteUserByID.useMutation({
     retry: 3,
     onSuccess: () => {
-      toast.success("Succesfully deleted user");
-      void router.push("/");
+      toast.success("User deleted");
+      signOut(); // invalidates user session
     },
     onError: (e) => {
       console.log(e);
@@ -61,18 +54,15 @@ const ProfilePage: NextPage = () => {
     variables: newUserData,
   } = api.user.update.useMutation({
     onSuccess: () => {
+      toast.success(`User updated`);
+
       if (!newUserData) throw new Error("newUserData is undefined");
 
       const { name, email, image } = newUserData;
       const newUserDataForSession = { name, email, image };
 
       setIsEditing(false);
-      toast.success(`User updated`);
-      // TODO: fix refetch by updating nextAuth https://next-auth.js.org/getting-started/client#updating-the-session
-      updateSession(newUserDataForSession).then((res) =>
-        console.log("res", res),
-      );
-      console.log("session", session);
+      updateSession(newUserDataForSession);
     },
     onError: (e) => {
       const errMsg = e.data?.zodError?.fieldErrors.content;
