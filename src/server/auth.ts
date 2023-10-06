@@ -1,5 +1,6 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { type PrismaClient } from "@prisma/client";
+import GitHubProvider from "next-auth/providers/github";
 import bcrypt from "bcrypt";
 import { type GetServerSidePropsContext } from "next";
 import {
@@ -11,12 +12,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { env } from "~/env.mjs";
 import { prismaPostgres as prisma } from "~/server/db";
 
-// todo: make this shared -> via some kind of env variable or smth
-export const saltRounds = 10;
-
 export async function hashPassword(password: string) {
+  const NUM_OF_SALT_ROUNDS = 10;
   return await bcrypt
-    .genSalt(saltRounds)
+    .genSalt(NUM_OF_SALT_ROUNDS)
     .then((salt) => bcrypt.hash(password, salt));
 }
 
@@ -51,38 +50,40 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXT_AUTH_SECRET,
   callbacks: {
     jwt: ({ token, user, trigger, session }) => {
-      console.log("[jwt]", "session in jwt", session);
-      console.log("[jwt]", "user", user);
-      console.log("[jwt]", "token", token);
-      console.log("[jwt]", "trigger", trigger);
-
       // user is ONLY provided on first time on sign in
       // https://next-auth.js.org/configuration/callbacks#jwt-callback
       //
       // session is data sent from client using useSession().update()
-      const newToken = { ...token, ...user, ...session };
+      if (trigger === "update") {
+        const updatedToken = { ...token, ...session };
+        console.log("[jwt]", "updatedToken", updatedToken);
+        return updatedToken;
+      }
+
+      const newToken = { ...token, ...user };
       console.log("[jwt]", "newToken", newToken);
       return newToken;
     },
-    session: ({ session, token, trigger }) => {
-      console.log("[session] session", session);
-      console.log("[session] token", token);
-      console.log("[session] trigger", trigger);
+    session: ({ session, token }) => {
       if (token !== null && token.id !== null) {
-        session = {
-          ...session,
-          user: {
-            ...session.user,
-            ...token,
-            id: token.id as string,
-          },
+        const newUser = {
+          ...session.user,
+          ...token,
+          id: token.id as string,
         };
+
+        session = { ...session, user: newUser };
       }
+      console.log("[session]", "newSession", session);
       return session;
     },
   },
   adapter: PrismaAdapter(prisma),
   providers: [
+    GitHubProvider({
+      clientId: env.GITHUB_ID,
+      clientSecret: env.GITHUB_SECRET,
+    }),
     CredentialsProvider({
       name: "Email",
       // `credentials` is used to generate a form on the sign in page.
