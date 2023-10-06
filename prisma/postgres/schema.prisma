@@ -73,3 +73,15 @@ model MatchRequest {
     difficulty  Int
     category    String
 }
+
+model JoinRequest {
+    id          Int     @id @default(autoincrement())
+    fromName    String
+    fromId      String
+    toId        String
+
+    @@unique([fromId, toId])
+
+    @@index([fromId])
+    @@index([toId]) 
+}

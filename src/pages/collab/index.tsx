@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -67,12 +64,21 @@ const MatchRequestPage = () => {
     "Insane",
   ];
 
+  const difficultyColors = [
+    "bg-green-500",
+    "bg-lime-500",
+    "bg-yellow-500",
+    "bg-amber-500",
+    "bg-orange-500",
+    "bg-red-500",
+  ];
+
   const router = useRouter();
   const { data: session, status } = useSession();
 
   const utils = api.useContext();
 
-  api.matchRequest.subscribeToRequests.useSubscription(undefined, {
+  api.matchRequest.subscribeToAllRequests.useSubscription(undefined, {
     onData(request) {
       console.log(request);
       void Promise.resolve(utils.matchRequest.invalidate());
@@ -83,7 +89,56 @@ const MatchRequestPage = () => {
     },
   });
 
-  const allRequests = api.matchRequest.getRequests.useInfiniteQuery({});
+  api.matchRequest.subscribeToAcceptRequests.useSubscription(undefined, {
+    onData(request) {
+      console.log(request);
+      void Promise.resolve(utils.matchRequest.invalidate());
+    },
+  });
+
+  api.matchRequest.subscribeToConfirmation.useSubscription(undefined, {
+    onData(request) {
+      console.log(request);
+      if (request.acceptId == session?.user.id) {
+        clearInterval(timer.current!);
+        setPageState((prev) => ({
+          ...prev,
+          isTimerActive: false,
+          waitingTime: 0,
+          isWaiting: false,
+        }));
+        timer.current = null;
+
+        // TODO: join session
+        console.log("Joining session...");
+      }
+    },
+  });
+
+  api.matchRequest.subscribeToDeclineRequests.useSubscription(undefined, {
+    onData(request) {
+      console.log(request);
+      if (request.acceptId == session?.user.id) {
+        console.log("Declined match");
+        // Maybe include the request user's name in the toast message
+        toast.error("Your match request was declined.");
+      }
+      void Promise.resolve(utils.matchRequest.invalidate());
+    },
+  });
+
+  const allOtherRequests = api.matchRequest.getOtherRequests.useInfiniteQuery(
+    {},
+  );
+
+  const allJoinRequests = api.matchRequest.getJoinRequests.useInfiniteQuery({});
+
+  const queueSize = allOtherRequests.data
+    ? allOtherRequests.data.pages.flat(2).length +
+      (pageState.isTimerActive ? 1 : 0)
+    : pageState.isTimerActive
+    ? 1
+    : 0;
 
   const addRequestMutation = api.matchRequest.addRequest.useMutation({
     onSuccess: (data) => {
@@ -94,6 +149,24 @@ const MatchRequestPage = () => {
   const cancelRequestMutation = api.matchRequest.cancelRequest.useMutation({
     onSuccess: (data) => {
       console.log(data);
+    },
+  });
+
+  const acceptRequestMutation = api.matchRequest.acceptRequest.useMutation({
+    onSuccess: () => {
+      console.log("Waiting for partner to accept...");
+    },
+  });
+
+  const confirmRequestMutation = api.matchRequest.confirmMatch.useMutation({
+    onSuccess: () => {
+      console.log("Joining session...");
+    },
+  });
+
+  const declineMatchMutation = api.matchRequest.declineMatch.useMutation({
+    onSuccess: () => {
+      console.log("Declined match");
     },
   });
 
@@ -128,13 +201,13 @@ const MatchRequestPage = () => {
       category: pageState.category,
     });
 
-    void Promise.resolve(allRequests.refetch());
+    void Promise.resolve(allOtherRequests.refetch());
   };
 
   const cancelRequest = () => {
     cancelRequestMutation.mutate({
       id: pageState.id,
-      name: session!.user.name!,
+      name: session?.user.name,
       difficulty: pageState.difficulty,
       category: pageState.category,
     });
@@ -146,6 +219,14 @@ const MatchRequestPage = () => {
       isWaiting: false,
     }));
     timer.current = null;
+  };
+
+  const acceptRequest = (partnerId: string) => {
+    acceptRequestMutation.mutate({
+      acceptUser: session?.user.name,
+      acceptId: session?.user.id,
+      requestId: partnerId,
+    });
   };
 
   const onDifficultySelect = () => {
@@ -194,9 +275,24 @@ const MatchRequestPage = () => {
     }));
   };
 
-  // TODO: join session
-  const joinSession = () => {
-    console.log("join session");
+  const confirmMatch = (acceptId: string, requestId: string) => {
+    clearInterval(timer.current!);
+    setPageState((prev) => ({
+      ...prev,
+      isTimerActive: false,
+      waitingTime: 0,
+      isWaiting: false,
+      incomingRequestUserId: "",
+    }));
+    timer.current = null;
+    confirmRequestMutation.mutate({ acceptId, requestId });
+
+    // TODO: join session
+    console.log("Joining session...");
+  };
+
+  const declineMatch = (acceptId: string, requestId: string) => {
+    declineMatchMutation.mutate({ acceptId, requestId });
   };
 
   if (status !== "authenticated") {
@@ -254,7 +350,7 @@ const MatchRequestPage = () => {
           )}
           {!pageState.isTimerActive && !pageState.requestFailed && (
             <button
-              onClick={joinSession}
+              onClick={() => console.log("Joining session...")}
               className="h-6 w-24 rounded-md bg-green-500 text-white"
             >
               Join Room
@@ -267,7 +363,7 @@ const MatchRequestPage = () => {
           Time elapsed: {pageState.waitingTime} seconds
         </div>
       )}
-      <div className="absolute left-1/4 top-1/2 flex h-80 w-64 -translate-x-1/2 -translate-y-1/2 flex-col justify-evenly rounded-xl border p-5">
+      <div className="absolute left-1/4 top-1/2 flex h-80 w-64 -translate-x-2/3 -translate-y-1/2 flex-col justify-evenly rounded-xl border p-5">
         <div className="difficulty-menu">
           <span className="choose">Choose Difficulty</span>
 
@@ -319,17 +415,116 @@ const MatchRequestPage = () => {
           Find practice partner
         </button>
       </div>
-      <div className="absolute left-3/4 top-1/2 flex h-80 w-1/2 -translate-x-2/3 -translate-y-1/2 flex-col justify-evenly rounded-xl border p-5">
+      <div className="absolute left-1/2 top-1/2 flex h-80 w-1/3 -translate-x-1/2 -translate-y-1/2 flex-col justify-evenly rounded-xl border p-5">
         <span className="absolute left-1/2 -translate-x-1/2 top-0 text-white ">
-          All requests
+          {`All requests (${queueSize} online users)`}
         </span>
-        {allRequests.data?.pages.flat(2).map((request, index) => (
-          <div key={index} onClick={() => console.log("Join this game!")}>
-            <span className="text-white">{request.name}</span>
-            <span className="text-white">{request.difficulty}</span>
-            <span className="text-white">{request.category}</span>
-          </div>
-        ))}
+        <div className="overflow-y-auto flex flex-col">
+          {pageState.isTimerActive && (
+            <div className="flex flex-col rounded-md bg-violet-700 m-2">
+              <span className="text-left text-white pl-4">
+                {session.user.name}
+              </span>
+              <div className="flex justify-evenly rounded-md p-2">
+                <div
+                  className={`w-1/3 flex justify-center items-center ${
+                    difficultyColors[pageState.difficulty]
+                  } rounded-md`}
+                >
+                  <span className="text-white">
+                    {difficultyLevels[pageState.difficulty]}
+                  </span>
+                </div>
+                <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
+                  <span className="text-white">{pageState.category}</span>
+                </div>
+                <button
+                  className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
+                  type="button"
+                >
+                  Edit
+                </button>
+              </div>
+            </div>
+          )}
+          {allOtherRequests.data?.pages.flat(2).map((request, index) => (
+            <div
+              className="flex flex-col rounded-md bg-sky-500 m-2"
+              key={index}
+            >
+              <span className="text-left text-white pl-4">{request.name}</span>
+              <div className="flex justify-evenly rounded-md p-2">
+                <div
+                  className={`w-1/3 flex justify-center items-center ${
+                    difficultyColors[request.difficulty]
+                  } rounded-md`}
+                >
+                  <span className="text-white">
+                    {difficultyLevels[request.difficulty]}
+                  </span>
+                </div>
+                <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
+                  <span className="text-white">{request.category}</span>
+                </div>
+                <button
+                  className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
+                  type="button"
+                  onClick={() => acceptRequest(request.id)}
+                >
+                  Accept
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="absolute left-3/4 top-1/2 flex h-80 w-1/4 -translate-x-1/4 -translate-y-1/2 flex-col rounded-xl border p-2 items-center justify-evenly">
+        <span className="absolute left-1/2 -translate-x-1/2 top-0 text-white py-2">
+          Requests from others
+        </span>
+        <div
+          className="overflow-y-auto w-full flex flex-col items-center"
+          style={{ height: "80%" }}
+        >
+          {allJoinRequests.data?.pages.flat(2).map((request, index) => (
+            <div
+              key={index}
+              className="flex flex-col border w-3/4  justify-items-center rounded-md bg-black text-white p-2 m-2"
+              style={{ top: "12.5%" }}
+            >
+              <span>
+                {(request as { fromName: string }).fromName} wants to join!
+              </span>
+              <div className="flex justify-evenly items-center p-2">
+                <button
+                  className="rounded-md p-2 text-white bg-emerald-500 w-1/3"
+                  type="button"
+                  onClick={() =>
+                    confirmMatch(
+                      (request as { fromId: string }).fromId,
+                      (request as { toId: string }).toId,
+                    )
+                  }
+                >
+                  Accept
+                </button>
+                <button
+                  className="rounded-md p-2 text-white bg-red-500 w-1/3"
+                  type="button"
+                  onClick={() =>
+                    declineMatch(
+                      (request as { fromId: string }).fromId,
+                      (request as { toId: string }).toId,
+                    )
+                  }
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
