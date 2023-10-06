@@ -122,6 +122,11 @@ export const QuestionRow = (props: QuestionRowProps) => {
       }
     });
     rendererRef.current!.style.height = `${height}px`;
+    if (bodyState === EDITING) {
+      window.scrollTo({
+        top: textAreaRefs.current[1]!.offsetTop - 100,
+      });
+    }
   }, [body, html, bodyState]);
 
   return <div {...others}>
@@ -142,12 +147,16 @@ export const QuestionRow = (props: QuestionRowProps) => {
 
     <StyledTextarea
       name="body"
-      onBlur={() => setBodyState(COLLAPSED)}
+      onBlur={() => {
+        setBodyState(COLLAPSED);
+      }}
       style={{
         minHeight: `${MIN_TEXTAREA_HEIGHT_px}px`,
         display: bodyState === EDITING ? 'block' : 'none',
       }}
-      onChange={(e) => onQuestionChange({ ...question, body: e.target.value })}
+      onChange={(e) =>
+        onQuestionChange({ ...question, body: e.target.value })
+      }
       // onKeyDown={handleKey}
       onPaste={(e) => { e.preventDefault(); void processPaste(e) }}
       value={body} span={4} highlight={body !== initialQuestion.body} ref={(r) => {
@@ -163,7 +172,12 @@ export const QuestionRow = (props: QuestionRowProps) => {
           setBodyState(EDITING);
         }
       }}
-      className={`flex-[4_4_0%] tb-border p-2 font-sans [&>ul]:list-disc [&>ul]:list-inside [&>ol]:list-decimal [&>ol]:list-inside break-word relative overflow-hidden ${bodyState === COLLAPSED ? '' : 'after:content-none'} after:w-full after:h-10 after:absolute after:left-0 after:top-0 after:translate-y-full after:bg-gradient-to-b after:from-transparent after:to-[inherit]`}
+      onBlur={() => {
+        if (bodyState === EXPANDED) {
+          setBodyState(COLLAPSED);
+        }
+      }}
+      className={`flex-[4_4_0%] tb-border p-2 font-sans [&>ul]:list-disc [&>ul]:list-inside [&>ol]:list-decimal [&>ol]:list-inside break-word relative overflow-hidden ${bodyState === COLLAPSED ? '' : 'after:content-none'} after:w-full after:h-10 after:absolute after:left-0 after:top-0 after:translate-y-full after:bg-gradient-to-b after:from-transparent after:to-[var(--bg-1)]`}
       dangerouslySetInnerHTML={{ __html: html }}
       style={{
         minHeight: `${MIN_TEXTAREA_HEIGHT_px}px`,

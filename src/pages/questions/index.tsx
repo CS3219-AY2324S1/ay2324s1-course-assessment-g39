@@ -8,6 +8,7 @@ import { QuestionRow } from "../../components/QuestionRow";
 import { StyledButton } from "../../components/StyledButton";
 import { StyledCheckbox } from "../../components/StyledCheckbox";
 import { makeMap } from "../../utils/utils";
+import { toast } from "react-hot-toast";
 
 export default function Questions() {
 
@@ -24,7 +25,10 @@ export default function Questions() {
                 ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q)
             }));
             setViewQns(makeMap(mappedData, 'id'));
-        }
+        },
+        onError: (e) => {
+            toast.error("Failed to fetch questions: " + e.message);
+        },
     }).data ?? [], 'id');
 
     const hasChanges = (id: string) => {
@@ -34,15 +38,24 @@ export default function Questions() {
     }
 
     const addMutation = api.question.addOne.useMutation({
-        onSuccess: () => { void getAllQuery.invalidate(); }
+        onSuccess: () => { void getAllQuery.invalidate() },
+        onError: (e, { title }) => {
+            toast.error(`Failed to add question '${title}':\n\t${e.message}`);
+        }
     });
 
     const updateMutation = api.question.updateOne.useMutation({
-        onSuccess: () => { void getAllQuery.invalidate(); }
+        onSuccess: () => { void getAllQuery.invalidate() },
+        onError: (e, { title }) => {
+            toast.error(`Failed to update question '${title}':\n\t${e.message}`);
+        }
     });
 
     const deleteMutation = api.question.deleteOne.useMutation({
-        onSuccess: () => { void getAllQuery.invalidate(); }
+        onSuccess: () => { void getAllQuery.invalidate() },
+        onError: (e, { id }) => {
+            toast.error(`Failed to delete question '${id}':\n\t${e.message}`);
+        }
     });
 
     const pushNew = () => {
@@ -67,9 +80,12 @@ export default function Questions() {
     const pushUpdated = () => {
         changedQns.forEach((id) => {
             if (!hasChanges(id)) return;
-            updateMutation.mutate({ id, ...viewQns.get(id) });
+            updateMutation.mutate({ id, ...viewQns.get(id) }, {
+                onSuccess: () => {
+                    changedQns.delete(id) && setChangedQns(new Set(changedQns));
+                }
+            });
         });
-        setChangedQns(new Set());
     };
 
     const saveDeleted = (id: string) => {
@@ -92,10 +108,12 @@ export default function Questions() {
     const pushDeleted = () => {
         deletedQns.forEach((id => {
             if (!questions.has(id)) return;
-            changedQns.delete(id) && setChangedQns(new Set(changedQns));
-            deleteMutation.mutate({ id });
+            deleteMutation.mutate({ id }, {
+                onSuccess: () => {
+                    deletedQns.delete(id) && setDeletedQns(new Set(deletedQns));
+                }
+            });
         }));
-        setDeletedQns(new Set());
     }
 
     return (
