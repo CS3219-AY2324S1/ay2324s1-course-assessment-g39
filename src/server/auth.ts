@@ -8,8 +8,6 @@ import {
   type NextAuthOptions,
 } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import DiscordProvider from "next-auth/providers/discord";
-import router from "next/router";
 import { env } from "~/env.mjs";
 import { prismaPostgres as prisma } from "~/server/db";
 
@@ -85,10 +83,6 @@ export const authOptions: NextAuthOptions = {
   },
   adapter: PrismaAdapter(prisma),
   providers: [
-    DiscordProvider({
-      clientId: env.DISCORD_CLIENT_ID,
-      clientSecret: env.DISCORD_CLIENT_SECRET,
-    }),
     CredentialsProvider({
       name: "Email",
       // `credentials` is used to generate a form on the sign in page.
