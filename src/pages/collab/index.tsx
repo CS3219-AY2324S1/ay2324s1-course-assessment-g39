@@ -73,7 +73,6 @@ const MatchRequestPage = () => {
         ...prev,
         response: data.msg,
       }));
-      console.log(data.msg);
 
       if (data.isSuccess) {
         setPageState((prev) => ({

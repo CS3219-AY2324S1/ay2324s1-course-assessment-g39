@@ -43,7 +43,6 @@ const ProfilePage: NextPage = () => {
       signOut(); // invalidates user session
     },
     onError: (e) => {
-      console.log(e);
       toast.error(`Failed to delete user: ${e.message}`);
     },
   });
@@ -113,7 +112,6 @@ const ProfilePage: NextPage = () => {
     const newData = { formData, ...userData };
     if (newData != userData) {
       updateUser({ ...userData, ...formData });
-      console.log("formData", formData);
     }
   });
 
@@ -145,6 +143,7 @@ const ProfilePage: NextPage = () => {
         </div>{" "}
         <div className="p-4">
           <div className="text-2xl font-bold">{name}</div>
+          {session.user.role == "MAINTAINER" && <em>Maintainer</em>}
           <div className="pb-4">{email}</div>
         </div>
         <div className="border-b border-slate-100"></div>
@@ -208,7 +207,6 @@ const ProfilePage: NextPage = () => {
                         password: pwVerified.data,
                       });
                     } else {
-                      console.log(pwVerified);
                       toast.error("invalid password");
                     }
                   }}

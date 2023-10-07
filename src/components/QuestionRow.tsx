@@ -25,17 +25,25 @@ type QuestionRowProps = {
   onQuestionDelete?: () => void;
   checked?: boolean;
   indeterminate?: boolean;
+  editable?: boolean;
 } & HTMLAttributes<HTMLDivElement>;
 export const QuestionRow = (props: QuestionRowProps) => {
   const {
     question, initialQuestion,
     onQuestionChange, onQuestionDelete,
     checked, indeterminate,
+    editable,
     ...others
   } = props;
   const { title, body, difficulty, category } = question;
 
-  const [bodyState, setBodyState] = useState(BODY_STATE.COLLAPSED);
+  const [bodyState, initSetBodyState] = useState(BODY_STATE.COLLAPSED);
+
+  const setBodyState = (bodyState: BODY_STATE) => {
+    if (!editable && bodyState == EDITING) return;
+    initSetBodyState(bodyState);
+  };
+
   const debouncedBodyState = useDebounce(bodyState, 100);
   const prevBodyState = useRef(bodyState);
   const [html, setHTML] = useState('');
@@ -143,7 +151,9 @@ export const QuestionRow = (props: QuestionRowProps) => {
       );
     }} span={2} highlight={title !== initialQuestion.title} ref={(r) => {
       textAreaRefs.current[0] = r;
-    }} />
+    }} 
+    disabled={!editable}
+    />
 
     <StyledTextarea
       name="body"
@@ -188,15 +198,19 @@ export const QuestionRow = (props: QuestionRowProps) => {
     />
 
     <StyledTextarea name="difficulty" value={difficulty ?? 0} onChange={(e) => onQuestionChange({ ...question, difficulty: parseInt(e.target.value) || 0 })}
+    
       ref={(r) => {
         textAreaRefs.current[2] = r;
-      }} type="number" highlight={difficulty !== initialQuestion.difficulty} />
+      }} type="number" highlight={difficulty !== initialQuestion.difficulty}
+      
+      disabled={!editable} />
 
     <StyledTextarea name="category" value={category}
       style={{
         minHeight: `${MIN_TEXTAREA_HEIGHT_px}px`,
       }} onChange={(e) => onQuestionChange({ ...question, category: e.target.value })} span={2} highlight={category !== initialQuestion.category} ref={(r) => {
         textAreaRefs.current[3] = r;
-      }} />
+      }} 
+      disabled={!editable} />
   </div>;
 };
