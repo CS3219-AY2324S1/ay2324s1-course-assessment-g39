@@ -55,13 +55,11 @@ const ProfilePage: NextPage = () => {
   } = api.user.update.useMutation({
     onSuccess: () => {
       toast.success(`User updated`);
+      setIsEditing(false);
 
       if (!newUserData) throw new Error("newUserData is undefined");
-
       const { name, email, image } = newUserData;
       const newUserDataForSession = { name, email, image };
-
-      setIsEditing(false);
       updateSession(newUserDataForSession);
     },
     onError: (e) => {
@@ -172,7 +170,7 @@ const ProfilePage: NextPage = () => {
               <form className="flex flex-col items-start" onSubmit={onUpdate}>
                 <label>name:</label>
                 <input
-                  className="text-slate-800"
+                  className="text-slate-800 rounded-md"
                   type="text"
                   defaultValue={name}
                   {...register("name")}
@@ -180,7 +178,7 @@ const ProfilePage: NextPage = () => {
                 <div className="p-1" />
                 <label>email:</label>
                 <input
-                  className="text-slate-800"
+                  className="text-slate-800 rounded-md"
                   type="email"
                   defaultValue={email}
                   {...register("email")}
