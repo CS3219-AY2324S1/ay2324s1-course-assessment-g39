@@ -1,5 +1,6 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { type PrismaClient } from "@prisma/client";
+import GitHubProvider from "next-auth/providers/github";
 import bcrypt from "bcrypt";
 import { type GetServerSidePropsContext } from "next";
 import {
@@ -8,16 +9,13 @@ import {
   type NextAuthOptions,
 } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import DiscordProvider from "next-auth/providers/discord";
 import { env } from "~/env.mjs";
 import { prismaPostgres as prisma } from "~/server/db";
 
-// todo: make this shared -> via some kind of env variable or smth
-export const saltRounds = 10;
-
 export async function hashPassword(password: string) {
+  const NUM_OF_SALT_ROUNDS = 10;
   return await bcrypt
-    .genSalt(saltRounds)
+    .genSalt(NUM_OF_SALT_ROUNDS)
     .then((salt) => bcrypt.hash(password, salt));
 }
 
@@ -51,34 +49,40 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
   secret: process.env.NEXT_AUTH_SECRET,
   callbacks: {
-    jwt: ({ token, user }) => {
-      if (user !== null) {
-        token = {
-          ...token,
-          ...user,
-        };
+    jwt: ({ token, user, trigger, session }) => {
+      // user is ONLY provided on first time on sign in
+      // https://next-auth.js.org/configuration/callbacks#jwt-callback
+      //
+      // session is data sent from client using useSession().update()
+      if (trigger === "update") {
+        const updatedToken = { ...token, ...session };
+        console.log("[jwt]", "updatedToken", updatedToken);
+        return updatedToken;
       }
-      return token;
+
+      const newToken = { ...token, ...user };
+      console.log("[jwt]", "newToken", newToken);
+      return newToken;
     },
     session: ({ session, token }) => {
       if (token !== null && token.id !== null) {
-        session = {
-          ...session,
-          user: {
-            ...token,
-            ...session.user,
-            id: token.id as string,
-          },
+        const newUser = {
+          ...session.user,
+          ...token,
+          id: token.id as string,
         };
+
+        session = { ...session, user: newUser };
       }
+      console.log("[session]", "newSession", session);
       return session;
     },
   },
   adapter: PrismaAdapter(prisma),
   providers: [
-    DiscordProvider({
-      clientId: env.DISCORD_CLIENT_ID,
-      clientSecret: env.DISCORD_CLIENT_SECRET,
+    GitHubProvider({
+      clientId: env.GITHUB_ID,
+      clientSecret: env.GITHUB_SECRET,
     }),
     CredentialsProvider({
       name: "Email",
@@ -86,11 +90,19 @@ export const authOptions: NextAuthOptions = {
       // You can specify which fields should be submitted, by adding keys to the `credentials` object.
       // e.g. domain, username, password, 2FA token, etc.
       // You can pass any HTML attribute to the <input> tag through the object.
+
+      // TODO: add button to signin page to redirect to signup page
+      // <button
+      //   className="p-1 text-neutral-400 rounded-md underline"
+      //   onClick={() => void router.push("/signup/")}
+      // >
+      //   Sign Up
+      // </button>
       credentials: {
         email: {
           label: "Email",
           type: "email",
-          placeholder: "jsmith@company.com",
+          placeholder: "jsmith@gmail.com",
         },
         password: {
           label: "Password",
@@ -98,9 +110,8 @@ export const authOptions: NextAuthOptions = {
           placeholder: "••••••••",
         },
       },
+      // look up user from the credentials supplied inside authorize
       async authorize(credentials, req) {
-        // Add logic here to look up the user from the credentials supplied
-
         if (!req.body?.email || !req.body.password) return null;
 
         const { email, password } = req.body as {
@@ -111,19 +122,17 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findUnique({
           where: { email },
         });
-        if (!user) return null;
-        if (!user.password) return null;
+
+        if (!user || !user.password) return null;
         if (user && bcrypt.compareSync(password, user.password)) {
           // Any object returned will be saved in `user` property of the JWT
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { password: _, ...userData } = user;
           return userData;
-        } else {
-          // If you return null then an error will be displayed advising the user to check their details.
-          return null;
-
-          // You can also Reject this callback with an Error thus the user will be sent to the error page with the error message as a query parameter
         }
+        return null;
+        // If you return null then an error will be displayed advising the user to check their details.
+        // You can also Reject this callback with an Error thus the user will be sent to the error page with the error message as a query parameter
       },
     }),
     /**

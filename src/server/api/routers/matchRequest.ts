@@ -291,7 +291,7 @@ void Promise.resolve(
         }, 30000);
       });
 
-      setInterval(() => void matchRequests(ch), 1000);
+      // setInterval(() => void matchRequests(ch), 1000);
     });
   }),
 );

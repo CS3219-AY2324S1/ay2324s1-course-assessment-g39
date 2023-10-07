@@ -27,16 +27,16 @@ const MatchRequestPage = () => {
 
   const timer = useRef<NodeJS.Timer | null>(null);
 
-  useEffect(() => {
-    if (pageState.isTimerActive && !timer.current) {
-      timer.current = setInterval(() => {
-        setPageState((prev) => ({
-          ...prev,
-          waitingTime: prev.waitingTime + 1,
-        }));
-      }, 1000);
-    }
-  });
+  // useEffect(() => {
+  //   if (pageState.isTimerActive && !timer.current) {
+  //     timer.current = setInterval(() => {
+  //       setPageState((prev) => ({
+  //         ...prev,
+  //         waitingTime: prev.waitingTime + 1,
+  //       }));
+  //     }, 1000);
+  //   }
+  // });
 
   useEffect(() => {
     const handleBeforeTabClose = (event: BeforeUnloadEvent) => {
