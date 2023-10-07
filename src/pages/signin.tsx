@@ -24,15 +24,11 @@ const image_z = z.string().nullable();
 const password_z = z.string().min(6);
 
 type SignInProps = InferGetServerSidePropsType<typeof getServerSideProps>;
-const Signin = ({ csrfToken, providers }: SignInProps) => {
+// const Signin = ({ csrfToken, providers }: SignInProps) => {
+const Signin = ({ providers }: SignInProps) => {
   const { data: session } = useSession();
   const isLoggedIn = !!session;
 
-  // const createUserInput_z = z.object({
-  //   name: name_z,
-  //   email: email_z,
-  //   password: password_z,
-  // });
   const createUserInput_z = z.object({
     email: email_z,
     password: password_z,
@@ -42,16 +38,15 @@ const Signin = ({ csrfToken, providers }: SignInProps) => {
     resolver: zodResolver(createUserInput_z),
   });
 
-  const handleSignIn = handleSubmit((formData) => {
+  const handleSignIn = handleSubmit(async (formData) => {
     console.log("formData", formData);
-    signIn("credentials", { ...formData }).then((res) => {
-      console.log("res", res);
+    const res = await signIn("credentials", {
+      email: formData.email,
+      password: formData.password,
+      redirect: false,
     });
-    // signIn("credentials", { username: "jsmith", password: "1234" })
-    // const newData = { formData };
-    //   createUser({ ...userData, ...formData });
-    //   console.log("formData", formData);
-    // }
+
+    console.log(res);
   });
 
   if (isLoggedIn) {
@@ -88,7 +83,7 @@ const Signin = ({ csrfToken, providers }: SignInProps) => {
           <PeerPrepRectLogo height={200} />
           {/* <form method="post" action="/api/auth/callback/credentials" className="flex flex-col items-start"> */}
           <form className="flex flex-col items-start" onSubmit={handleSignIn}>
-            <input name="csrfToken" type="hidden" defaultValue={csrfToken} />
+            {/* <input name="csrfToken" type="hidden" defaultValue={csrfToken} /> */}
             <div className="p-1" />
             <label>email:</label>
             <input
@@ -149,11 +144,11 @@ export default Signin;
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
   const providers = await getProviders();
-  const csrfToken = await getCsrfToken(context);
+  //   const csrfToken = await getCsrfToken(context);
   return {
     props: {
       providers,
-      csrfToken,
+      //   csrfToken,
     },
   };
 }
