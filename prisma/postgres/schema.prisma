@@ -21,6 +21,11 @@ model Example {
   updatedAt DateTime @updatedAt
 }
 
+enum Role {
+  USER
+  MAINTAINER
+}
+
 // Necessary for Next auth
 model Account {
   id                String  @id @default(cuid())
@@ -49,12 +54,12 @@ model Session {
 }
 
 model CodeSpace {
-  id            String       @default(cuid())
-  userId        String
-  code          String
-  name          String       @default("")
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  codeSession   CodeSession?
+  id          String       @default(cuid())
+  userId      String
+  code        String
+  name        String       @default("")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeSession CodeSession?
 
   @@id([id, userId])
 }
@@ -97,6 +102,7 @@ model User {
   accounts            Account[]
   sessions            Session[]
   codeSpace           CodeSpace[]
+  role                Role                  @default(USER)
   codeSessionAuthRecv CodeSessionUserAuth[] @relation(name: "auth_receiver")
 }
 
@@ -109,8 +115,8 @@ model VerificationToken {
 }
 
 model MatchRequest {
-    id          String  @id
-    replyTo     String  @unique
-    difficulty  Int
-    category    String
+  id         String @id
+  replyTo    String @unique
+  difficulty Int
+  category   String
 }

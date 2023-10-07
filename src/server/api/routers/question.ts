@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, publicProcedure, maintainerProcedure } from "~/server/api/trpc";
+
+
 
 const questionObject = z.object({
   title: z.string(),
@@ -22,7 +24,7 @@ export const questionRouter = createTRPCRouter({
     return ctx.prismaMongo.question.findMany();
   }),
 
-  addOne: publicProcedure
+  addOne: maintainerProcedure
     .input(questionObject)
     .mutation(async ({ ctx, input }) => {
       const q = await ctx.prismaMongo.question.create({
@@ -36,7 +38,7 @@ export const questionRouter = createTRPCRouter({
       };
     }),
 
-  updateOne: publicProcedure
+  updateOne: maintainerProcedure
     .input(questionUpdateObject)
     .mutation(async ({ ctx, input }) => {
       const { id, ...remainder } = input;
@@ -51,7 +53,7 @@ export const questionRouter = createTRPCRouter({
       };
     }),
 
-  deleteOne: publicProcedure
+  deleteOne: maintainerProcedure
     .input(
       z.object({
         id: z.string(),

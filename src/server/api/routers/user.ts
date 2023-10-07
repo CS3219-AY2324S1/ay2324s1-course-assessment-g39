@@ -15,6 +15,7 @@ const userObject = z.object({
   email: z.string(),
   password: z.string().min(6),
   image: z.string().nullable(),
+  role: z.enum(["MAINTAINER", "USER"]).nullable()
 });
 
 const userUpdateObject = z.object({
