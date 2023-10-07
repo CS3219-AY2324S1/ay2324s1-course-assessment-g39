@@ -19,12 +19,14 @@ const email_z = z.string().email().min(1);
 const emailVerified_z = z.date().nullable();
 const image_z = z.string().nullable();
 const password_z = z.string().min(6);
+const role_z = z.enum(["MAINTAINER", "USER"]).nullable();
 
 const userCreateInput_z = z.object({
   name: name_z,
   email: email_z,
   password: password_z,
   image: image_z,
+  role: role_z,
 });
 
 const userUpdateInfoInput_z = z.object({

@@ -21,6 +21,11 @@ datasource db {
 //     updatedAt DateTime @updatedAt
 // }
 
+enum Role {
+    USER
+    MAINTAINER
+}
+
 // Necessary for Next auth
 model Account {
     id                String  @id @default(cuid())
@@ -56,6 +61,7 @@ model User {
     emailVerified DateTime?
     image         String?
     password      String?
+    role          Role      @default(USER)
     accounts      Account[]
     sessions      Session[]
 }

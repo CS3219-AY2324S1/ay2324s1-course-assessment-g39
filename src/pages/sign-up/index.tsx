@@ -36,6 +36,7 @@ const SignUp = () => {
     const email = data.get("email") as string;
     const password = data.get("password") as string;
     const confirmPassword = data.get("confirm-password") as string;
+    const role = data.get("role") as "USER" | "MAINTAINER";
     if (confirmPassword != password) {
       toast.error("Passwords do not match");
       return null;
@@ -46,6 +47,7 @@ const SignUp = () => {
       email,
       password,
       image: null,
+      role,
     });
   }
 
@@ -143,7 +145,20 @@ const SignUp = () => {
                     required
                   />
                 </div>
+                <div>
+                  <span className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                    Select your role from the options below.
+                  </span>
+                  <select
+                    className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    name="role"
+                  >
+                    <option value="USER">User</option>
+                    <option value="MAINTAINER">Maintainer</option>
+                  </select>
+                </div>
                 <div className="py-3"></div>
+
                 <button
                   type="submit"
                   className="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
