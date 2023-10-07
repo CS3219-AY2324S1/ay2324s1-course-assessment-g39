@@ -5,8 +5,10 @@
   "scripts": {
     "build:1-next": "dotenv -v NODE_ENV=production next build",
     "build:2-server": "tsc --project tsconfig.server.json",
-    "build": "next build",
-    "dev": "next dev*",
+    "build": "run-s build:*",
+    "dev": "run-p dev:*",
+    "dev:next": "next dev",
+    "dev:wss": "dotenv tsx watch src/server/wssServer.ts --tsconfig tsconfig.server.json",
     "postinstall": "yarn prisma:generate",
     "lint": "next lint",
     "start": "next start",

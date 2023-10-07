@@ -1,17 +1,23 @@
 
 import { AppRouter, appRouter } from './api/root';
 import { applyWSSHandler } from '@trpc/server/adapters/ws';
-import ws from 'ws';
+import ws, { WebSocketServer } from 'ws';
 import { createWSTRPCContext } from './api/trpc';
 
-const wss = new ws.Server({
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+const wss: WebSocketServer = new ws.Server({
   port: 3001,
 });
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const handler = applyWSSHandler<AppRouter>({ wss, router: appRouter, createContext: createWSTRPCContext });
 
-wss.on('connection', (ws) => {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+export const wssEE = wss.on('connection', (ws) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   console.log(`➕➕ Connection (${wss.clients.size})`);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   ws.once('close', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     console.log(`➖➖ Connection (${wss.clients.size})`);
   });
 });
@@ -20,5 +26,7 @@ console.log('✅ WebSocket Server listening on ws://localhost:3001');
 process.on('SIGTERM', () => {
   console.log('SIGTERM');
   handler.broadcastReconnectNotification();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   wss.close();
 });
+

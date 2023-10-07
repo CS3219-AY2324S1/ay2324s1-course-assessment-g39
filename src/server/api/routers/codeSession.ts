@@ -297,12 +297,18 @@ export const codeSessionRouter = createTRPCRouter({
       });
       let currCode = codeSessionsCode.get(input.codeSessionId);
       if (!currCode) {
+        const codeSession = await prismaPostgres.codeSession.findUnique({
+          where: {
+            id: input.codeSessionId
+          }
+        });
+        if (!codeSession) throw new TRPCError({ message:  "No such session exists", code: "BAD_REQUEST" });
         const values = await prismaPostgres.codeSpace.findUnique({
           where: {
-            codeSessionId: input.codeSessionId
-          },
-          select: {
-            code: true
+            id_userId: {
+              id: codeSession?.id,
+              userId: codeSession?.userId
+            }
           }
         });
         if (!values) throw new TRPCError({ code: "BAD_REQUEST", message: "Failed to fetch code" });
