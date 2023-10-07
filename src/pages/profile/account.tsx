@@ -143,6 +143,7 @@ const ProfilePage: NextPage = () => {
         </div>{" "}
         <div className="p-4">
           <div className="text-2xl font-bold">{name}</div>
+          {session.user.role == "MAINTAINER" && <em>Maintainer</em>}
           <div className="pb-4">{email}</div>
         </div>
         <div className="border-b border-slate-100"></div>
