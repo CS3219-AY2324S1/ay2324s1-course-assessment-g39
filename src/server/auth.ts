@@ -29,6 +29,7 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: DefaultSession["user"] & {
       id: string;
+      role: "USER" | "MAINTAINER";
       // ...other properties
       // role: UserRole;
     };
@@ -56,12 +57,10 @@ export const authOptions: NextAuthOptions = {
       // session is data sent from client using useSession().update()
       if (trigger === "update") {
         const updatedToken = { ...token, ...session };
-        console.log("[jwt]", "updatedToken", updatedToken);
         return updatedToken;
       }
 
       const newToken = { ...token, ...user };
-      console.log("[jwt]", "newToken", newToken);
       return newToken;
     },
     session: ({ session, token }) => {
@@ -74,7 +73,6 @@ export const authOptions: NextAuthOptions = {
 
         session = { ...session, user: newUser };
       }
-      console.log("[session]", "newSession", session);
       return session;
     },
   },
@@ -123,7 +121,7 @@ export const authOptions: NextAuthOptions = {
           where: { email },
         });
 
-        if (!user || !user.password) return null;
+        if (!user?.password) return null;
         if (user && bcrypt.compareSync(password, user.password)) {
           // Any object returned will be saved in `user` property of the JWT
           // eslint-disable-next-line @typescript-eslint/no-unused-vars

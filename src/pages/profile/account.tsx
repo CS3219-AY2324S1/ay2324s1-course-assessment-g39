@@ -43,7 +43,6 @@ const ProfilePage: NextPage = () => {
       signOut(); // invalidates user session
     },
     onError: (e) => {
-      console.log(e);
       toast.error(`Failed to delete user: ${e.message}`);
     },
   });
@@ -113,7 +112,6 @@ const ProfilePage: NextPage = () => {
     const newData = { formData, ...userData };
     if (newData != userData) {
       updateUser({ ...userData, ...formData });
-      console.log("formData", formData);
     }
   });
 
@@ -208,7 +206,6 @@ const ProfilePage: NextPage = () => {
                         password: pwVerified.data,
                       });
                     } else {
-                      console.log(pwVerified);
                       toast.error("invalid password");
                     }
                   }}
