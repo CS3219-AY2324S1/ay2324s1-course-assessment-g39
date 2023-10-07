@@ -11,7 +11,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signOut, useSession } from "next-auth/react";
 import { LoadingPage } from "~/components/Loading";
-import { email_z } from "~/server/api/routers/user";
 
 // TODO:
 // - edit imageURL
@@ -19,14 +18,23 @@ import { email_z } from "~/server/api/routers/user";
 // - client-side validation using zod
 // - add email verification
 
+const id_z = z.string().min(1); // can add error message
+const name_z = z.string().min(1);
+const email_z = z.string().email().min(1);
+const emailVerified_z = z.date().nullable();
+const image_z = z.string().nullable();
+const password_z = z.string().min(6);
 const ProfilePage: NextPage = () => {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   // session is `null` until nextauth fetches user's session data
   const { data: session, update: updateSession } = useSession({
     required: true,
+    onUnauthenticated() {
+      router.push("/signin");
+    },
     // defaults redirects user to sign in page if not signed in
   });
-  const router = useRouter();
 
   const updateInfoSchema = z.object({
     name: z.string().min(1, { message: "Required" }),

@@ -8,17 +8,19 @@ import {
 
 import { TRPCError } from "@trpc/server";
 import { hashPassword } from "~/server/auth";
-import { prismaPostgres as prisma } from "~/server/db";
+import {
+  prismaPostgres as prisma,
+  email_z,
+  id_z,
+  image_z,
+  name_z,
+  emailVerified_z,
+  password_z,
+} from "~/server/db";
 
 // zod object does stricter runtime validation of types compared to
 // typescript's type in `import { type User } from "@prisma-db-psql/client`
 // --- requires manual updating when schema changes
-const id_z = z.string().min(1); // can add error message
-const name_z = z.string().min(1);
-const email_z = z.string().email().min(1);
-const emailVerified_z = z.date().nullable();
-const image_z = z.string().nullable();
-const password_z = z.string().min(6);
 
 const userCreateInput_z = z.object({
   name: name_z,
