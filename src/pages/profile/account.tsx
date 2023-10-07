@@ -9,7 +9,7 @@ import { PageLayout } from "~/components/Layout";
 import { api } from "~/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { LoadingPage } from "~/components/Loading";
 
 // TODO:
@@ -18,18 +18,27 @@ import { LoadingPage } from "~/components/Loading";
 // - client-side validation using zod
 // - add email verification
 
+const id_z = z.string().min(1); // can add error message
+const name_z = z.string().min(1);
+const email_z = z.string().email().min(1);
+const emailVerified_z = z.date().nullable();
+const image_z = z.string().nullable();
+const password_z = z.string().min(6);
 const ProfilePage: NextPage = () => {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   // session is `null` until nextauth fetches user's session data
   const { data: session, update: updateSession } = useSession({
     required: true,
+    onUnauthenticated() {
+      router.push("/sign-in");
+    },
     // defaults redirects user to sign in page if not signed in
   });
-  const router = useRouter();
 
   const updateInfoSchema = z.object({
     name: z.string().min(1, { message: "Required" }),
-    email: z.string().email(),
+    email: email_z,
   });
 
   const { register, handleSubmit } = useForm({
@@ -54,13 +63,11 @@ const ProfilePage: NextPage = () => {
   } = api.user.update.useMutation({
     onSuccess: () => {
       toast.success(`User updated`);
+      setIsEditing(false);
 
       if (!newUserData) throw new Error("newUserData is undefined");
-
       const { name, email, image } = newUserData;
       const newUserDataForSession = { name, email, image };
-
-      setIsEditing(false);
       updateSession(newUserDataForSession);
     },
     onError: (e) => {
@@ -171,7 +178,7 @@ const ProfilePage: NextPage = () => {
               <form className="flex flex-col items-start" onSubmit={onUpdate}>
                 <label>name:</label>
                 <input
-                  className="text-slate-800"
+                  className="text-slate-800 rounded-md"
                   type="text"
                   defaultValue={name}
                   {...register("name")}
@@ -179,7 +186,7 @@ const ProfilePage: NextPage = () => {
                 <div className="p-1" />
                 <label>email:</label>
                 <input
-                  className="text-slate-800"
+                  className="text-slate-800 rounded-md"
                   type="email"
                   defaultValue={email}
                   {...register("email")}

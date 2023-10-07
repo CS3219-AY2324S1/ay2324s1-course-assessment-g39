@@ -83,19 +83,12 @@ export const authOptions: NextAuthOptions = {
       clientSecret: env.GITHUB_SECRET,
     }),
     CredentialsProvider({
-      name: "Email",
+      name: "Credentials",
       // `credentials` is used to generate a form on the sign in page.
       // You can specify which fields should be submitted, by adding keys to the `credentials` object.
       // e.g. domain, username, password, 2FA token, etc.
       // You can pass any HTML attribute to the <input> tag through the object.
 
-      // TODO: add button to signin page to redirect to signup page
-      // <button
-      //   className="p-1 text-neutral-400 rounded-md underline"
-      //   onClick={() => void router.push("/signup/")}
-      // >
-      //   Sign Up
-      // </button>
       credentials: {
         email: {
           label: "Email",
@@ -143,6 +136,9 @@ export const authOptions: NextAuthOptions = {
      * @see https://next-auth.js.org/providers/github
      */
   ],
+  pages: {
+    signIn: "/sign-in",
+  },
 };
 
 /**
