@@ -106,32 +106,20 @@ const Signin = ({ providers }: SignInProps) => {
             />
             <div className="p-4" />
           </form>
-          {/* <form method="post" action="/api/auth/callback/credentials">
-                <input
-                  name="csrfToken"
-                  type="hidden"
-                  defaultValue={csrfToken}
-                />
-                <label>
-                  Email
-                  <input name="Email" type="email" />
-                </label>
-                <label>
-                  Password
-                  <input name="password" type="password" />
-                </label>
-                <button type="submit">Sign in</button>
-              </form> */}
           <div>
             <hr />
             {providers &&
-              Object.values(providers).map((provider) => (
-                <div key={provider.name} style={{ marginBottom: 0 }}>
-                  <button onClick={() => signIn(provider.id)}>
-                    Sign in with {provider.name}
-                  </button>
-                </div>
-              ))}
+              Object.values(providers)
+                .filter((provider) => provider.id != "credentials")
+                .map((provider) => {
+                  return (
+                    <div key={provider.name} style={{ marginBottom: 0 }}>
+                      <button onClick={() => signIn(provider.id)}>
+                        Sign in with {provider.name}
+                      </button>
+                    </div>
+                  );
+                })}
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
         </div>
@@ -144,11 +132,9 @@ export default Signin;
 
 export async function getServerSideProps(context: GetServerSidePropsContext) {
   const providers = await getProviders();
-  //   const csrfToken = await getCsrfToken(context);
   return {
     props: {
       providers,
-      //   csrfToken,
     },
   };
 }
