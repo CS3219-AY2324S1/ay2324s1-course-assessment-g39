@@ -80,7 +80,7 @@ const SignUp = () => {
         <title>Profile</title>
       </Head>
       <PageLayout>
-        <div className="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
+        <div className="flex flex-col items-center justify-center px-6 py-8 my-8 mx-auto md:h-screen lg:py-0">
           <div className="flex flex-col w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
             <div className="py-3"></div>
             <PeerPrepRectLogo height={200} />
