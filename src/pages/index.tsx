@@ -25,7 +25,13 @@ export default function Home() {
             href="/signup/"
             className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
           >
-            Go to Signup
+            Sign Up
+          </Link>
+          <Link
+            href="/sign-in"
+            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
+          >
+            Sign In
           </Link>
           <Link
             href="/profile/account"

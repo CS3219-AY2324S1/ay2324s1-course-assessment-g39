@@ -31,7 +31,7 @@ const ProfilePage: NextPage = () => {
   const { data: session, update: updateSession } = useSession({
     required: true,
     onUnauthenticated() {
-      router.push("/signin");
+      router.push("/sign-in");
     },
     // defaults redirects user to sign in page if not signed in
   });

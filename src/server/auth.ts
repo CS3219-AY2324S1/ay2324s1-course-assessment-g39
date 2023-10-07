@@ -98,18 +98,18 @@ export const authOptions: NextAuthOptions = {
       // >
       //   Sign Up
       // </button>
-      // credentials: {
-      //   email: {
-      //     label: "Email",
-      //     type: "email",
-      //     placeholder: "jsmith@gmail.com",
-      //   },
-      //   password: {
-      //     label: "Password",
-      //     type: "password",
-      //     placeholder: "••••••••",
-      //   },
-      // },
+      credentials: {
+        email: {
+          label: "Email",
+          type: "email",
+          placeholder: "jsmith@gmail.com",
+        },
+        password: {
+          label: "Password",
+          type: "password",
+          placeholder: "••••••••",
+        },
+      },
       // look up user from the credentials supplied inside authorize
       async authorize(credentials, req) {
         if (!req.body?.email || !req.body.password) return null;
@@ -146,7 +146,7 @@ export const authOptions: NextAuthOptions = {
      */
   ],
   pages: {
-    signIn: "/signin",
+    signIn: "/sign-in",
   },
 };
 
