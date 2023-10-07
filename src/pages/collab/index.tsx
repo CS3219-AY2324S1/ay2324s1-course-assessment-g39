@@ -224,7 +224,6 @@ const MatchRequestPage = () => {
         </PageLayout>
       </>
     );
-    // router.push("/signup/");
   }
 
   // Remove current request immediately so that the user doesn't need to wait for timeout to send another request

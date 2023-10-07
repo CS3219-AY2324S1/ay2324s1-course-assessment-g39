@@ -31,7 +31,6 @@ const LoginWithCredentials = (props: Props) => {
   return (
     <div className={props.className}>
       <form className="flex flex-col items-stretch" onSubmit={handleSignIn}>
-        {/* <input name="csrfToken" type="hidden" defaultValue={csrfToken} /> */}
         <div className="p-1" />
         <label>email:</label>
         <input
@@ -47,7 +46,7 @@ const LoginWithCredentials = (props: Props) => {
         />
         <div className="p-2"></div>
         <input
-          className="rounded-md bg-slate-600 px-1"
+          className="rounded-md bg-slate-600 px-1  hover:text-white"
           type="submit"
           value="sign in"
         />

@@ -7,6 +7,7 @@ import {
 } from "next";
 import { PeerPrepRectLogo } from "~/assets/logo";
 import LoginWithCredentials from "~/components/Login";
+import Link from "next/link";
 
 // Signin page with credentials & oauth provider sign in
 type SignInProps = InferGetServerSidePropsType<typeof getServerSideProps>;
@@ -44,7 +45,7 @@ const SignIn = ({ providers }: SignInProps) => {
       </Head>
       <PageLayout>
         <div className="w-full h-full flex flex-col justify-center items-center">
-          <div className="flex flex-col items-stretch">
+          <div className="flex flex-col items-stretch border-slate-200">
             <PeerPrepRectLogo height={200} />
             <div className="p-2 rounded-md">
               {providers &&
@@ -66,6 +67,13 @@ const SignIn = ({ providers }: SignInProps) => {
                   })}
             </div>
             <LoginWithCredentials className="px-2" />
+            <div className="pt-4" />
+            <Link
+              href="/sign-up"
+              className="text-slate-200 text-center underline hover:underline"
+            >
+              sign up
+            </Link>
           </div>
         </div>
       </PageLayout>
