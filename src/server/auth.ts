@@ -84,6 +84,7 @@ export const authOptions: NextAuthOptions = {
       clientId: env.GITHUB_ID,
       clientSecret: env.GITHUB_SECRET,
     }),
+    /*
     CredentialsProvider({
       name: "Email",
       // `credentials` is used to generate a form on the sign in page.
@@ -135,6 +136,7 @@ export const authOptions: NextAuthOptions = {
         // You can also Reject this callback with an Error thus the user will be sent to the error page with the error message as a query parameter
       },
     }),
+    */
     /**
      * ...add more providers here.
      *
@@ -145,6 +147,9 @@ export const authOptions: NextAuthOptions = {
      * @see https://next-auth.js.org/providers/github
      */
   ],
+  pages: {
+    signIn: "/auth/signin",
+  },
 };
 
 /**
