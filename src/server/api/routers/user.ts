@@ -13,7 +13,7 @@ import { prismaPostgres as prisma } from "~/server/db";
 // zod object does stricter runtime validation of types compared to
 // typescript's type in `import { type User } from "@prisma-db-psql/client`
 // --- requires manual updating when schema changes
-const id_z = z.string().min(1);
+const id_z = z.string().min(1); // can add error message
 const name_z = z.string().min(1);
 const email_z = z.string().email().min(1);
 const emailVerified_z = z.date().nullable();
@@ -129,3 +129,5 @@ export const userRouter = createTRPCRouter({
   //   };
   // }),
 });
+
+export { id_z, name_z, email_z, emailVerified_z, image_z, password_z };

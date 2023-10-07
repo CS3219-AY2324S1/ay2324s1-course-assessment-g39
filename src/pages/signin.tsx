@@ -5,20 +5,49 @@ import {
   useSession,
   signOut,
 } from "next-auth/react";
-import Image from "next/image";
 import Head from "next/head";
 import { PageLayout } from "~/components/Layout";
-import { CtxOrReq } from "next-auth/client/_utils";
 import {
   type GetServerSidePropsContext,
   InferGetServerSidePropsType,
 } from "next";
 import { PeerPrepRectLogo } from "~/assets/logo";
+// import { email_z, name_z, password_z } from "~/server/api/routers/user";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 type SignInProps = InferGetServerSidePropsType<typeof getServerSideProps>;
 const Signin = ({ csrfToken, providers }: SignInProps) => {
   const { data: session } = useSession();
   const isLoggedIn = !!session;
-  if (isLoggedIn)
+
+  // const createUserInput_z = z.object({
+  //   name: name_z,
+  //   email: email_z,
+  //   password: password_z,
+  // });
+  const createUserInput_z = z.object({
+    name: z.string().min(1, { message: "Required" }),
+    // email: email_z,
+    // email: z.string().email({ message: "Invalid email" }),
+    password: z
+      .string()
+      .min(6, { message: "Password must be at least 6 characters" }),
+  });
+
+  const { register, handleSubmit } = useForm({
+    resolver: zodResolver(createUserInput_z),
+  });
+
+  const onSignInUser = handleSubmit((formData) => {
+    // const newData = { formData };
+    //   createUser({ ...userData, ...formData });
+    //   console.log("formData", formData);
+    // }
+  });
+
+  if (isLoggedIn) {
     return (
       <>
         <Head>
@@ -40,6 +69,8 @@ const Signin = ({ csrfToken, providers }: SignInProps) => {
         </PageLayout>
       </>
     );
+  }
+
   return (
     <>
       <Head>
@@ -50,14 +81,55 @@ const Signin = ({ csrfToken, providers }: SignInProps) => {
           <div className="">
             <div className="">
               <PeerPrepRectLogo height={200} />
-              <div className="">
+              <form
+                className="flex flex-col items-start"
+                onSubmit={onSignInUser}
+              >
                 <input
                   name="csrfToken"
                   type="hidden"
                   defaultValue={csrfToken}
                 />
-                <input placeholder="Email (Not Setup - Please Use Github)" />
-                <button className="">Submit</button>
+                <div className="p-1" />
+                <label>email:</label>
+                <input
+                  className="text-slate-800 rounded-md"
+                  type="email"
+                  {...register("email")}
+                />
+                <label>password:</label>
+                <input
+                  className="text-slate-800 rounded-md"
+                  type="email"
+                  {...register("password")}
+                />
+                <hr />
+                <div className="p-2"></div>
+                <input
+                  className="rounded-md bg-green-500 px-1"
+                  type="submit"
+                  value="save"
+                  disabled={false}
+                />
+                <div className="p-4" />
+              </form>
+              {/* <form method="post" action="/api/auth/callback/credentials">
+                <input
+                  name="csrfToken"
+                  type="hidden"
+                  defaultValue={csrfToken}
+                />
+                <label>
+                  Email
+                  <input name="Email" type="email" />
+                </label>
+                <label>
+                  Password
+                  <input name="password" type="password" />
+                </label>
+                <button type="submit">Sign in</button>
+              </form> */}
+              <div>
                 <hr />
                 {providers &&
                   Object.values(providers).map((provider) => (

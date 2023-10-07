@@ -9,8 +9,9 @@ import { PageLayout } from "~/components/Layout";
 import { api } from "~/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { LoadingPage } from "~/components/Loading";
+import { email_z } from "~/server/api/routers/user";
 
 // TODO:
 // - edit imageURL
@@ -29,7 +30,7 @@ const ProfilePage: NextPage = () => {
 
   const updateInfoSchema = z.object({
     name: z.string().min(1, { message: "Required" }),
-    email: z.string().email(),
+    email: email_z,
   });
 
   const { register, handleSubmit } = useForm({
