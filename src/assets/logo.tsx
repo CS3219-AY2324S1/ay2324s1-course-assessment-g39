@@ -6,7 +6,7 @@ export const PeerPrepCircularLogo = (props: SVGProps<SVGSVGElement>) => (
     <g
       id="SvgjsG2222"
       transform="matrix(2.8935085026835243,0,0,2.8935085026835243,0.00002517377618448307,0.004629023665224828)"
-      fill="#ffffff"
+      fill="none"
     >
       <g
         xmlns="http://www.w3.org/2000/svg"
@@ -66,7 +66,7 @@ export const PeerPrepCircularLogo = (props: SVGProps<SVGSVGElement>) => (
 export const PeerPrepRectLogo = (props: SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 390 285" {...props}>
     <defs id="SvgjsDefs2267"></defs>
-    <g id="SvgjsG2268" transform="matrix(1,0,0,1,0,0)" fill="#111111">
+    <g id="SvgjsG2268" transform="matrix(1,0,0,1,0,0)" fill="none">
       <rect
         xmlns="http://www.w3.org/2000/svg"
         width="390"

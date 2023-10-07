@@ -30,27 +30,40 @@ const LoginWithCredentials = (props: Props) => {
   });
   return (
     <div className={props.className}>
-      <form className="flex flex-col items-stretch" onSubmit={handleSignIn}>
-        <div className="p-1" />
-        <label>email:</label>
-        <input
-          className="text-slate-800 rounded-md"
-          type="email"
-          {...register("email")}
-        />
-        <label>password:</label>
-        <input
-          className="text-slate-800 rounded-md"
-          type="password"
-          {...register("password")}
-        />
-        <div className="p-2"></div>
-        <input
-          className="rounded-md bg-slate-600 px-1  hover:text-white"
-          type="submit"
-          value="sign in"
-        />
-        <div className="p-4" />
+      <form
+        className="flex flex-col items-stretch space-y-4 md:space-y-6"
+        onSubmit={handleSignIn}
+      >
+        <div>
+          <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            Email
+          </label>
+          <input
+            className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            type="email"
+            placeholder="name@company.com"
+            {...register("email")}
+          />
+        </div>
+        <div>
+          <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            Password
+          </label>
+          <input
+            className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            type="password"
+            placeholder="••••••••"
+            {...register("password")}
+          />
+        </div>
+        <div className="py-1">
+          <input
+            className="w-full text-white bg-slate-500 hover:bg-slate-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-slate-400 dark:hover:bg-slate-500 dark:focus:ring-primary-800"
+            type="submit"
+            value="Sign In"
+          />
+        </div>
+        <div />
       </form>
     </div>
   );

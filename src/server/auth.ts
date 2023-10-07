@@ -91,13 +91,6 @@ export const authOptions: NextAuthOptions = {
       // e.g. domain, username, password, 2FA token, etc.
       // You can pass any HTML attribute to the <input> tag through the object.
 
-      // TODO: add button to signin page to redirect to signup page
-      // <button
-      //   className="p-1 text-neutral-400 rounded-md underline"
-      //   onClick={() => void router.push("/signup/")}
-      // >
-      //   Sign Up
-      // </button>
       credentials: {
         email: {
           label: "Email",
