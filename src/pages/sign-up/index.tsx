@@ -16,7 +16,6 @@ const SignUp = () => {
 
   const createMutation = api.user.create.useMutation({
     onError: (e) => {
-      console.log(e);
       // follow convention to provide generic error message
       // to prevent malicious actors to derive db data (eg. email exists)
       toast.error("Failed to create account\n Please try again later");

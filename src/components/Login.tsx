@@ -18,7 +18,6 @@ const LoginWithCredentials = (props: Props) => {
   });
 
   const handleSignIn = handleSubmit(async (formData) => {
-    console.log("formData", formData);
     const res = await signIn("credentials", {
       email: formData.email,
       password: formData.password,
@@ -26,7 +25,6 @@ const LoginWithCredentials = (props: Props) => {
       callbackUrl: "/",
     });
 
-    console.log(res);
   });
   return (
     <div className={props.className}>
