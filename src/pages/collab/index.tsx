@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { useEffect, useRef, useState, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -299,7 +302,6 @@ const MatchRequestPage = () => {
         </PageLayout>
       </>
     );
-    // router.push("/signup/");
   }
 
   // Remove current request immediately so that the user doesn't need to wait for timeout to send another request

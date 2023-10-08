@@ -8,9 +8,12 @@ import { QuestionRow } from "../../components/QuestionRow";
 import { StyledButton } from "../../components/StyledButton";
 import { StyledCheckbox } from "../../components/StyledCheckbox";
 import { makeMap } from "../../utils/utils";
+import { toast } from "react-hot-toast";
+import { useSession } from "next-auth/react";
 
 export default function Questions() {
-
+    const { data: sessionData } = useSession();
+    const allowedToModify = sessionData?.user.role === "MAINTAINER";
     const getAllQuery = api.useContext().question.getAll;
 
     const [viewQns, setViewQns] = useState<QuestionMap>(new Map());
@@ -24,7 +27,10 @@ export default function Questions() {
                 ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q)
             }));
             setViewQns(makeMap(mappedData, 'id'));
-        }
+        },
+        onError: (e) => {
+            toast.error("Failed to fetch questions: " + e.message);
+        },
     }).data ?? [], 'id');
 
     const hasChanges = (id: string) => {
@@ -34,15 +40,24 @@ export default function Questions() {
     }
 
     const addMutation = api.question.addOne.useMutation({
-        onSuccess: () => { void getAllQuery.invalidate(); }
+        onSuccess: () => { void getAllQuery.invalidate() },
+        onError: (e, { title }) => {
+            toast.error(`Failed to add question '${title}':\n\t${e.message}`);
+        }
     });
 
     const updateMutation = api.question.updateOne.useMutation({
-        onSuccess: () => { void getAllQuery.invalidate(); }
+        onSuccess: () => { void getAllQuery.invalidate() },
+        onError: (e, { title }) => {
+            toast.error(`Failed to update question '${title}':\n\t${e.message}`);
+        }
     });
 
     const deleteMutation = api.question.deleteOne.useMutation({
-        onSuccess: () => { void getAllQuery.invalidate(); }
+        onSuccess: () => { void getAllQuery.invalidate() },
+        onError: (e, { id }) => {
+            toast.error(`Failed to delete question '${id}':\n\t${e.message}`);
+        }
     });
 
     const pushNew = () => {
@@ -67,9 +82,12 @@ export default function Questions() {
     const pushUpdated = () => {
         changedQns.forEach((id) => {
             if (!hasChanges(id)) return;
-            updateMutation.mutate({ id, ...viewQns.get(id) });
+            updateMutation.mutate({ id, ...viewQns.get(id) }, {
+                onSuccess: () => {
+                    changedQns.delete(id) && setChangedQns(new Set(changedQns));
+                }
+            });
         });
-        setChangedQns(new Set());
     };
 
     const saveDeleted = (id: string) => {
@@ -92,10 +110,12 @@ export default function Questions() {
     const pushDeleted = () => {
         deletedQns.forEach((id => {
             if (!questions.has(id)) return;
-            changedQns.delete(id) && setChangedQns(new Set(changedQns));
-            deleteMutation.mutate({ id });
+            deleteMutation.mutate({ id }, {
+                onSuccess: () => {
+                    deletedQns.delete(id) && setDeletedQns(new Set(deletedQns));
+                }
+            });
         }));
-        setDeletedQns(new Set());
     }
 
     return (
@@ -128,13 +148,14 @@ export default function Questions() {
                                 initialQuestion={questions.get(id) ?? q}
                                 onQuestionChange={(q) => saveUpdated(id, q)}
                                 onQuestionDelete={() => saveDeleted(id)}
-                                className="bg-[var(--bg-1)] flex font-mono hover:bg-[var(--bg-2)] active:bg-[var(--bg-2)]" checked={deletedQns.has(id)} />
+                                className="bg-[var(--bg-1)] flex font-mono hover:bg-[var(--bg-2)] active:bg-[var(--bg-2)]" checked={deletedQns.has(id)} 
+                                editable={allowedToModify} />
                         )) :
                             <div className="bg-[var(--bg-1)] flex flex-col items-center justify-center gap-4 h-[2.4rem] m-[1px]" ><i className="opacity-30">No items found.</i></div>}
                         <div className="flex-1 flex gap-2 mt-1">
-                            <StyledButton onClick={pushNew} style={{ backgroundColor: 'var(--txt-5)' }}>Add Question</StyledButton>
-                            <StyledButton disabled={changedQns.size === 0} onClick={pushUpdated} style={{ backgroundColor: 'var(--txt-4)' }}>Save {changedQns.size > 0 ? changedQns.size : ''} Change{changedQns.size === 1 ? '' : 's'}</StyledButton>
-                            <StyledButton disabled={deletedQns.size === 0} onClick={pushDeleted} style={{ backgroundColor: 'var(--txt-6)' }}>Delete {deletedQns.size > 0 ? deletedQns.size : ''}</StyledButton>
+                            <StyledButton disabled={!allowedToModify} onClick={pushNew} style={{ backgroundColor: 'var(--txt-5)' }}>Add Question</StyledButton>
+                            <StyledButton disabled={!allowedToModify || changedQns.size === 0} onClick={pushUpdated} style={{ backgroundColor: 'var(--txt-4)' }}>Save {changedQns.size > 0 ? changedQns.size : ''} Change{changedQns.size === 1 ? '' : 's'}</StyledButton>
+                            <StyledButton disabled={!allowedToModify || deletedQns.size === 0} onClick={pushDeleted} style={{ backgroundColor: 'var(--txt-6)' }}>Delete {deletedQns.size > 0 ? deletedQns.size : ''}</StyledButton>
                             <div className="flex-[5_5_0%]" />
                             <StyledButton disabled={changedQns.size === 0} onClick={clearUpdated}>Discard Changes</StyledButton>
                         </div>
