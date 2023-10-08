@@ -56,7 +56,9 @@ export const authOptions: NextAuthOptions = {
       //
       // session is data sent from client using useSession().update()
       if (trigger === "update") {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const updatedToken = { ...token, ...session };
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return updatedToken;
       }
 
@@ -76,11 +78,12 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  adapter: PrismaAdapter(prisma),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+  adapter: PrismaAdapter(prisma as any),
   providers: [
     GitHubProvider({
-      clientId: env.GITHUB_ID as string,
-      clientSecret: env.GITHUB_SECRET as string,
+      clientId: env.GITHUB_ID,
+      clientSecret: env.GITHUB_SECRET,
     }),
     CredentialsProvider({
       name: "Email",

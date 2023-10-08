@@ -40,7 +40,7 @@ const ProfilePage: NextPage = () => {
     retry: 3,
     onSuccess: () => {
       toast.success("User deleted");
-      signOut(); // invalidates user session
+      void signOut(); // invalidates user session
     },
     onError: (e) => {
       toast.error(`Failed to delete user: ${e.message}`);
@@ -61,7 +61,7 @@ const ProfilePage: NextPage = () => {
       const newUserDataForSession = { name, email, image };
 
       setIsEditing(false);
-      updateSession(newUserDataForSession);
+      void updateSession(newUserDataForSession);
     },
     onError: (e) => {
       const errMsg = e.data?.zodError?.fieldErrors.content;
@@ -134,7 +134,7 @@ const ProfilePage: NextPage = () => {
         <div className="h-[64px] relative">
           <div className="absolute m-2 p-2 top-0 right-0">
             <button
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={() => void signOut({ callbackUrl: "/" })}
               className="text-neutral-400 rounded-md underline"
             >
               log out
@@ -168,7 +168,7 @@ const ProfilePage: NextPage = () => {
           </div>
           {isEditing && (
             <>
-              <form className="flex flex-col items-start" onSubmit={onUpdate}>
+              <form className="flex flex-col items-start" onSubmit={(e) => void onUpdate(e)}>
                 <label>name:</label>
                 <input
                   className="text-slate-800"
@@ -198,9 +198,9 @@ const ProfilePage: NextPage = () => {
                 {" "}
                 <button
                   onClick={() => {
-                    let pw = prompt("enter new password");
+                    const pw = prompt("enter new password");
                     // stopgap measure, need to centralize user field type def
-                    let pwVerified = z.string().min(8).safeParse(pw);
+                    const pwVerified = z.string().min(8).safeParse(pw);
                     if (pwVerified.success) {
                       void updatePassword({
                         id: userData.id,

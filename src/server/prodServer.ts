@@ -7,11 +7,13 @@ import ws from 'ws';
 import { createWSTRPCContext } from './api/trpc';
 
 const port = parseInt(process.env.PORT ?? '3000', 10);
+console.log(port);
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
 void app.prepare().then(() => {
+  console.log("Preparing server");
   const server = http.createServer((req, res) => {
     const proto = req.headers['x-forwarded-proto'];
     if (proto && proto === 'http') {
@@ -27,7 +29,9 @@ void app.prepare().then(() => {
     const parsedUrl = parse(req.url!, true);
     void handle(req, res, parsedUrl);
   });
-  const wss = new ws.Server({ server });
+  console.log("Created http server");
+  const wss = new ws.Server({ port: 3001 });
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const handler = applyWSSHandler({ wss, router: appRouter, createContext: createWSTRPCContext });
 
   process.on('SIGTERM', () => {
@@ -41,4 +45,6 @@ void app.prepare().then(() => {
       dev ? 'development' : process.env.NODE_ENV
     }`,
   );
+}).catch(e => {
+  console.log(e);
 });

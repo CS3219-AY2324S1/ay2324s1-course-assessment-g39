@@ -4,6 +4,9 @@ import amqp from "amqplib/callback_api";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { prismaPostgres } from "~/server/db";
 
+import { MatchRequest } from "@prisma-db-psql/client";
+
+
 const MIN_DIFFICULTY = 0;
 const MAX_DIFFICULTY = 5;
 
@@ -89,7 +92,7 @@ export const matchRequestRouter = createTRPCRouter({
           id: id,
         },
       })
-      .then((req) => {
+      .then((req: unknown) => {
         return req;
       });
 
@@ -204,12 +207,13 @@ const matchRequests = async (ch: amqp.Channel) => {
           difficulty: i,
         },
       })
-      .then((res) => {
+      .then((res: MatchRequest[]) => {
         return res;
       });
 
     if (requests && requests.length >= 2) {
-      const categorizedRequests = requests.reduce((acc, request) => {
+      const categorizedRequests = requests.reduce((acc: Map<string, Array<string>>, 
+        request: MatchRequest) => {
         if (!acc.has(request.category)) {
           acc.set(request.category, []);
         }
