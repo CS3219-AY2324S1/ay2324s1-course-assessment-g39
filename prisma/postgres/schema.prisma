@@ -55,15 +55,26 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
+    id            String            @id @default(cuid())
     name          String
-    email         String    @unique
+    email         String            @unique
     emailVerified DateTime?
     image         String?
     password      String?
-    role          Role      @default(USER)
+    role          Role              @default(USER)
     accounts      Account[]
     sessions      Session[]
+    attempts      QuestionAttempt[]
+}
+
+model QuestionAttempt {
+    userId      String
+    questionId  String
+    attemptedOn DateTime @default(now())
+    success     Boolean
+    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, questionId, attemptedOn])
 }
 
 model VerificationToken {
