@@ -6,30 +6,39 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { PageLayout } from "~/components/Layout";
-import { LoadingPage } from "~/components/Loading";
 import { api } from "~/utils/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { signOut, useSession } from "next-auth/react";
+import { LoadingPage } from "~/components/Loading";
 
 // TODO:
 // - edit imageURL
-// - change password
+// - change password using email link
 // - client-side validation using zod
+// - add email verification
 
+const id_z = z.string().min(1); // can add error message
+const name_z = z.string().min(1);
+const email_z = z.string().email().min(1);
+const emailVerified_z = z.date().nullable();
+const image_z = z.string().nullable();
+const password_z = z.string().min(6);
 const ProfilePage: NextPage = () => {
-  const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
-
-  const {
-    data: userData,
-    isLoading: isLoadingUserData,
-    refetch: refetchUser,
-    error: errorFetchingUser,
-  } = api.user.getCurrentUser.useQuery();
+  const [isEditing, setIsEditing] = useState(false);
+  // session is `null` until nextauth fetches user's session data
+  const { data: session, update: updateSession } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push("/sign-in");
+    },
+    // defaults redirects user to sign in page if not signed in
+  });
 
   const updateInfoSchema = z.object({
     name: z.string().min(1, { message: "Required" }),
-    email: z.string().email(),
+    email: email_z,
   });
 
   const { register, handleSubmit } = useForm({
@@ -39,29 +48,35 @@ const ProfilePage: NextPage = () => {
   const { mutate: deleteUser } = api.user.deleteUserByID.useMutation({
     retry: 3,
     onSuccess: () => {
-      toast.success("Succesfully deleted user");
-      void router.push("/");
+      toast.success("User deleted");
+      signOut(); // invalidates user session
     },
     onError: (e) => {
-      console.log(e);
       toast.error(`Failed to delete user: ${e.message}`);
     },
   });
 
-  const { mutate: updateUser, isLoading: isSavingUserData } =
-    api.user.update.useMutation({
-      onSuccess: () => {
-        setIsEditing(false);
-        toast.success(`User updated`);
-        void refetchUser();
-      },
-      onError: (e) => {
-        const errMsg = e.data?.zodError?.fieldErrors.content;
-        if (errMsg?.[0]) {
-          toast.error(`Failed to post: ${errMsg[0]}`);
-        }
-      },
-    });
+  const {
+    mutate: updateUser,
+    isLoading: isSavingUserData,
+    variables: newUserData,
+  } = api.user.update.useMutation({
+    onSuccess: () => {
+      toast.success(`User updated`);
+      setIsEditing(false);
+
+      if (!newUserData) throw new Error("newUserData is undefined");
+      const { name, email, image } = newUserData;
+      const newUserDataForSession = { name, email, image };
+      updateSession(newUserDataForSession);
+    },
+    onError: (e) => {
+      const errMsg = e.data?.zodError?.fieldErrors.content;
+      if (errMsg?.[0]) {
+        toast.error(`Failed to post: ${errMsg[0]}`);
+      }
+    },
+  });
 
   const { mutate: updatePassword, isLoading: isUpdatingPassword } =
     api.user.updatePassword.useMutation({
@@ -77,30 +92,26 @@ const ProfilePage: NextPage = () => {
       },
     });
 
-  if (errorFetchingUser) {
+  if (!session) {
     return (
       <>
         <Head>
           <title>Profile</title>
         </Head>
         <PageLayout>
-          <div className="w-full h-full flex flex-col justify-center items-center">
-            <div className="align-middle">404 User not found</div>
-            <div>
-              <button
-                className="text-neutral-400 rounded-md underline"
-                onClick={() => void router.push("/signup/")}
-              >
-                Go to Signup
-              </button>
-            </div>
-          </div>
+          <LoadingPage />
         </PageLayout>
       </>
     );
-    // router.push("/signup/");
   }
-  if (isLoadingUserData || !userData) return <LoadingPage />;
+
+  // TODO: hacky fix, please have useSession return correctly typed user
+  const userData = session.user as {
+    name: string;
+    email: string;
+    id: string;
+    image: string | null;
+  };
 
   const { name, image: imageURL, email } = userData;
 
@@ -108,7 +119,6 @@ const ProfilePage: NextPage = () => {
     const newData = { formData, ...userData };
     if (newData != userData) {
       updateUser({ ...userData, ...formData });
-      console.log("formData", formData);
     }
   });
 
@@ -127,9 +137,20 @@ const ProfilePage: NextPage = () => {
             className="absolute -mb-[64px] ml-4 rounded-md border-b border-2 bottom-0 left-0 bg-black"
           />
         </div>
-        <div className="h-[64px]"></div>
+        {/* spacer */}
+        <div className="h-[64px] relative">
+          <div className="absolute m-2 p-2 top-0 right-0">
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="text-neutral-400 rounded-md underline"
+            >
+              log out
+            </button>
+          </div>
+        </div>{" "}
         <div className="p-4">
           <div className="text-2xl font-bold">{name}</div>
+          {session.user.role == "MAINTAINER" && <em>Maintainer</em>}
           <div className="pb-4">{email}</div>
         </div>
         <div className="border-b border-slate-100"></div>
@@ -157,7 +178,7 @@ const ProfilePage: NextPage = () => {
               <form className="flex flex-col items-start" onSubmit={onUpdate}>
                 <label>name:</label>
                 <input
-                  className="text-slate-800"
+                  className="text-slate-800 rounded-md"
                   type="text"
                   defaultValue={name}
                   {...register("name")}
@@ -165,7 +186,7 @@ const ProfilePage: NextPage = () => {
                 <div className="p-1" />
                 <label>email:</label>
                 <input
-                  className="text-slate-800"
+                  className="text-slate-800 rounded-md"
                   type="email"
                   defaultValue={email}
                   {...register("email")}
@@ -193,7 +214,6 @@ const ProfilePage: NextPage = () => {
                         password: pwVerified.data,
                       });
                     } else {
-                      console.log(pwVerified);
                       toast.error("invalid password");
                     }
                   }}
