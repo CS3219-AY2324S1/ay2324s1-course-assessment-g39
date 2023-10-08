@@ -71,9 +71,6 @@ export const api = createTRPCNext<AppRouter>({
             (opts.direction === "down" && opts.result instanceof Error),
         }),
         getEndingLink(ctx)
-        // httpBatchLink({
-        //   url: `${getBaseUrl()}/api/trpc`,
-        // }),
       ],
     };
   },
