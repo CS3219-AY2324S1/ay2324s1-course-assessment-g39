@@ -1,9 +1,11 @@
-import { signIn } from "next-auth/react";
+import { PageLayout } from "./Layout";
+import { LoadingPage } from "./Loading";
 
 export default function UserDenied() {
-  return (<div className="items-center">
-  <h1>User Denied</h1>
-  <button onClick={() =>  void signIn()}>Sign In</button>
-  </div>)
+  return (
+    <PageLayout>
+      <LoadingPage />
+    </PageLayout>
+  )
 }
 

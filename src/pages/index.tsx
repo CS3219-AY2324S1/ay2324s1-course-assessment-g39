@@ -46,6 +46,12 @@ export default function Home() {
           >
             Practice with others
           </Link>
+          <Link
+            href="/codespace"
+            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
+          >
+            Code spaces
+          </Link>
         </div>
       </main>
     </>

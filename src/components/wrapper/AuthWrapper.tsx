@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import UserDenied from "~/components/UserDenied";
+import { LoadingPage } from "../Loading";
 
 type Props = {
   children: React.ReactElement;
@@ -43,7 +44,7 @@ export const AuthWrapper = ({ children }: Props): JSX.Element => {
 
   // if the user refreshed the page or somehow navigated to the protected page
   if (loading) {
-    return <>Loading app...</>;
+    return <LoadingPage />;
   }
 
   // if the user is authorized, render the page
