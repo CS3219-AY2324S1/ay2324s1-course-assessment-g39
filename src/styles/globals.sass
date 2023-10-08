@@ -192,3 +192,62 @@ span.choose
   justify-content: space-evenly
   align-items: center
   height: 5%
+
+.request
+  display: flex
+  justify-content: space-evenly
+  border-radius: 0.375rem
+  padding: 0.5rem
+
+  .request-dropdown
+    width: 33.333333%
+  
+  .request-select
+    height: 100%
+    width: 100%
+    border-radius: 0.375rem
+    display: flex
+    justify-content: center
+    align-items: center
+    cursor: pointer
+
+    > i
+      color: #888
+      cursor: pointer
+      transition: all 0.3s ease-in-out
+      float: right
+
+  &.active:hover,
+  &.active
+    box-shadow: 0 0 4px rgb(204, 204, 204)
+    border-radius: 2px 2px 0 0
+    background-color: #f8f8f8
+
+    .select > i
+      transform: rotate(-90deg)
+
+  .request-dropdown-menu
+    position: absolute
+    background-color: #fff
+    width: 28.5% 
+    margin-top: 1px
+    box-shadow: 0 1px 2px rgb(204, 204, 204)
+    border-radius: 0 1px 2px 2px
+    overflow: hidden
+    max-height: 100px
+    overflow-y: auto
+    z-index: 9
+
+    &:not(.active)
+      display: none
+
+    li
+      padding: 10px
+      transition: all 0.2s ease-in-out
+      cursor: pointer
+
+      &:hover
+        background-color: #f2f2f2
+
+      &:active
+        background-color: #e2e2e2

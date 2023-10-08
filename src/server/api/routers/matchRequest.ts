@@ -115,6 +115,44 @@ export const matchRequestRouter = createTRPCRouter({
       };
     }),
 
+  editRequest: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        difficulty: z.number().min(0).max(5),
+        category: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, difficulty, category } = input;
+
+      const request = await ctx.prismaPostgres.matchRequest
+        .findFirst({
+          where: {
+            id,
+          },
+        })
+        .then((req) => {
+          return req;
+        });
+
+      if (!request) {
+        throw new Error("Request not found");
+      }
+
+      const updatedRequest = await ctx.prismaPostgres.matchRequest.update({
+        where: {
+          id,
+        },
+        data: {
+          difficulty,
+          category,
+        },
+      });
+
+      return updatedRequest;
+    }),
+
   subscribeToAllRequests: publicProcedure.subscription(() => {
     return observable<UserRequest>((emit) => {
       const onAdd = (data: UserRequest) => {
