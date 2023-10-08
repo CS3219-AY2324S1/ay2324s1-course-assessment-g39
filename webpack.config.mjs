@@ -67,12 +67,7 @@ const config = (_env) => {
     filename: "server.bundle.js",
   },
   resolve: {
-    fallback: {
-      "http": require.resolve("stream-http"),
-      "stream": require.resolve("stream-browserify"),
-      "https": require.resolve("https-browserify"),
-      "url": require.resolve("url")
-    },
+
     extensions: [".js", ".ts"],
     alias: resolveTsconfigPathsToAlias( "./tsconfig.webpack.json")
   },
