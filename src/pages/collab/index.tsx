@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -653,7 +657,7 @@ const MatchRequestPage = () => {
                   <button
                     className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
                     type="button"
-                    onClick={() => acceptRequest(request.id)}
+                    onClick={() => acceptRequest(request.id as string)}
                   >
                     Accept
                   </button>
