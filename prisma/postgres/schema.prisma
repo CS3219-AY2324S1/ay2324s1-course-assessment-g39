@@ -26,6 +26,17 @@ enum Role {
     MAINTAINER
 }
 
+enum AnswerResult {
+    COMPILE_ERROR
+    ACCEPTED
+    RUNTIME_ERROR
+    TIME_LIMITED_ERROR
+    WRONG_ANSWER
+    OUTPUT_LIMIT_EXCEEDED
+    MEMORY_LIMITED_EXCEEDED
+    JUDGE_ERROR
+}
+
 // Necessary for Next auth
 model Account {
     id                String  @id @default(cuid())
@@ -70,11 +81,13 @@ model User {
 model QuestionAttempt {
     userId      String
     questionId  String
+    answerId    String
     attemptedOn DateTime @default(now())
-    success     Boolean
+    // storing result in postgres because its easier to access if we want to list the results
+    result      AnswerResult 
     user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@unique([userId, questionId, attemptedOn])
+    @@unique([userId, questionId, answerId])
 }
 
 model VerificationToken {
