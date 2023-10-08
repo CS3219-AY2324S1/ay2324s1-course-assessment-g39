@@ -5,6 +5,7 @@ import next from 'next';
 import { parse } from 'url';
 import ws from 'ws';
 import { createWSTRPCContext } from './api/trpc';
+import { env } from '~/env.mjs';
 
 const port = parseInt(process.env.PORT ?? '3000', 10);
 console.log(port);
@@ -30,7 +31,7 @@ void app.prepare().then(() => {
     void handle(req, res, parsedUrl);
   });
   console.log("Created http server");
-  const wss = new ws.Server({ port: 3001 });
+  const wss = new ws.Server({ port: Number(env.NEXT_PUBLIC_WS_PORT) ?? 3001 });
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const handler = applyWSSHandler({ wss, router: appRouter, createContext: createWSTRPCContext });
 

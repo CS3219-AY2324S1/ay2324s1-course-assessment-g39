@@ -9,6 +9,7 @@ import { createTRPCNext } from "@trpc/next";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
 import { NextPageContext } from "next";
 import superjson from "superjson";
+import { env } from "~/env.mjs"
 
 import { type AppRouter } from "~/server/api/root";
 
@@ -39,7 +40,7 @@ function getEndingLink(ctx: NextPageContext | undefined) {
     });
   }
   const client = createWSClient({
-    url: 'ws://localhost:3001',
+    url: `ws://localhost:${env.NEXT_PUBLIC_WS_PORT ?? 3001}`,
   });
   return wsLink<AppRouter>({
     client,
