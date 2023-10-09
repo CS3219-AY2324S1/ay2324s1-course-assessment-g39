@@ -20,7 +20,6 @@ const MatchRequestPage = () => {
     difficulty: -1,
     category: "",
     id: "",
-    response: "",
     statusMessage: "",
     isWaiting: false,
     requestFailed: false,
@@ -74,20 +73,6 @@ const MatchRequestPage = () => {
         ));
       }
     }
-  });
-
-  useEffect(() => {
-    const handleBeforeTabClose = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-
-      return (event.returnValue = "Are you sure you want to exit?");
-    };
-
-    window.addEventListener("beforeunload", handleBeforeTabClose);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeTabClose);
-    };
   });
 
   const difficultyMissingMessage = "Please select a difficulty";
@@ -508,11 +493,11 @@ const MatchRequestPage = () => {
         <span className="absolute left-1/2 -translate-x-1/2 top-0 text-white ">
           {`All requests (${queueSize} online users)`}
         </span>
-        <div className="absolute" style={{ top: "15%", left: "3.5%" }}>
+        <div className="absolute w-full" style={{ top: "15%", right: "0.5%" }}>
           <div className="flex justify-evenly">
             <input
               className="h-8 focus:outline-none rounded-md text-center"
-              style={{ width: "45%" }}
+              style={{ width: "40%" }}
               placeholder={"Filter by difficulty"}
               onChange={(e) =>
                 setPageState((prev) => ({
@@ -523,7 +508,7 @@ const MatchRequestPage = () => {
             ></input>
             <input
               className="h-8 focus:outline-none rounded-md text-center"
-              style={{ width: "45%" }}
+              style={{ width: "40%" }}
               placeholder={"Filter by category"}
               onChange={(e) =>
                 setPageState((prev) => ({
@@ -657,7 +642,7 @@ const MatchRequestPage = () => {
                   <button
                     className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
                     type="button"
-                    onClick={() => acceptRequest(request.id as string)}
+                    onClick={() => acceptRequest(request.id)}
                   >
                     Accept
                   </button>
