@@ -93,20 +93,6 @@ const MatchRequestPage = () => {
     pageState.waitingTime,
   ]);
 
-  useEffect(() => {
-    const handleBeforeTabClose = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-
-      return (event.returnValue = "Are you sure you want to exit?");
-    };
-
-    window.addEventListener("beforeunload", handleBeforeTabClose);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeTabClose);
-    };
-  });
-
   const difficultyMissingMessage = "Please select a difficulty";
   const categoryMissingMessage = "Please enter a category";
 
@@ -293,7 +279,7 @@ const MatchRequestPage = () => {
             <div>
               <button
                 className="text-neutral-400 rounded-md underline"
-                onClick={() => void router.push("/signup/")}
+                onClick={() => void router.push("/sign-up/")}
               >
                 Go to Signup
               </button>
