@@ -14,10 +14,10 @@ const userObject = z.object({
   category: z.string(),
 });
 
-const acceptRequestObject = z.object({
-  acceptUser: z.string(),
-  acceptId: z.string(),
-  requestId: z.string(),
+const addJoinRequestObject = z.object({
+  joiningUser: z.string(),
+  joiningUserId: z.string(),
+  originalRequestId: z.string(),
 });
 
 type UserRequest = {
@@ -171,17 +171,17 @@ export const matchRequestRouter = createTRPCRouter({
   }),
 
   // Users want to match with other user
-  acceptRequest: publicProcedure
-    .input(acceptRequestObject)
+  addJoinRequest: publicProcedure
+    .input(addJoinRequestObject)
     .mutation(async ({ ctx, input }) => {
-      const { acceptUser, acceptId, requestId } = input;
+      const { joiningUser, joiningUserId, originalRequestId } = input;
 
       const existingRequest = await ctx.prismaPostgres.joinRequest
         .findFirst({
           where: {
-            fromName: acceptUser,
-            fromId: acceptId,
-            toId: requestId,
+            fromName: joiningUser,
+            fromId: joiningUserId,
+            toId: originalRequestId,
           },
         })
         .then((req) => {
@@ -191,33 +191,33 @@ export const matchRequestRouter = createTRPCRouter({
       if (!existingRequest) {
         await ctx.prismaPostgres.joinRequest.create({
           data: {
-            fromName: acceptUser,
-            fromId: acceptId,
-            toId: requestId,
+            fromName: joiningUser,
+            fromId: joiningUserId,
+            toId: originalRequestId,
           },
         });
 
-        ee.emit("accept", { acceptUser, acceptId, requestId });
+        ee.emit("join", { joiningUser, joiningUserId, originalRequestId });
       }
     }),
 
   // Users listens to other users who want to join their session
-  subscribeToAcceptRequests: publicProcedure.subscription(() => {
+  subscribeToJoinRequests: publicProcedure.subscription(() => {
     return observable<{
-      acceptUser: string;
-      acceptId: string;
-      requestId: string;
+      joiningUser: string;
+      joiningUserId: string;
+      originalRequestId: string;
     }>((emit) => {
-      const onAccept = (data: {
-        acceptUser: string;
-        acceptId: string;
-        requestId: string;
+      const onJoinRequest = (data: {
+        joiningUser: string;
+        joiningUserId: string;
+        originalRequestId: string;
       }) => {
         emit.next(data);
       };
-      ee.on("accept", onAccept);
+      ee.on("join", onJoinRequest);
       return () => {
-        ee.off("accept", onAccept);
+        ee.off("join", onJoinRequest);
       };
     });
   }),

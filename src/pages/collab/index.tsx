@@ -158,7 +158,7 @@ const MatchRequestPage = () => {
     },
   });
 
-  api.matchRequest.subscribeToAcceptRequests.useSubscription(undefined, {
+  api.matchRequest.subscribeToJoinRequests.useSubscription(undefined, {
     onData(request) {
       console.log(request);
       void Promise.resolve(utils.matchRequest.invalidate());
@@ -227,7 +227,7 @@ const MatchRequestPage = () => {
     },
   });
 
-  const acceptRequestMutation = api.matchRequest.acceptRequest.useMutation({
+  const addJoinRequestMutation = api.matchRequest.addJoinRequest.useMutation({
     onSuccess: () => {
       console.log("Waiting for partner to accept...");
     },
@@ -342,12 +342,14 @@ const MatchRequestPage = () => {
     });
   };
 
-  const acceptRequest = (partnerId: string) => {
-    acceptRequestMutation.mutate({
-      acceptUser: session?.user?.name ?? "",
-      acceptId: session?.user?.id ?? "",
-      requestId: partnerId || "",
+  const addJoinRequest = (partnerId: string) => {
+    addJoinRequestMutation.mutate({
+      joiningUser: session?.user?.name ?? "",
+      joiningUserId: session?.user?.id ?? "",
+      originalRequestId: partnerId || "",
     });
+
+    toast.success("Waiting for partner to accept...");
   };
 
   const confirmMatch = (acceptId: string, requestId: string) => {
@@ -642,9 +644,9 @@ const MatchRequestPage = () => {
                   <button
                     className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
                     type="button"
-                    onClick={() => acceptRequest(request.id)}
+                    onClick={() => addJoinRequest(request.id)}
                   >
-                    Accept
+                    Request to join
                   </button>
                 </div>
               </div>
