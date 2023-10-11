@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-hot-toast";
@@ -29,6 +29,8 @@ const MatchRequestPage = () => {
     isEditing: false,
     difficultyFilter: "",
     categoryFilter: "",
+    editDifficulty: -1,
+    editCategory: "",
   });
 
   const timer = useRef<NodeJS.Timer | null>(null);
@@ -196,18 +198,19 @@ const MatchRequestPage = () => {
     },
   });
 
+  const ownRequest = api.matchRequest.getOwnRequest
+    .useInfiniteQuery({})
+    .data?.pages.flat(2)[0];
+
   const allOtherRequests = api.matchRequest.getOtherRequests.useInfiniteQuery(
     {},
   );
 
   const allJoinRequests = api.matchRequest.getJoinRequests.useInfiniteQuery({});
 
-  const queueSize = allOtherRequests.data
-    ? allOtherRequests.data.pages.flat(2).length +
-      (pageState.isTimerActive ? 1 : 0)
-    : pageState.isTimerActive
-    ? 1
-    : 0;
+  const queueSize =
+    (ownRequest ? 1 : 0) +
+    (allOtherRequests.data ? allOtherRequests.data.pages.flat(2).length : 0);
 
   const addRequestMutation = api.matchRequest.addRequest.useMutation({
     onSuccess: (data) => {
@@ -245,6 +248,14 @@ const MatchRequestPage = () => {
     },
   });
 
+  useMemo(() => {
+    if (session)
+      setPageState((prev) => ({
+        ...prev,
+        id: session.user.id,
+      }));
+  }, [session]);
+
   const addRequest = () => {
     if (pageState.difficulty == -1 || pageState.category == "") {
       if (!pageState.hasSubmitted)
@@ -257,16 +268,16 @@ const MatchRequestPage = () => {
       return;
     }
 
+    if (ownRequest !== null) {
+      toast.error("Request already exists for this user");
+      return;
+    }
+
     setPageState((prev) => ({
       ...prev,
       isWaiting: true,
       isTimerActive: true,
       statusMessage: "Searching for partner...",
-    }));
-
-    setPageState((prev) => ({
-      ...prev,
-      id: session.user.id,
     }));
 
     addRequestMutation.mutate({
@@ -276,7 +287,7 @@ const MatchRequestPage = () => {
       category: pageState.category,
     });
 
-    void Promise.resolve(allOtherRequests.refetch());
+    void Promise.resolve(utils.matchRequest.invalidate());
   };
 
   const cancelRequest = () => {
@@ -317,23 +328,34 @@ const MatchRequestPage = () => {
 
     setPageState((prev) => ({
       ...prev,
-      difficulty: parseInt(value!),
+      editDifficulty: parseInt(value!),
+    }));
+  };
+
+  const onRequestCategoryChange = (value: string) => {
+    setPageState((prev) => ({
+      ...prev,
+      editCategory: value,
     }));
   };
 
   const updateRequest = () => {
     editRequestMutation.mutate({
       id: pageState.id,
-      difficulty: pageState.difficulty,
-      category: pageState.category,
+      difficulty: pageState.editDifficulty,
+      category: pageState.editCategory,
     });
+
     const displayedDifficulty = document.querySelector(
       ".difficulty-menu .select",
     );
+
     if (displayedDifficulty)
       displayedDifficulty.innerHTML =
         difficultyLevels[pageState.difficulty] ?? displayedDifficulty.innerHTML;
+
     console.log("Request updated");
+
     setPageState((prev) => {
       return {
         ...prev,
@@ -384,7 +406,7 @@ const MatchRequestPage = () => {
             <div>
               <button
                 className="text-neutral-400 rounded-md underline"
-                onClick={() => void router.push("/signup/")}
+                onClick={() => void router.push("/sign-up/")}
               >
                 Go to Signup
               </button>
@@ -521,21 +543,21 @@ const MatchRequestPage = () => {
             ></input>
           </div>
         </div>
-        <div className="overflow-y-auto flex flex-col">
-          {pageState.isTimerActive && (
+        <div className="overflow-y-auto flex flex-col height-3/4 mt-2">
+          {ownRequest && (
             <div className="flex flex-col rounded-md bg-purple-500 m-2">
               <span className="text-left text-white pl-4">
-                {session.user.name}
+                {ownRequest.name}
               </span>
               <div className="request">
                 {!pageState.isEditing && (
                   <div
                     className={`w-1/3 flex justify-center items-center ${
-                      difficultyColors[pageState.difficulty]
+                      difficultyColors[ownRequest.difficulty]
                     } rounded-md`}
                   >
                     <span className="text-white">
-                      {difficultyLevels[pageState.difficulty]}
+                      {difficultyLevels[ownRequest.difficulty]}
                     </span>
                   </div>
                 )}
@@ -546,11 +568,11 @@ const MatchRequestPage = () => {
                   >
                     <div
                       className={`request-select ${
-                        difficultyColors[pageState.difficulty]
+                        difficultyColors[pageState.editDifficulty]
                       }`}
                     >
                       <span className="text-white">
-                        {difficultyLevels[pageState.difficulty]}
+                        {difficultyLevels[pageState.editDifficulty]}
                       </span>
                     </div>
                     <ul className="request-dropdown-menu">
@@ -568,7 +590,7 @@ const MatchRequestPage = () => {
                 )}
                 {!pageState.isEditing && (
                   <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
-                    <span className="text-white">{pageState.category}</span>
+                    <span className="text-white">{ownRequest.category}</span>
                   </div>
                 )}
                 {pageState.isEditing && (
@@ -576,8 +598,8 @@ const MatchRequestPage = () => {
                     <input
                       className="w-full rounded-md p-2 text-center focus:outline-none bg-stone-700 text-white "
                       type="text"
-                      value={pageState.category}
-                      onChange={(e) => onCategoryChange(e.target.value)}
+                      value={pageState.editCategory}
+                      onChange={(e) => onRequestCategoryChange(e.target.value)}
                     />
                   </div>
                 )}
@@ -589,6 +611,8 @@ const MatchRequestPage = () => {
                       setPageState((prev) => ({
                         ...prev,
                         isEditing: !prev.isEditing,
+                        editDifficulty: ownRequest.difficulty,
+                        editCategory: ownRequest.category,
                       }))
                     }
                   >
@@ -644,7 +668,7 @@ const MatchRequestPage = () => {
                   <button
                     className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
                     type="button"
-                    onClick={() => addJoinRequest(request.id)}
+                    onClick={() => addJoinRequest(request.id as string)}
                   >
                     Request to join
                   </button>

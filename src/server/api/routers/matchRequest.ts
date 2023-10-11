@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
+import { TRPCError } from "@trpc/server";
 import { observable } from "@trpc/server/observable";
 import { EventEmitter } from "events";
 import { z } from "zod";
@@ -30,6 +31,14 @@ type UserRequest = {
 const ee = new EventEmitter();
 
 export const matchRequestRouter = createTRPCRouter({
+  getOwnRequest: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.prismaPostgres.matchRequest.findFirst({
+      where: {
+        id: ctx.session.user.id,
+      },
+    });
+  }),
+
   getOtherRequests: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.prismaPostgres.matchRequest.findMany({
       where: {
@@ -62,11 +71,10 @@ export const matchRequestRouter = createTRPCRouter({
         });
 
       if (existingRequest) {
-        return {
-          msg: "Request already exists",
-          partner: "",
-          isSuccess: false,
-        };
+        throw new TRPCError({
+          message: "Request already exists",
+          code: "CONFLICT",
+        });
       }
 
       const request = await ctx.prismaPostgres.matchRequest
@@ -108,11 +116,7 @@ export const matchRequestRouter = createTRPCRouter({
 
       ee.emit("remove", request);
 
-      return {
-        msg: "Request cancelled",
-        partner: "",
-        isSuccess: false,
-      };
+      return request;
     }),
 
   editRequest: protectedProcedure
@@ -137,7 +141,10 @@ export const matchRequestRouter = createTRPCRouter({
         });
 
       if (!request) {
-        throw new Error("Request not found");
+        throw new TRPCError({
+          message: "Request not found",
+          code: "NOT_FOUND",
+        });
       }
 
       const updatedRequest = await ctx.prismaPostgres.matchRequest.update({
@@ -150,6 +157,8 @@ export const matchRequestRouter = createTRPCRouter({
         },
       });
 
+      ee.emit("edit", request);
+
       return updatedRequest;
     }),
 
@@ -158,14 +167,23 @@ export const matchRequestRouter = createTRPCRouter({
       const onAdd = (data: UserRequest) => {
         emit.next(data);
       };
+
       const onRemove = (data: UserRequest) => {
         emit.next(data);
       };
+
+      const onEdit = (data: UserRequest) => {
+        emit.next(data);
+      };
+
       ee.on("add", onAdd);
       ee.on("remove", onRemove);
+      ee.on("edit", onEdit);
+
       return () => {
         ee.off("add", onAdd);
         ee.off("remove", onRemove);
+        ee.off("edit", onEdit);
       };
     });
   }),
