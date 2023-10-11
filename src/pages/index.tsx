@@ -19,7 +19,7 @@ export default function Home() {
             href="/questions"
             className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
           >
-            Go to Questions
+            Questions
           </Link>
           <Link
             href="/sign-up"
@@ -44,6 +44,12 @@ export default function Home() {
             className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
           >
             Practice with others
+          </Link>
+          <Link
+            href="/judge"
+            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
+          >
+            Test Code
           </Link>
         </div>
       </main>
