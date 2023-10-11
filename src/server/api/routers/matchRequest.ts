@@ -5,7 +5,7 @@
 import { observable } from "@trpc/server/observable";
 import { EventEmitter } from "events";
 import { z } from "zod";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 const userObject = z.object({
   id: z.string(),
@@ -30,7 +30,7 @@ type UserRequest = {
 const ee = new EventEmitter();
 
 export const matchRequestRouter = createTRPCRouter({
-  getOtherRequests: publicProcedure.query(async ({ ctx }) => {
+  getOtherRequests: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.prismaPostgres.matchRequest.findMany({
       where: {
         id: { not: ctx.session?.user.id },
@@ -38,7 +38,7 @@ export const matchRequestRouter = createTRPCRouter({
     });
   }),
 
-  getJoinRequests: publicProcedure.query(async ({ ctx }) => {
+  getJoinRequests: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.prismaPostgres.joinRequest.findMany({
       where: {
         toId: ctx.session?.user.id,
@@ -46,7 +46,7 @@ export const matchRequestRouter = createTRPCRouter({
     });
   }),
 
-  addRequest: publicProcedure
+  addRequest: protectedProcedure
     .input(userObject)
     .mutation(async ({ ctx, input }) => {
       const { id, name, difficulty, category } = input;
@@ -91,7 +91,7 @@ export const matchRequestRouter = createTRPCRouter({
       };
     }),
 
-  cancelRequest: publicProcedure
+  cancelRequest: protectedProcedure
     .input(userObject)
     .mutation(async ({ ctx, input }) => {
       const { id } = input;
@@ -115,7 +115,7 @@ export const matchRequestRouter = createTRPCRouter({
       };
     }),
 
-  editRequest: publicProcedure
+  editRequest: protectedProcedure
     .input(
       z.object({
         id: z.string(),
@@ -153,7 +153,7 @@ export const matchRequestRouter = createTRPCRouter({
       return updatedRequest;
     }),
 
-  subscribeToAllRequests: publicProcedure.subscription(() => {
+  subscribeToAllRequests: protectedProcedure.subscription(() => {
     return observable<UserRequest>((emit) => {
       const onAdd = (data: UserRequest) => {
         emit.next(data);
@@ -171,7 +171,7 @@ export const matchRequestRouter = createTRPCRouter({
   }),
 
   // Users want to match with other user
-  addJoinRequest: publicProcedure
+  addJoinRequest: protectedProcedure
     .input(addJoinRequestObject)
     .mutation(async ({ ctx, input }) => {
       const { joiningUser, joiningUserId, originalRequestId } = input;
@@ -202,7 +202,7 @@ export const matchRequestRouter = createTRPCRouter({
     }),
 
   // Users listens to other users who want to join their session
-  subscribeToJoinRequests: publicProcedure.subscription(() => {
+  subscribeToJoinRequests: protectedProcedure.subscription(() => {
     return observable<{
       joiningUser: string;
       joiningUserId: string;
@@ -223,7 +223,7 @@ export const matchRequestRouter = createTRPCRouter({
   }),
 
   // Users confirm that they want to match with the other user
-  confirmMatch: publicProcedure
+  confirmMatch: protectedProcedure
     .input(z.object({ acceptId: z.string(), requestId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { acceptId, requestId } = input;
@@ -245,7 +245,7 @@ export const matchRequestRouter = createTRPCRouter({
     }),
 
   // Users listens for confirmation from other user to join the session
-  subscribeToConfirmation: publicProcedure.subscription(() => {
+  subscribeToConfirmation: protectedProcedure.subscription(() => {
     return observable<{ acceptId: string; requestId: string }>((emit) => {
       const onConfirm = (data: { acceptId: string; requestId: string }) => {
         emit.next(data);
@@ -257,7 +257,7 @@ export const matchRequestRouter = createTRPCRouter({
     });
   }),
 
-  declineMatch: publicProcedure
+  declineMatch: protectedProcedure
     .input(z.object({ acceptId: z.string(), requestId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { acceptId, requestId } = input;
@@ -276,7 +276,7 @@ export const matchRequestRouter = createTRPCRouter({
       };
     }),
 
-  subscribeToDeclineRequests: publicProcedure.subscription(() => {
+  subscribeToDeclineRequests: protectedProcedure.subscription(() => {
     return observable<{ acceptId: string; requestId: string }>((emit) => {
       const onDecline = (data: { acceptId: string; requestId: string }) => {
         emit.next(data);
