@@ -1,126 +1,112 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+import { observable } from "@trpc/server/observable";
+import { EventEmitter } from "events";
 import { z } from "zod";
-import amqp from "amqplib/callback_api";
-
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { prismaPostgres } from "~/server/db";
-
-import { MatchRequest } from "@prisma-db-psql/client";
-
-
-const MIN_DIFFICULTY = 0;
-const MAX_DIFFICULTY = 5;
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 const userObject = z.object({
+  id: z.string(),
+  name: z.string(),
   difficulty: z.number().min(0).max(5),
   category: z.string(),
-  id: z.string(),
+});
+
+const addJoinRequestObject = z.object({
+  joiningUser: z.string(),
+  joiningUserId: z.string(),
+  originalRequestId: z.string(),
 });
 
 type UserRequest = {
+  id: string;
+  name: string;
   difficulty: number;
   category: string;
-  id: string;
 };
 
-type RequestResponse = {
-  msg: string;
-  partner: string;
-  isSuccess: boolean;
-};
-
-class UserRequestHandler {
-  async sendRequest(request: UserRequest) {
-    return await new Promise<RequestResponse>((resolve, reject) => {
-      amqp.connect("amqp://localhost", (err, conn) => {
-        if (err) reject(err);
-
-        conn.createChannel((err, ch) => {
-          if (err) reject(err);
-
-          ch.assertQueue("", { durable: true }, (err, q) => {
-            if (err) reject(err);
-
-            console.log(
-              `[x] Sending match request: '${request.id}' with difficulty: ${request.difficulty} and category: ${request.category}`,
-            );
-
-            ch.consume(q.queue, (msg) => {
-              if (msg && msg.properties.correlationId === request.id) {
-                console.log(
-                  `[x] Received partner: ${msg.properties.headers.partner}.`,
-                );
-                console.log(msg.content.toString());
-                resolve({
-                  msg: msg.content.toString(),
-                  partner: msg.properties.headers.partner as string,
-                  isSuccess: msg.properties.headers.isSuccess as boolean,
-                } as RequestResponse);
-                setTimeout(() => {
-                  ch.close((err) => {
-                    if (err) {
-                      throw err;
-                    }
-                  });
-                }, 500);
-              }
-            });
-
-            ch.sendToQueue("request_queue", Buffer.from(""), {
-              persistent: true,
-              replyTo: q.queue,
-              headers: {
-                difficulty: request.difficulty,
-                category: request.category,
-                isCancel: false,
-                id: request.id,
-              },
-            });
-          });
-        });
-      });
-    });
-  }
-}
+const ee = new EventEmitter();
 
 export const matchRequestRouter = createTRPCRouter({
-  addRequest: publicProcedure.input(userObject).mutation(async ({ input }) => {
-    const { difficulty, category, id } = input;
-
-    const existingRequest = await prismaPostgres.matchRequest
-      .findFirst({
-        where: {
-          id: id,
-        },
-      })
-      .then((req: unknown) => {
-        return req;
-      });
-
-    if (existingRequest) {
-      return {
-        msg: "Request already exists",
-        partner: "",
-        isSuccess: false,
-      };
-    }
-
-    const requestHandler = new UserRequestHandler();
-
-    const response = await requestHandler
-      .sendRequest({ difficulty, category, id })
-      .then((res) => {
-        return res;
-      });
-
-    return response;
+  getOtherRequests: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.prismaPostgres.matchRequest.findMany({
+      where: {
+        id: { not: ctx.session?.user.id },
+      },
+    });
   }),
 
-  cancelRequest: publicProcedure
-    .input(userObject)
-    .mutation(async ({ input }) => {
-      const { difficulty, category, id } = input;
+  getJoinRequests: protectedProcedure.query(async ({ ctx }) => {
+    return await ctx.prismaPostgres.joinRequest.findMany({
+      where: {
+        toId: ctx.session?.user.id,
+      },
+    });
+  }),
 
-      await removeRequest(id, difficulty, category);
+  addRequest: protectedProcedure
+    .input(userObject)
+    .mutation(async ({ ctx, input }) => {
+      const { id, name, difficulty, category } = input;
+
+      const existingRequest = await ctx.prismaPostgres.matchRequest
+        .findFirst({
+          where: {
+            id: id,
+          },
+        })
+        .then((req) => {
+          return req;
+        });
+
+      if (existingRequest) {
+        return {
+          msg: "Request already exists",
+          partner: "",
+          isSuccess: false,
+        };
+      }
+
+      const request = await ctx.prismaPostgres.matchRequest
+        .create({
+          data: {
+            id,
+            name,
+            difficulty,
+            category,
+          },
+        })
+        .then((req) => {
+          return req;
+        });
+
+      ee.emit("add", request);
+
+      return {
+        msg: "Searching for partner...",
+        partner: "",
+        isSuccess: true,
+      };
+    }),
+
+  cancelRequest: protectedProcedure
+    .input(userObject)
+    .mutation(async ({ ctx, input }) => {
+      const { id } = input;
+
+      const request = await ctx.prismaPostgres.matchRequest
+        .delete({
+          where: {
+            id,
+          },
+        })
+        .then((req) => {
+          return req;
+        });
+
+      ee.emit("remove", request);
 
       return {
         msg: "Request cancelled",
@@ -128,174 +114,177 @@ export const matchRequestRouter = createTRPCRouter({
         isSuccess: false,
       };
     }),
-});
 
-const removeRequest = async (
-  id: string,
-  difficulty: number,
-  category: string,
-) => {
-  const removedRequest = await prismaPostgres.matchRequest
-    .delete({
-      where: {
-        id,
-        difficulty,
-        category,
-      },
-    })
-    .catch(() => {
-      return undefined;
-    });
+  editRequest: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        difficulty: z.number().min(0).max(5),
+        category: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, difficulty, category } = input;
 
-  return removedRequest;
-};
-
-const sendToClients = async (
-  difficulty: number,
-  ch: amqp.Channel,
-  categorizedRequests: Map<string, Array<string>>,
-) => {
-  for (const [category, ids] of categorizedRequests) {
-    if (ids.length < 2) continue;
-
-    const index1 = Math.floor(Math.random() * ids.length);
-    const id1 = ids.splice(index1, 1)[0];
-    const request1 = id1
-      ? await Promise.resolve(removeRequest(id1, difficulty, category)).then(
-          (res) => {
-            return res;
+      const request = await ctx.prismaPostgres.matchRequest
+        .findFirst({
+          where: {
+            id,
           },
-        )
-      : undefined;
+        })
+        .then((req) => {
+          return req;
+        });
 
-    const index2 = Math.floor(Math.random() * ids.length);
-    const id2 = ids.splice(index2, 1)[0];
-    const request2 = id2
-      ? await Promise.resolve(removeRequest(id2, difficulty, category))
-      : undefined;
+      if (!request) {
+        throw new Error("Request not found");
+      }
 
-    if (request1 && request2) {
-      const replyTo1 = request1.replyTo;
-      const replyTo2 = request2.replyTo;
-
-      const msg1 = Buffer.from("Found match!");
-      const msg2 = Buffer.from("Found match!");
-
-      ch.sendToQueue(replyTo1, msg1, {
-        correlationId: id1,
-        headers: {
-          partner: id2,
-          isSuccess: true,
-        },
-      });
-      ch.sendToQueue(replyTo2, msg2, {
-        correlationId: id2,
-        headers: {
-          partner: id1,
-          isSuccess: true,
-        },
-      });
-    }
-  }
-};
-
-const matchRequests = async (ch: amqp.Channel) => {
-  for (let i = MIN_DIFFICULTY; i <= MAX_DIFFICULTY; i++) {
-    const requests = await prismaPostgres.matchRequest
-      .findMany({
+      const updatedRequest = await ctx.prismaPostgres.matchRequest.update({
         where: {
-          difficulty: i,
+          id,
         },
-      })
-      .then((res: MatchRequest[]) => {
-        return res;
+        data: {
+          difficulty,
+          category,
+        },
       });
 
-    if (requests && requests.length >= 2) {
-      const categorizedRequests = requests.reduce((acc: Map<string, Array<string>>, 
-        request: MatchRequest) => {
-        if (!acc.has(request.category)) {
-          acc.set(request.category, []);
-        }
+      return updatedRequest;
+    }),
 
-        const ids = acc.get(request.category);
-        if (ids) ids.push(request.id);
-
-        return acc;
-      }, new Map<string, Array<string>>());
-
-      await sendToClients(i, ch, categorizedRequests);
-    }
-  }
-};
-
-void Promise.resolve(
-  amqp.connect("amqp://localhost", (err, conn) => {
-    if (err) throw err;
-
-    conn.createChannel((err, ch) => {
-      if (err) throw err;
-
-      // Start with clean slate for dev
-      void Promise.resolve(prismaPostgres.matchRequest.deleteMany({}));
-
-      // https://amqp-node.github.io/amqplib/channel_api.html#channel_prefetch
-      ch.prefetch(1);
-
-      console.log("[*] Waiting for requests.");
-
-      const request_queue = "request_queue";
-
-      // https://amqp-node.github.io/amqplib/channel_api.html#channel_assertQueue
-      ch.assertQueue(request_queue, { durable: true });
-
-      // https://amqp-node.github.io/amqplib/channel_api.html#channel_consume
-      ch.consume(request_queue, (msg) => {
-        if (!msg) return;
-
-        const difficulty = msg.properties.headers.difficulty as number;
-        const category = msg.properties.headers.category as string;
-        const id = msg.properties.headers.id as string;
-        const replyTo = msg.properties.replyTo as string;
-
-        void Promise.resolve(
-          prismaPostgres.matchRequest.create({
-            data: {
-              id,
-              replyTo,
-              difficulty,
-              category,
-            },
-          }),
-        );
-
-        console.log("[x] Received request: '%s'", id.toString());
-
-        // Very important to acknowledge the message, otherwise it will be sent again
-        ch.ack(msg);
-
-        setTimeout(() => {
-          void Promise.resolve(removeRequest(id, difficulty, category)).then(
-            (res) => {
-              if (res) {
-                // https://amqp-node.github.io/amqplib/channel_api.html#channel_sendToQueue
-                ch.sendToQueue(
-                  replyTo,
-                  Buffer.from("Timeout. No match found."),
-                  {
-                    correlationId: id,
-                    headers: {
-                      isSuccess: false,
-                    },
-                  },
-                );
-              }
-            },
-          );
-        }, 30000);
-      });
-
-      // setInterval(() => void matchRequests(ch), 1000);
+  subscribeToAllRequests: protectedProcedure.subscription(() => {
+    return observable<UserRequest>((emit) => {
+      const onAdd = (data: UserRequest) => {
+        emit.next(data);
+      };
+      const onRemove = (data: UserRequest) => {
+        emit.next(data);
+      };
+      ee.on("add", onAdd);
+      ee.on("remove", onRemove);
+      return () => {
+        ee.off("add", onAdd);
+        ee.off("remove", onRemove);
+      };
     });
   }),
-);
+
+  // Users want to match with other user
+  addJoinRequest: protectedProcedure
+    .input(addJoinRequestObject)
+    .mutation(async ({ ctx, input }) => {
+      const { joiningUser, joiningUserId, originalRequestId } = input;
+
+      const existingRequest = await ctx.prismaPostgres.joinRequest
+        .findFirst({
+          where: {
+            fromName: joiningUser,
+            fromId: joiningUserId,
+            toId: originalRequestId,
+          },
+        })
+        .then((req) => {
+          return req;
+        });
+
+      if (!existingRequest) {
+        await ctx.prismaPostgres.joinRequest.create({
+          data: {
+            fromName: joiningUser,
+            fromId: joiningUserId,
+            toId: originalRequestId,
+          },
+        });
+
+        ee.emit("join", { joiningUser, joiningUserId, originalRequestId });
+      }
+    }),
+
+  // Users listens to other users who want to join their session
+  subscribeToJoinRequests: protectedProcedure.subscription(() => {
+    return observable<{
+      joiningUser: string;
+      joiningUserId: string;
+      originalRequestId: string;
+    }>((emit) => {
+      const onJoinRequest = (data: {
+        joiningUser: string;
+        joiningUserId: string;
+        originalRequestId: string;
+      }) => {
+        emit.next(data);
+      };
+      ee.on("join", onJoinRequest);
+      return () => {
+        ee.off("join", onJoinRequest);
+      };
+    });
+  }),
+
+  // Users confirm that they want to match with the other user
+  confirmMatch: protectedProcedure
+    .input(z.object({ acceptId: z.string(), requestId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { acceptId, requestId } = input;
+
+      await ctx.prismaPostgres.matchRequest.deleteMany({
+        where: {
+          id: { in: [acceptId, requestId] },
+        },
+      });
+
+      await ctx.prismaPostgres.joinRequest.deleteMany({
+        where: {
+          fromId: { in: [acceptId, requestId] },
+          toId: { in: [acceptId, requestId] },
+        },
+      });
+
+      ee.emit("confirm", { acceptId, requestId });
+    }),
+
+  // Users listens for confirmation from other user to join the session
+  subscribeToConfirmation: protectedProcedure.subscription(() => {
+    return observable<{ acceptId: string; requestId: string }>((emit) => {
+      const onConfirm = (data: { acceptId: string; requestId: string }) => {
+        emit.next(data);
+      };
+      ee.on("confirm", onConfirm);
+      return () => {
+        ee.off("confirm", onConfirm);
+      };
+    });
+  }),
+
+  declineMatch: protectedProcedure
+    .input(z.object({ acceptId: z.string(), requestId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { acceptId, requestId } = input;
+
+      await ctx.prismaPostgres.joinRequest.deleteMany({
+        where: {
+          fromId: acceptId,
+          toId: requestId,
+        },
+      });
+
+      ee.emit("decline", { acceptId, requestId });
+
+      return {
+        acceptId,
+      };
+    }),
+
+  subscribeToDeclineRequests: protectedProcedure.subscription(() => {
+    return observable<{ acceptId: string; requestId: string }>((emit) => {
+      const onDecline = (data: { acceptId: string; requestId: string }) => {
+        emit.next(data);
+      };
+      ee.on("decline", onDecline);
+      return () => {
+        ee.off("decline", onDecline);
+      };
+    });
+  }),
+});

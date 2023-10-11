@@ -36,13 +36,17 @@ services:
       - "./data/s3:/home/app/public/peer-prep"
   rabbitmq:
     image: rabbitmq:3.11.23-management-alpine
+    restart: always
     container_name: "rabbitmq-dev"
     ports:
       - 5672:5672
       - 15672:15672
-    volumes:
-      - ./data/rabbitmq:/var/lib/rabbitmq/
-      - ./data/rabbitmq_log:/var/log/rabbitmq
+      - 15674:15674
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    command: sh -c "rabbitmq-plugins enable rabbitmq_web_stomp && rabbitmq-server"
+
     networks:
       - rabbitmq_go_net
 networks:
