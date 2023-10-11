@@ -73,9 +73,16 @@ amqp.connect("amqp://localhost", (err, conn) => {
                   },
                 })
                 .then((request) => {
+                  console.log(`Client ${id} has joined the queue`);
                   void Promise.resolve(findMatchingRequest(request)).then(
                     (matchRes) => {
                       if (matchRes) {
+                        console.log(
+                          `Client ${id} has found a match! Leaving the queue...`,
+                        );
+                        console.log(
+                          `Client ${matchRes.id} has found a match! Leaving the queue...`,
+                        );
                         void Promise.resolve(removeRequest(request));
                         void Promise.resolve(removeRequest(matchRes));
 
