@@ -63,7 +63,7 @@ const SignUp = () => {
               To access the SignUp page,{" "}
               <button
                 className="px-1 text-neutral-400 rounded-md underline"
-                onClick={() => signOut({ callbackUrl: "/signup" })}
+                onClick={() => void signOut({ callbackUrl: "/sign-up" })}
               >
                 log out
               </button>

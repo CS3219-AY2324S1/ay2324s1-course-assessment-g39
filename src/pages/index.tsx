@@ -1,3 +1,4 @@
+import { signOut } from "next-auth/react";
 import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
@@ -44,6 +45,12 @@ export default function Home() {
             className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
           >
             Practice with others
+          </Link>
+          <Link
+            href="/codespace"
+            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
+          >
+            Code spaces
           </Link>
         </div>
       </main>
