@@ -9,9 +9,14 @@
 
 import { initTRPC, TRPCError } from "@trpc/server";
 import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
+import type { NodeHTTPCreateContextFnOptions } from "@trpc/server/adapters/node-http";
+import type * as trpcNext from "@trpc/server/adapters/next";
 import { type Session } from "next-auth";
+import { getSession } from "next-auth/react";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import type ws from "ws";
+import type { IncomingMessage } from "http";
 import { getServerAuthSession } from "~/server/auth";
 import { prismaPostgres, prismaMongo } from "~/server/db";
 
@@ -40,6 +45,20 @@ interface CreateContextOptions {
 const createInnerTRPCContext = (opts: CreateContextOptions) => {
   return {
     session: opts.session,
+    prismaPostgres,
+    prismaMongo,
+  };
+};
+
+// Context creator used for WS
+export const createWSTRPCContext = async (
+  opts:
+    | NodeHTTPCreateContextFnOptions<IncomingMessage, ws>
+    | trpcNext.CreateNextContextOptions,
+) => {
+  const session = await getSession(opts);
+  return {
+    session,
     prismaPostgres,
     prismaMongo,
   };
@@ -119,7 +138,6 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
 });
 
 const enforceUserIsMaintainer = t.middleware(({ ctx, next }) => {
-  
   if (!ctx.session?.user || ctx.session?.user.role !== "MAINTAINER") {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
@@ -140,7 +158,6 @@ const enforceUserIsMaintainer = t.middleware(({ ctx, next }) => {
  * @see https://trpc.io/docs/procedures
  */
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
-
 
 /**
  * Protected route for maintainers only.

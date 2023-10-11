@@ -5,7 +5,7 @@
   "scripts": {
     "build": "next build",
     "dev:next": "next dev",
-    "dev:wss": "dotenv tsx watch src/server/amqpServer.ts --tsconfig tsconfig.server.json",
+    "dev:wss": "dotenv tsx watch src/server/wssServer.ts --tsconfig tsconfig.server.json",
     "dev": "run-p dev:*",
     "postinstall": "yarn prisma:generate",
     "lint": "next lint",
@@ -33,6 +33,7 @@
     "@trpc/next": "^10.34.0",
     "@trpc/react-query": "^10.34.0",
     "@trpc/server": "^10.34.0",
+    "@types/ws": "^8.5.6",
     "amqplib": "^0.10.3",
     "bcrypt": "^5.1.1",
     "concurrently": "^8.2.1",
@@ -57,6 +58,7 @@
     "superjson": "^1.13.1",
     "tsx": "^3.13.0",
     "unified": "^11.0.3",
+    "ws": "^8.14.2",
     "zod": "^3.21.4"
   },
   "devDependencies": {
