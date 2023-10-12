@@ -63,7 +63,7 @@ export default function Questions() {
                         >
                             {languages.map((language, i) => (
                                 <option key={language.id} value={language.id} selected={i === 0}>
-                                    {language.name}
+                                    {`[${language.id}] ` + language.name}
                                 </option>
                             ))}
                         </select>

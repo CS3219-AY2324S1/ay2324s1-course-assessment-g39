@@ -3,7 +3,7 @@
 
 generator client {
     provider = "prisma-client-js"
-    output = "../../node_modules/@prisma-db-mongo/client"
+    output   = "../../node_modules/@prisma-db-mongo/client"
 }
 
 datasource db {
@@ -12,21 +12,29 @@ datasource db {
 }
 
 model Question {
+    id           String        @id @default(cuid()) @map("_id")
+    createdAt    DateTime      @default(now())
+    updatedAt    DateTime      @updatedAt
+    title        String        @unique
+    body         String
+    difficulty   Int
+    category     String
+    environments Environment[]
+}
+
+model Environment {
     id        String   @id @default(cuid()) @map("_id")
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-    title     String   @unique
-    body      String
-    difficulty Int
-    category  String
-    // answers   Answer[]
-}
 
-// model Answer {
-//     id        String   @id @default(cuid()) @map("_id")
-//     createdAt DateTime @default(now())
-//     updatedAt DateTime @updatedAt
-//     body      String
-//     question  Question @relation(fields: [questionId], references: [id])
-//     questionId String
-// }
+    languageId Int      // from Judge0
+    Question   Question @relation(fields: [questionId], references: [id])
+    questionId String
+
+    template    String
+    prepend     String
+    append      String
+    testCases   String[]
+
+    @@unique([languageId, questionId])
+}
