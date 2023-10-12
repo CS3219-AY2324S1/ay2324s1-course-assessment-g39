@@ -32,9 +32,24 @@ model Environment {
     questionId String
 
     template    String
-    prepend     String
-    append      String
-    testCases   String[]
+    prepend     String?
+    append      String?
+    testCases   TestCase[]
 
     @@unique([languageId, questionId])
+}
+
+model TestCase {
+    id        String   @id @default(cuid()) @map("_id")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    Environment Environment @relation(fields: [environmentId], references: [id])
+    environmentId String
+
+    description String
+    test        String
+    input       String?
+    output      String?
+    hint        String?
 }
