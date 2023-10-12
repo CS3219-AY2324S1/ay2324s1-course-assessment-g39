@@ -37,6 +37,10 @@ export const QuestionRow = (props: QuestionRowProps) => {
   } = props;
   const { title, body, difficulty, category } = question;
 
+  const envs = api.question.getOneEnvironments.useQuery({
+    id: "clmcztrlq0000ammcltt67q6y"
+  });
+
   const [bodyState, initSetBodyState] = useState(BODY_STATE.COLLAPSED);
 
   const setBodyState = (bodyState: BODY_STATE) => {
@@ -151,7 +155,7 @@ export const QuestionRow = (props: QuestionRowProps) => {
       );
     }} span={2} highlight={title !== initialQuestion.title} ref={(r) => {
       textAreaRefs.current[0] = r;
-    }} 
+    }}
     disabled={!editable}
     />
 
@@ -198,11 +202,11 @@ export const QuestionRow = (props: QuestionRowProps) => {
     />
 
     <StyledTextarea name="difficulty" value={difficulty ?? 0} onChange={(e) => onQuestionChange({ ...question, difficulty: parseInt(e.target.value) || 0 })}
-    
+
       ref={(r) => {
         textAreaRefs.current[2] = r;
       }} type="number" highlight={difficulty !== initialQuestion.difficulty}
-      
+
       disabled={!editable} />
 
     <StyledTextarea name="category" value={category}
@@ -210,7 +214,12 @@ export const QuestionRow = (props: QuestionRowProps) => {
         minHeight: `${MIN_TEXTAREA_HEIGHT_px}px`,
       }} onChange={(e) => onQuestionChange({ ...question, category: e.target.value })} span={2} highlight={category !== initialQuestion.category} ref={(r) => {
         textAreaRefs.current[3] = r;
-      }} 
+      }}
       disabled={!editable} />
+      {
+        envs.data?.map((env) => (
+          env.id
+        ))
+      }
   </div>;
 };

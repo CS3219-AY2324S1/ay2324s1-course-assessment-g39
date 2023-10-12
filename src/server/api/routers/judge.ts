@@ -1,6 +1,6 @@
 import axios from "axios";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { createTRPCRouter, maintainerProcedure } from "../trpc";
 
 // TODO: Multifile
 
@@ -16,12 +16,12 @@ const executionObject = z.object({
 });
 
 export const judgeRouter = createTRPCRouter({
-  getLanguages: protectedProcedure.query(async () => {
+  getLanguages: maintainerProcedure.query(async () => {
     return axios.get("http://localhost:2358/languages").then((res) => {
       return res.data as language[];
     });
   }),
-  run: protectedProcedure.input(executionObject).mutation(async ({ input }) => {
+  run: maintainerProcedure.input(executionObject).mutation(async ({ input }) => {
     return axios
       .post(
         "http://localhost:2358/submissions/?base64_encoded=false&wait=true",
