@@ -46,11 +46,12 @@ export const userRouter = createTRPCRouter({
   create: publicProcedure
     .input(userCreateInput_z)
     .mutation(async ({ input }) => {
-      const { password, ...values } = input;
+      const { password, role, ...values } = input;
       const passwordHash = await hashPassword(password);
       try {
         await prisma.user.create({
           data: {
+            role: role ?? undefined,
             ...values,
             password: passwordHash,
           },

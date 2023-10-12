@@ -91,6 +91,20 @@ input[type=number]::-webkit-outer-spin-button
                 left: 25%
                 border-radius: 0.15rem
 
+
+
+
+.generic-button
+    @apply  rounded-lg bg-gray-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700
+    
+    &--delete
+        @apply h-1/2 text-red-500
+
+    &--enter-session
+        @apply h-1/2 text-green-400
+
+.codespace-header
+    @apply dark:bg-slate-600 text-white row-span-1
 @keyframes lds-dual-ring
   0%
     transform: rotate(0deg)
