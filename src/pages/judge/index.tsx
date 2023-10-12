@@ -1,15 +1,18 @@
-import { useState, type FormEvent } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState, type FormEvent } from "react";
 
-import { toast } from "react-hot-toast";
-import { PeerPrepRectLogo } from "~/assets/logo";
-import J0Logo from "~/assets/j0_white.png";
-import { api } from "~/utils/api";
 import Image from "next/image";
+import { toast } from "react-hot-toast";
+import J0Logo from "~/assets/j0_white.png";
+import { PeerPrepRectLogo } from "~/assets/logo";
+import { api } from "~/utils/api";
 // import { useSession } from "next-auth/react";
 
 export default function Questions() {
 
     const [output, setOutput] = useState<string | null>(null);
+    const [questionId, setQuestionId] = useState<string | null>(null);
+    const [environmentId, setEnvironmentId] = useState<string | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
     const languages = api.judge.getLanguages.useQuery(undefined, {
         onError: (e) => {
@@ -17,9 +20,52 @@ export default function Questions() {
         },
     }).data ?? [];
 
+    const questions = api.question.getAll.useQuery(undefined, {
+        onError: (e) => {
+            toast.error("Failed to fetch questions: " + e.message);
+        },
+        onSuccess: (data) => {
+            setQuestionId(data[0]?.id ?? null);
+        },
+        refetchOnWindowFocus: false
+    }).data ?? [];
+
+    const environments = api.question.getOneEnvironments.useQuery({
+        id: questionId!
+    }, {
+        onError: (e) => {
+            toast.error("Failed to fetch environments: " + e.message);
+        },
+        onSuccess: (data) => {
+            setEnvironmentId(data[0]?.id ?? null);
+        },
+        enabled: !!questionId,
+        refetchOnWindowFocus: false
+    }).data ?? [];
+
+    const testCases = api.question.getOneEnvironmentTestCases.useQuery({
+        id: environmentId!
+    }, {
+        onError: (e) => {
+            toast.error("Failed to fetch test cases: " + e.message);
+        },
+        enabled: !!environmentId,
+        refetchOnWindowFocus: false
+    }).data ?? [];
+
     const run = api.judge.run.useMutation({
         onSuccess: (data) => {
-            setOutput(data);
+            setOutput(JSON.stringify(data, null, 4));
+        },
+        onError: (e) => {
+            toast.error("Failed to run code: " + e.message);
+            setOutput(null);
+        },
+    });
+
+    const runTestCase = api.judge.runTestCase.useMutation({
+        onSuccess: (data) => {
+            setOutput(JSON.stringify(data, null, 4));
         },
         onError: (e) => {
             toast.error("Failed to run code: " + e.message);
@@ -31,10 +77,32 @@ export default function Questions() {
         event.preventDefault();
         const form = event.target as HTMLFormElement;
         const data = new FormData(form);
-        const language_id = Number(data.get("language") as string);
         const source_code = data.get("source_code") as string;
-        run.mutate({ language_id, source_code });
+        if (questionId && environmentId) {
+            const testCaseId = data.get("testCases") as string;
+            runTestCase.mutate({ testCaseId, source_code });
+        } else {
+            const language_id = Number(data.get("language") as string);
+            run.mutate({ language_id, source_code });
+        }
     };
+
+    const keyRedirect = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+        if (event.key === 'Tab') {
+            event.preventDefault();
+            const textarea = event.target as HTMLTextAreaElement;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            textarea.value = textarea.value.substring(0, start) + "    " + textarea.value.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + 4;
+        }
+    }
+
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.value = environments.find(environment => environment.id == environmentId)?.template ?? "";
+        }
+    }, [environmentId, environments]);
 
     return (
         <main className=" flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[var(--bg-1)] to-[var(--bg-2)]">
@@ -53,7 +121,10 @@ export default function Questions() {
                     action="#"
                     onSubmit={handleSubmit}
                 >
-                    <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white"
+                        style={{
+                            opacity: questionId && environmentId ? 0.5 : 1
+                        }}>
                         Language
                         <select
                             name="language"
@@ -69,11 +140,61 @@ export default function Questions() {
                         </select>
                     </label>
 
+                    <span className="flex flex-row gap-6">
+                        <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                            Question
+                            <select
+                                name="question"
+                                id="question"
+                                className="mt-3 bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                required
+                                onChange={(e) => setQuestionId(e.target.value)}
+                            >
+                                {questions.map((question, i) => (
+                                    <option key={question.id} value={question.id} selected={i == 0} >
+                                        {question.title}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                            Environments
+                            <select
+                                name="environments"
+                                id="environments"
+                                className="mt-3 bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                onChange={(e) => setEnvironmentId(e.target.value)}
+                            >
+                                {environments.map((environment, i) => (
+                                    <option key={environment.id} value={environment.id} selected={i == 0}>
+                                        {languages.find(language => language.id == environment.languageId)?.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="block text-sm font-medium text-gray-900 dark:text-white">
+                            Test Cases
+                            <select
+                                name="testCases"
+                                id="testCases"
+                                className="mt-3 bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                            >
+                                {testCases.map((testCase, i) => (
+                                    <option key={testCase.id} value={testCase.id} selected={i == 0}>
+                                        {testCase.description}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    </span>
+
                     <label className="w-full mb-10 flex-1 block text-sm font-medium text-gray-900 dark:text-white">
                         Code
                         <textarea
                             name="source_code"
                             id="source_code"
+                            ref={textareaRef}
+                            onKeyDown={(e) => keyRedirect(e)}
                             className="mt-3 h-full min-h-[10rem] w-full p-2 font-mono box-border bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white "
                         />
                     </label>

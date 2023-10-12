@@ -37,10 +37,6 @@ export const QuestionRow = (props: QuestionRowProps) => {
   } = props;
   const { title, body, difficulty, category } = question;
 
-  const envs = api.question.getOneEnvironments.useQuery({
-    id: "clmcztrlq0000ammcltt67q6y"
-  });
-
   const [bodyState, initSetBodyState] = useState(BODY_STATE.COLLAPSED);
 
   const setBodyState = (bodyState: BODY_STATE) => {
@@ -216,10 +212,5 @@ export const QuestionRow = (props: QuestionRowProps) => {
         textAreaRefs.current[3] = r;
       }}
       disabled={!editable} />
-      {
-        envs.data?.map((env) => (
-          env.id
-        ))
-      }
   </div>;
 };
