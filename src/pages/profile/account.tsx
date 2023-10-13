@@ -149,12 +149,15 @@ const ProfilePage: NextPage = () => {
               log out
             </button>
           </div>
-        </div>{" "}
+        </div>
         <div className="p-4">
           <div className="text-2xl font-bold">{name}</div>
-          {session.user.role == "MAINTAINER" && <em>Maintainer</em>}
-          <div className="pb-4">{email}</div>
+          <div className="">{email}</div>
+          {session.user.role == "MAINTAINER" && (
+            <span className="font-thin">(Maintainer)</span>
+          )}
         </div>
+        <div className="py-2" />
         <div className="border-b border-slate-100"></div>
         <div className="p-4 w-1/2">
           <div className="font-bold pb-2">
@@ -177,7 +180,10 @@ const ProfilePage: NextPage = () => {
           </div>
           {isEditing && (
             <>
-              <form className="flex flex-col items-start" onSubmit={(e) => void onUpdate(e)}>
+              <form
+                className="flex flex-col items-start"
+                onSubmit={(e) => void onUpdate(e)}
+              >
                 <label>name:</label>
                 <input
                   className="text-slate-800 rounded-md"

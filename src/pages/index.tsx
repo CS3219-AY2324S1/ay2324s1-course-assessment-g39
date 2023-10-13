@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { PeerPrepCircularLogo, PeerPrepRectLogo } from "~/assets/logo";
+import { PeerPrepCircularLogo } from "~/assets/logo";
 import { PageLayout } from "~/components/Layout";
 
 export default function Home() {
