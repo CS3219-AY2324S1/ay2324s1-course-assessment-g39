@@ -4,7 +4,7 @@ import { createTRPCRouter } from "~/server/api/trpc";
 import { matchRequestRouter } from "./routers/matchRequest";
 import { formRouter } from "~/server/api/routers/form";
 import { codeSessionRouter } from "./routers/codeSession";
-
+import { judgeRouter } from "~/server/api/routers/judge";
 
 /**
  * This is the primary router for your server.
@@ -17,6 +17,7 @@ export const appRouter = createTRPCRouter({
   form: formRouter,
   user: userRouter,
   codeSession: codeSessionRouter,
+  judge: judgeRouter,
 });
 
 
