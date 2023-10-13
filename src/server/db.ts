@@ -1,5 +1,5 @@
 import { PrismaClient as PrismaClientMongo } from "@prisma-db-mongo/client";
-import { PrismaClient as PrismaClientPostgres } from "@prisma-db-psql/client";
+import { PrismaClient as PrismaClientPostgres} from "@prisma-db-psql/client";
 import { type LogLevel } from "@prisma/client/runtime/library";
 
 import { env } from "~/env.mjs";
@@ -14,6 +14,7 @@ const globalForPrisma = globalThis as unknown as {
 const logLevels = (
   NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"]
 ) as LogLevel[];
+
 
 export const prismaPostgres =
   globalForPrisma.prismaPostgres ??

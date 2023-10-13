@@ -38,6 +38,7 @@ export const env = createEnv({
    */
   client: {
     // NEXT_PUBLIC_CLIENTVAR: z.string().min(1),
+    NEXT_PUBLIC_WS_PORT: z.string().min(1)
   },
 
   /**
@@ -53,6 +54,7 @@ export const env = createEnv({
     MONGO_URL: process.env.MONGO_URL,
     NODE_ENV: process.env.NODE_ENV,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    NEXT_PUBLIC_WS_PORT: process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_WS_PORT : "3001",
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
     GITHUB_ID: process.env.GITHUB_ID,
