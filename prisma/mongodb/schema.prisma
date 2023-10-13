@@ -48,8 +48,11 @@ model TestCase {
     environmentId String
 
     description String
+    hint        String?
+
     test        String
     input       String?
     output      String?
-    hint        String?
+    timeLimit   Float?  // in seconds
+    memoryLimit Float?  // in kilobytes
 }
