@@ -3,6 +3,8 @@ import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
 import { PeerPrepCircularLogo, PeerPrepRectLogo } from "~/assets/logo";
+import { PageLayout } from "~/components/Layout";
+import NavBar from "~/components/NavBar";
 
 export default function Home() {
   return (
@@ -12,47 +14,27 @@ export default function Home() {
         <meta name="description" content="Supercharge your interview prep" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className=" flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[var(--bg-1)] to-[var(--bg-2)]">
-        <div className="container flex flex-col items-center justify-center px-12 py-28 max-w-screen-xl">
-          <PeerPrepCircularLogo height={300} width={300} borderColor="red" />
-          <PeerPrepRectLogo height={300} width={300} borderColor="white" />
-          <Link
-            href="/questions"
-            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
-          >
-            Go to Questions
-          </Link>
-          <Link
-            href="/sign-up"
-            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
-          >
-            Sign Up
-          </Link>
-          <Link
-            href="/sign-in"
-            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
-          >
-            Sign In
-          </Link>
-          <Link
-            href="/profile/account"
-            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
-          >
-            User Profile
-          </Link>
-          <Link
-            href="/collab"
-            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
-          >
-            Practice with others
-          </Link>
-          <Link
-            href="/codespace"
-            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-2 py-1 mt-2"
-          >
-            Code spaces
-          </Link>
-        </div>
+      <main>
+        <PageLayout>
+          <div className="bg-slate-900 flex flex-col items-center justify-center h-screen">
+            <div className="p-4 w-4/6">
+              <PeerPrepCircularLogo
+                // height={400}
+                // width={400}
+                borderColor="white"
+              />
+            </div>
+            {/* <PeerPrepRectLogo height={300} width={300} borderColor="white" /> */}
+            <div className="text-center p-2 px-6 w-5/6">
+              <p>
+                Sed ut perspiciatis unde omnis iste natus error sit voluptatem
+                accusantium doloremque laudantium, totam rem aperiam, eaque ipsa
+                quae ab illo inventore veritatis et quasi architecto beatae
+                vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia
+              </p>
+            </div>
+          </div>
+        </PageLayout>
       </main>
     </>
   );
