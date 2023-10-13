@@ -23,6 +23,7 @@ Notes:
 - If you want persistent data, create directories `./data/postgres` and `./data/mongo`.
 - If you encounter authentication errors with `prisma:push` change the database ports or delete your local installations.
 - If postgres is running on 5432, kill the process `sudo pkill -u postgres`
+- If you have trouble starting the `judge0` container, or encounter `Incorrect type. Expected "include".` in `compose.yml`, try updating `docker-compose` to `v2.20` (Docker Desktop `4.42.1`) or later.
 
 ## What's next? How do I make an app with this?
 

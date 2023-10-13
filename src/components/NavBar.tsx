@@ -64,6 +64,13 @@ const NavBar = () => {
           >
             SignIn
           </Link>
+          <Link
+            href="/judge"
+            onClick={closeDropdown}
+            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-4"
+          >
+            CodeExecution - Judge0
+          </Link>
         </div>
       )}
     </div>

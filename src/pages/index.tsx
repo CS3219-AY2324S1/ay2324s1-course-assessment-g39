@@ -1,10 +1,6 @@
-import { signOut } from "next-auth/react";
 import Head from "next/head";
-import Link from "next/link";
-import Image from "next/image";
 import { PeerPrepCircularLogo, PeerPrepRectLogo } from "~/assets/logo";
 import { PageLayout } from "~/components/Layout";
-import NavBar from "~/components/NavBar";
 
 export default function Home() {
   return (
