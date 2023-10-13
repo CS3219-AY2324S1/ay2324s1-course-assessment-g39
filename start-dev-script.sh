@@ -15,7 +15,7 @@ fi
 # Function to perform cleanup
 cleanup() {
   echo "Cleaning up..."
-  kill $PRISMA_STUDIO_PID
+  # kill $PRISMA_STUDIO_PID
   yarn docker:down & 
   sleep 20
   echo "Stopping Docker..."
@@ -31,9 +31,10 @@ yarn
 
 yarn docker:up && sleep 5
 
-yarn prisma:studio -- &
-PRISMA_STUDIO_PID=$!
+# yarn prisma:studio -- &
+# PRISMA_STUDIO_PID=$!
+# open http://localhost:3000  
+# yarn dev -- -p 3000
 
-open http://localhost:3000  
-yarn dev -- -p 3000
+yarn prisma:studio
 
