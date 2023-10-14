@@ -309,7 +309,6 @@ export const matchRequestRouter = createTRPCRouter({
           }
         }
         const findSync = (arg1: { requestId: string, userId: string }) => {
-          console.log(arg1);
           void find(arg1);
         }
         ee.on("findAutomatic", findSync);

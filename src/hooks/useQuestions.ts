@@ -31,7 +31,8 @@ type UseQuestionsReturn = {
 
     setTestCaseId: (testCaseId: string) => void,
     languages: Language[],
-    currentLanguage: Language | undefined
+    currentLanguage: Language | undefined,
+    setCurrentLanguage: (lang: Language) => void
     
 };
 
@@ -121,7 +122,11 @@ export default function useQuestions(): UseQuestionsReturn {
         setTestCaseId,
         currentTestCase: testCases.find((testcase) => testcase.id === testCaseId),
         languages: languages.data ?? [],
-        currentLanguage
+        currentLanguage,
+        setCurrentLanguage: (language: Language) => {
+          const env = environments.find((env) => env.languageId == language.id);
+          env && setEnvironmentId(env.id);
+        }
         
 
     }

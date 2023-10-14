@@ -23,7 +23,15 @@ export default function useCodeSession(codeSessionId: string): [CMText, (v: { ch
                 return;
             }
             const changes = ChangeSet.fromJSON(update.changes);
-            setCode(changes.apply(code));
+            try {
+                const newCode = changes.apply(code);
+                setCode(newCode);
+            } catch (e) {
+                // force a refetch
+                setLoadedCode(false);
+                void codeSessionQuery.refetch();
+            }
+
         },
         async onError() {
             await deleteClientIdQuery.refetch();
@@ -49,7 +57,7 @@ export default function useCodeSession(codeSessionId: string): [CMText, (v: { ch
         
         setLoadedCode(true);
         
-    }, [data, codeSessionQuery]);    
+    }, [data, codeSessionQuery.data?.code]);    
 
 
     const updateCode = (update: { changes: ChangeSet }) => {
