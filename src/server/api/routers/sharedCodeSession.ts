@@ -50,8 +50,24 @@ export const sharedCodeSessionRouter = createTRPCRouter({
      */
     createSharedCodeSession: protectedProcedure
         .input(createSharedCodeSession_z)
-        .mutation(async ({ input }) => {
+        .mutation(async ({ ctx, input }) => {
+            return await prismaPostgres.$transaction(async (tx) => {
+
             const rId = await createRootUserIfNotExist();
+            const yest = new Date();
+            // 30 days
+            yest.setDate(yest.getDate() - 30);
+
+            await tx.codeSpace.deleteMany({
+                where: {
+                    AND: {
+                        userId: rId,
+                        createdAt: {
+                            lte: yest
+                        }
+                    }                    
+                }
+            })
             // do not allow a user to have another session in memory
             // if one already exists
             if (sharedCodeSessions.has(input.user1) 
@@ -67,21 +83,36 @@ export const sharedCodeSessionRouter = createTRPCRouter({
                     sessionId: sharedCodeSessions.get(input.user1),
                 }
             }
-            const sharedCodeSpace = await prismaPostgres.codeSpace.create({
+            const sharedCodeSpace = await tx.codeSpace.create({
                 data: {
                     userId: rId,
                     code: ""
                 }
             });
-            const sharedSession = await prismaPostgres.codeSession.create({
+            const sharedSession = await tx.codeSession.create({
                 data: {
                     userId: rId,
                     codeSpaceId: sharedCodeSpace.id
                 }
             });
+            sharedCodeSessions.set(input.user1, sharedSession.id);
+            sharedCodeSessions.set(input.user2, sharedSession.id);
+            await tx.codeSessionUserAuth.createMany({
+                data: [
+                    {
+                        authorisedUserId: input.user1,
+                        codeSessionId: sharedSession.id
+                    },
+                    {
+                        authorisedUserId: input.user2,
+                        codeSessionId: sharedSession.id
+                    }
+                ]
+            })
             return {
                 sessionId: sharedSession.id
             };
+            })
         }),
         deleteSharedCodeSession: protectedProcedure
             .input(deleteSharedCodeSession_z)

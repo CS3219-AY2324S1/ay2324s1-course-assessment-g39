@@ -344,17 +344,12 @@ export const matchRequestRouter = createTRPCRouter({
     .input(z.object({ acceptId: z.string(), requestId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { acceptId, requestId } = input;
-      const r1 = await ctx.prismaPostgres.matchRequest.findUnique({
-        where: {
-          id: acceptId,
-        }
-      });
       const r2 = await ctx.prismaPostgres.matchRequest.findUnique({
         where: {
           id: requestId
         }
       })
-      if (!r1 || !r2) throw new TRPCError({
+      if (!r2) throw new TRPCError({
         code: "BAD_REQUEST", 
         message: "Failed to match requests"
       })
@@ -371,18 +366,19 @@ export const matchRequestRouter = createTRPCRouter({
         },
       });
       
-      ee.emit("confirm", { acceptId, requestId });
+      ee.emit("confirm", { user1Id: acceptId, user2Id: r2.userId });
       // needed for matching information
       return {
-        user1Id: r1.userId,
+        user1Id: acceptId,
         user2Id: r2.userId
       }
     }),
 
   // Users listens for confirmation from other user to join the session
   subscribeToConfirmation: protectedProcedure.subscription(() => {
-    return observable<{ acceptId: string; requestId: string }>((emit) => {
-      const onConfirm = (data: { acceptId: string; requestId: string }) => {
+    return observable<{ user1Id: string; user2Id: string }>((emit) => {
+      const onConfirm = (data: { user1Id: string; user2Id: string }) => {
+        
         emit.next(data);
       };
       ee.on("confirm", onConfirm);

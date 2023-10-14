@@ -238,7 +238,7 @@ const MatchRequestPage = () => {
 
   api.matchRequest.subscribeToConfirmation.useSubscription(undefined, {
     onData(request) {
-      if (request.acceptId == session?.user.id) {
+      if (request.user1Id === session?.user.id || request.user2Id === session?.user.id) {
         clearInterval(timer.current!);
         setPageState((prev) => ({
           ...prev,
@@ -247,7 +247,7 @@ const MatchRequestPage = () => {
           isWaiting: false,
         }));
         timer.current = null;
-
+        matchUsers.setMatchedUsers(request.user1Id, request.user2Id)
         // TODO: join session
         console.log("Joining session...");
       }

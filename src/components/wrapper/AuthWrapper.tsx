@@ -22,10 +22,8 @@ type Props = {
  */
 
 export const AuthWrapper = ({ children }: Props): JSX.Element => {
-  const router = useRouter();
   const { status: sessionStatus } = useSession({ required: true });
   const authorized = sessionStatus === "authenticated";
-  const unAuthorized = sessionStatus === "unauthenticated";
   const loading = sessionStatus === "loading";
 
 
