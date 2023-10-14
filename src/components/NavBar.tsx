@@ -21,7 +21,7 @@ const NavBar = () => {
         </button>
       </div>
       {isDropdownOpen && (
-        <div className="absolute bg-slate-800 flex flex-col space-y-1 p-2">
+        <div className="absolute z-50 bg-slate-800 flex flex-col space-y-1 p-2">
           <Link
             href="/questions"
             onClick={closeDropdown}

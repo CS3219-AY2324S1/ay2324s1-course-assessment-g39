@@ -161,10 +161,10 @@ const ProfilePage: NextPage = () => {
         <div className="border-b border-slate-100"></div>
         <div className="p-4 w-1/2">
           <div className="font-bold pb-2">
-            Account information
+            <span className="pr-3">Account information</span>
             {isEditing ? (
               <button
-                className="text-blue-400 rounded px-1 m-2"
+                className="font-medium text-primary-600 hover:underline dark:text-primary-500"
                 onClick={() => setIsEditing(false)}
               >
                 cancel
@@ -172,45 +172,52 @@ const ProfilePage: NextPage = () => {
             ) : (
               <button
                 onClick={() => setIsEditing(true)}
-                className="text-blue-400 rounded px-1 m-2"
+                className="font-medium text-primary-600 hover:underline dark:text-primary-500"
               >
                 edit
               </button>
             )}
           </div>
+          <div className="py-2" />
           {isEditing && (
             <>
               <form
-                className="flex flex-col items-start"
+                className="flex flex-col items-stretch space-y-4 md:space-y-6"
                 onSubmit={(e) => void onUpdate(e)}
               >
-                <label>name:</label>
+                <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-900 dark:text-slate-200">
+                    Name
+                  </label>
+                  <input
+                    className=" border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 bg-transparent dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    type="text"
+                    defaultValue={name}
+                    {...register("name")}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm font-medium text-gray-900 dark:text-slate-200">
+                    Email
+                  </label>
+                  <input
+                    className=" border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 bg-transparent dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    type="email"
+                    defaultValue={email}
+                    {...register("email")}
+                  />
+                </div>
                 <input
-                  className="text-slate-800 rounded-md"
-                  type="text"
-                  defaultValue={name}
-                  {...register("name")}
-                />
-                <div className="p-1" />
-                <label>email:</label>
-                <input
-                  className="text-slate-800 rounded-md"
-                  type="email"
-                  defaultValue={email}
-                  {...register("email")}
-                />
-                <hr />
-                <div className="p-2"></div>
-                <input
-                  className="rounded-md bg-green-500 px-1"
+                  // className=" border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 bg-transparent dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  // className="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                  className="w-full bg-opacity-60 dark:bg-opacity-60 text-white bg-primary-600 hover:bg-opacity-70 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                   type="submit"
-                  value="save"
+                  value="Save Changes"
                   disabled={isSavingUserData}
                 />
                 <div className="p-4" />
               </form>
               <div>
-                {" "}
                 <button
                   onClick={() => {
                     const pw = prompt("enter new password");
