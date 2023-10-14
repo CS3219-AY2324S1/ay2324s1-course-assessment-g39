@@ -111,24 +111,30 @@ model VerificationToken {
     @@unique([identifier, token])
 }
 
+enum MatchType {
+    AUTO
+    MANUAL
+}
+
 model MatchRequest {
-    id          String  @id
-    userId      String  @unique
-    name        String?
-    difficulty  Int
-    category    String
-    user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    createdAt   DateTime    @default(now())
+    id         String    @id
+    userId     String    @unique
+    cursor     Int       @unique @default(autoincrement())
+    name       String?
+    difficulty Int
+    category   String
+    user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    matchType  MatchType @default(MANUAL)
+    createdAt  DateTime  @default(now())
 }
 
 model JoinRequest {
-    id          Int     @id @default(autoincrement())
-    fromName    String
-    fromId      String
-    toId        String
+    id       Int    @id @default(autoincrement())
+    fromName String
+    fromId   String
+    toId     String
 
     @@unique([fromId, toId])
-
     @@index([fromId])
-    @@index([toId]) 
+    @@index([toId])
 }

@@ -144,7 +144,7 @@ const CodeSpace = () => {
   const allSpaces = api.codeSession.getAllSpaces.useQuery();
     
   return (
-    <div className="absolute w-full h-full">
+    <div className="w-full h-screen flex flex-col">
     <div className="grid w-full h-full grid-rows-6 gap-0 dark:bg-gray-900">
       <div className="codespace-header">
       <h1>Code Space</h1>
