@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { CodeOutput, Question, TestCase } from "~/types/global";
+import { CodeOutput, Language, Question, TestCase } from "~/types/global";
 import { api } from "~/utils/api";
+
 
 type UseQuestionsReturn = {
     output: CodeOutput | undefined,
@@ -28,7 +29,9 @@ type UseQuestionsReturn = {
      */
     setQuestionId: (questionTitle: string) => void,
 
-    setTestCaseId: (testCaseId: string) => void
+    setTestCaseId: (testCaseId: string) => void,
+    languages: Language[],
+    currentLanguage: Language | undefined
     
 };
 
@@ -54,32 +57,30 @@ export default function useQuestions(): UseQuestionsReturn {
         id: questionId
     });
 
-    const environments =
-    api.question.getOneEnvironments.useQuery(
-      {
-        id: questionId,
-      },
-      {
-        onError: (e) => {
-          toast.error("Failed to fetch environments: " + e.message);
-        },
-        onSuccess: (data) => {
-          setEnvironmentId(data[0]?.id ?? null);
-        },
-        enabled: !!questionId,
-        refetchOnWindowFocus: false,
-      },
-    ).data ?? [];
-    const run = api.judge.run.useMutation({
-        onSuccess: (data) => {
-          setOutput(data);
-        },
-        onError: (e) => {
-          toast.error("Failed to run code: " + e.message);
-          setOutput(undefined);
-        },
-      });
 
+    const environments =
+      api.question.getOneEnvironments.useQuery(
+        {
+          id: questionId,
+        },
+        {
+          onError: (e) => {
+            toast.error("Failed to fetch environments: " + e.message);
+          },
+          onSuccess: (data) => {
+            setEnvironmentId(data[0]?.id ?? null);
+          },
+          enabled: !!questionId,
+          refetchOnWindowFocus: false,
+        },
+      ).data ?? [];
+
+    const languages = api.judge.getSpecificLanguages.useQuery({
+      languages: environments.map(({ languageId }) => languageId)
+    });
+
+    const currentEnvironment = environments.find((val) => val.id === environmentId);
+    const currentLanguage = languages.data?.find((val) => val.id === currentEnvironment?.languageId);
     const runTestCase = api.judge.runTestCase.useMutation({
         onSuccess: (data) => {
           setOutput(data);
@@ -109,9 +110,9 @@ export default function useQuestions(): UseQuestionsReturn {
         currentQuestion: question.data,
         submitCode(code, language_id) {
         if (questionId && environmentId) {
-            runTestCase.mutate({ testCaseId, source_code: code });
+          runTestCase.mutate({ testCaseId, source_code: code });
         } else {
-            run.mutate({ language_id, source_code: code });
+          toast.error("Test case not selected");
         }
         },
         loading,
@@ -119,5 +120,9 @@ export default function useQuestions(): UseQuestionsReturn {
         testCaseIdList: testCases.map(({ id, test }) => ({ id, test  })),
         setTestCaseId,
         currentTestCase: testCases.find((testcase) => testcase.id === testCaseId),
+        languages: languages.data ?? [],
+        currentLanguage
+        
+
     }
 }

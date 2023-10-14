@@ -15,7 +15,7 @@ const rootUser = {
 /**
  * Creats the root user if it isn't in the db.
  */
-async function createRootUserIfNotExist() {
+export  async function createRootUserIfNotExist() {
     const result = await prismaPostgres.user.upsert({
         create: rootUser,
         update: rootUser,

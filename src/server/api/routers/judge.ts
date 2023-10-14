@@ -1,9 +1,10 @@
 import axios from "axios";
-import { z } from "zod";
+import { number, z } from "zod";
 import {
   createTRPCRouter,
   maintainerProcedure,
   protectedProcedure,
+  publicProcedure,
 } from "../trpc";
 
 // TODO: Multifile
@@ -44,6 +45,15 @@ export const judgeRouter = createTRPCRouter({
   getLanguages: maintainerProcedure.query(async () => {
     return axios.get("http://localhost:2358/languages").then((res) => {
       return res.data as Language[];
+    });
+  }),
+  getSpecificLanguages: protectedProcedure
+    .input(z.object({ languages: z.array(z.number()) }))
+    .query(async ({ input }) => {
+    const languageIdSet = new Set<number>();
+    input.languages.forEach((val) => languageIdSet.add(val));
+    return axios.get("http://localhost:2358/languages").then((res) => {
+      return (res.data as Language[]).filter((value) => languageIdSet.has(value.id));
     });
   }),
   run: maintainerProcedure

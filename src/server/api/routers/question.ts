@@ -21,7 +21,14 @@ export const questionRouter = createTRPCRouter({
   getAll: publicProcedure.query(({ ctx }) => {
     return ctx.prismaMongo.question.findMany();
   }),
-
+  getAllReduced: publicProcedure.query(({ ctx }) => {
+    return ctx.prismaMongo.question.findMany({
+      select: {
+        title: true,
+        id: true
+      }
+    })
+  }),
   addOne: maintainerProcedure
     .input(questionObject)
     .mutation(async ({ ctx, input }) => {

@@ -6,6 +6,7 @@ import { EventEmitter } from "stream";
 import { Update } from '@codemirror/collab'
 import { ChangeSet, Text } from '@codemirror/state'
 import { observable } from "@trpc/server/observable";
+import { createRootUserIfNotExist } from "./sharedCodeSession";
 
 
 const createSessionObject = z.object({
@@ -26,7 +27,7 @@ const updateCodeSessionObject = z.object({
     changes: z.string(), // json changeset
     clientId: z.string()
   }),
-  codeSessionId: z.string(),
+  codeSessionId: z.string()
 });
 
 const createCodeSpaceObject = z.object({
@@ -306,8 +307,8 @@ export const codeSessionRouter = createTRPCRouter({
         const values = await prismaPostgres.codeSpace.findUnique({
           where: {
             id_userId: {
-              id: codeSession?.id,
-              userId: codeSession?.userId
+              userId: codeSession.userId,
+              id: codeSession.codeSpaceId
             }
           }
         });
@@ -337,7 +338,7 @@ export const codeSessionRouter = createTRPCRouter({
         where: {
           id_userId: {
             id: codeSession.codeSpaceId,
-            userId: ctx.session.user.id
+            userId: codeSession.userId
           }
         },
         data: {

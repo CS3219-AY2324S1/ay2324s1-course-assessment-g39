@@ -355,16 +355,17 @@ export const matchRequestRouter = createTRPCRouter({
       })
       await ctx.prismaPostgres.matchRequest.deleteMany({
         where: {
-          id: { in: [acceptId, requestId] },
+          OR: [
+            {
+              userId: r2.userId,
+            },
+            {
+              userId: acceptId,
+            }
+          ]
         },
       });
 
-      await ctx.prismaPostgres.joinRequest.deleteMany({
-        where: {
-          fromId: { in: [acceptId, requestId] },
-          toId: { in: [acceptId, requestId] },
-        },
-      });
       
       ee.emit("confirm", { user1Id: acceptId, user2Id: r2.userId });
       // needed for matching information
