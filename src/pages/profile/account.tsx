@@ -209,8 +209,6 @@ const ProfilePage: NextPage = () => {
                   />
                 </div>
                 <input
-                  // className=" border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 bg-transparent dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  // className="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                   className="w-full bg-opacity-60 dark:bg-opacity-60 text-white bg-primary-600 hover:bg-opacity-70 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                   type="submit"
                   value="Save Changes"
@@ -222,8 +220,7 @@ const ProfilePage: NextPage = () => {
                 <button
                   onClick={() => {
                     const pw = prompt("enter new password");
-                    // stopgap measure, need to centralize user field type def
-                    const pwVerified = z.string().min(8).safeParse(pw);
+                    const pwVerified = password_z.safeParse(pw);
                     if (pwVerified.success) {
                       void updatePassword({
                         id: userData.id,
