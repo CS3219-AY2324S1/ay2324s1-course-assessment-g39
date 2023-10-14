@@ -13,10 +13,9 @@ import { signOut, useSession } from "next-auth/react";
 import { LoadingPage } from "~/components/Loading";
 
 // TODO:
-// - edit imageURL
-// - change password using email link
-// - client-side validation using zod
 // - add email verification
+// - change password using email link
+// - edit imageURL
 
 const id_z = z.string().min(1); // can add error message
 const name_z = z.string().min(1);
@@ -37,7 +36,7 @@ const ProfilePage: NextPage = () => {
   });
 
   const updateInfoSchema = z.object({
-    name: z.string().min(1, { message: "Required" }),
+    name: name_z,
     email: email_z,
   });
 
@@ -75,8 +74,9 @@ const ProfilePage: NextPage = () => {
     onError: (e) => {
       const errMsg = e.data?.zodError?.fieldErrors.content;
       if (errMsg?.[0]) {
-        toast.error(`Failed to post: ${errMsg[0]}`);
+        toast.error(`Failed to update: ${errMsg[0]}`);
       }
+      toast.error(`Failed to update user: ${e.message}`);
     },
   });
 
@@ -91,6 +91,7 @@ const ProfilePage: NextPage = () => {
         if (errMsg?.[0]) {
           toast.error(`Failed to update password: ${errMsg[0]}`);
         }
+        toast.error(`Failed to update password: ${e.message}`);
       },
     });
 
