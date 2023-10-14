@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 import { useEffect } from "react";
 import UserDenied from "~/components/UserDenied";
 import { LoadingPage } from "../Loading";
+import { PageLayout } from "../Layout";
 
 type Props = {
   children: React.ReactElement;
@@ -22,29 +23,22 @@ type Props = {
 
 export const AuthWrapper = ({ children }: Props): JSX.Element => {
   const router = useRouter();
-  const { status: sessionStatus } = useSession();
+  const { status: sessionStatus } = useSession({ required: true });
   const authorized = sessionStatus === "authenticated";
   const unAuthorized = sessionStatus === "unauthenticated";
   const loading = sessionStatus === "loading";
 
-  useEffect(() => {
-    // check if the session is loading or the router is not ready
-    if (loading || !router.isReady) return;
 
-    // if the user is not authorized, redirect to the login page
-    // with a return url to the current page
-    // if (unAuthorized) {
-    //   console.log("not authorized");
-    //   router.push({
-    //     pathname: "/",
-    //     query: { returnUrl: router.asPath },
-    //   });
-    // }
-  }, [loading, unAuthorized, sessionStatus, router]);
 
   // if the user refreshed the page or somehow navigated to the protected page
   if (loading) {
-    return <LoadingPage />;
+    return (
+      <>
+        <PageLayout>
+          <LoadingPage />
+        </PageLayout>
+      </>
+    );
   }
 
   // if the user is authorized, render the page
