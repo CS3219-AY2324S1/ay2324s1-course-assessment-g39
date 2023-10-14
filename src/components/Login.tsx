@@ -28,7 +28,8 @@ const LoginWithCredentials = (props: Props) => {
     });
     if (res?.ok) {
       toast.success("Successfully signed in");
-      return void router.push("/");
+      // reload is necessary to have ctx.session be updated
+      return void router.push("/").then(() => window.location.reload());
     }
     const error = new Error(res?.error ?? "");
     props.onError(error);
