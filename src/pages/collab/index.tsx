@@ -7,13 +7,15 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
+import { NextRouter, useRouter } from "next/router";
 import Head from "next/head";
 
 import { api } from "~/utils/api";
 
 import { PageLayout } from "~/components/Layout";
 import LoadingIcon from "~/components/LoadingIcon";
+import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
+
 
 const MatchRequestPage = () => {
   const [pageState, setPageState] = useState({
@@ -30,7 +32,19 @@ const MatchRequestPage = () => {
     difficultyFilter: "",
     categoryFilter: "",
   });
-
+  const simplifiedSetPage = (values: Partial<typeof pageState>) => {
+    setPageState((prev) => 
+      {return {
+    ...prev,
+    ...values
+      }})
+    };
+  // saved data
+  const [submittedData, setSubmittedData] = useState({
+    difficulty: -1,
+    category: "",
+    requestId: ""
+  });
   const timer = useRef<NodeJS.Timer | null>(null);
 
   useEffect(() => {
@@ -144,13 +158,63 @@ const MatchRequestPage = () => {
 
   const router = useRouter();
   const { data: session, status } = useSession();
-
   const utils = api.useContext();
+
+  const ownRequest = api.matchRequest.getOwnRequest.useQuery();
+
+  const waitForRequest = () => {
+    simplifiedSetPage({
+      isTimerActive: true,
+      isWaiting: true
+    });
+  };
+
+  /**
+   * Updates the current users request
+   * @returns 
+   */
+  function updateOwnRequest() {
+    if (!ownRequest.data) {
+      return;
+    }
+    if (!ownRequest.data.success
+      || !ownRequest.data.ownRequest || ownRequest.data.ownRequest.id
+      == submittedData.requestId) {
+      return;
+    }
+    const { difficulty, id: requestId, category, createdAt, ..._ } 
+      = ownRequest.data.ownRequest;
+      
+    const curr = new Date();
+    const timeDiff = Math.round((curr.getTime() - createdAt.getTime()) / 1000);
+    
+    simplifiedSetPage({
+      difficulty,
+      category,
+      hasSubmitted: true,
+      waitingTime: timeDiff
+    });
+    setSubmittedData({
+      difficulty,
+      requestId,
+      category
+    });
+    waitForRequest();
+  }
+
+  useEffect(() => {
+    updateOwnRequest();
+  }, [ownRequest]);
 
   api.matchRequest.subscribeToAllRequests.useSubscription(undefined, {
     onData(request) {
-      console.log(request);
-      void Promise.resolve(utils.matchRequest.invalidate());
+      if (!submittedData.difficulty || !submittedData.requestId || !submittedData.category) {
+        return;
+      }
+      if (request.difficulty == submittedData.difficulty
+        && request.category == submittedData.category) {
+          console.log(request);
+      }
     },
     onError(err) {
       console.log("Subscription error: ", err);
@@ -196,9 +260,10 @@ const MatchRequestPage = () => {
     },
   });
 
-  const allOtherRequests = api.matchRequest.getOtherRequests.useInfiniteQuery(
+  const allOtherRequests = api.matchRequest.getAllRequests.useInfiniteQuery(
     {},
   );
+
 
   const allJoinRequests = api.matchRequest.getJoinRequests.useInfiniteQuery({});
 
@@ -210,9 +275,12 @@ const MatchRequestPage = () => {
     : 0;
 
   const addRequestMutation = api.matchRequest.addRequest.useMutation({
-    onSuccess: (data) => {
-      console.log(data);
+    onSuccess: (_) => {
+      void ownRequest.refetch();
     },
+    onError(err) {
+      toast.error(err.message);
+    }
   });
 
   const cancelRequestMutation = api.matchRequest.cancelRequest.useMutation({
@@ -275,16 +343,13 @@ const MatchRequestPage = () => {
       difficulty: pageState.difficulty,
       category: pageState.category,
     });
-
+    void ownRequest.refetch();
     void Promise.resolve(allOtherRequests.refetch());
   };
 
   const cancelRequest = () => {
     cancelRequestMutation.mutate({
-      id: pageState.id,
-      name: session?.user?.name ?? "",
-      difficulty: pageState.difficulty,
-      category: pageState.category,
+      id: submittedData.requestId,
     });
     clearInterval(timer.current!);
     setPageState((prev) => ({
@@ -372,28 +437,7 @@ const MatchRequestPage = () => {
     declineMatchMutation.mutate({ acceptId, requestId });
   };
 
-  if (status !== "authenticated") {
-    return (
-      <>
-        <Head>
-          <title>Profile</title>
-        </Head>
-        <PageLayout>
-          <div className="w-full h-full flex flex-col justify-center items-center">
-            <div className="align-middle">404 User not found</div>
-            <div>
-              <button
-                className="text-neutral-400 rounded-md underline"
-                onClick={() => void router.push("/signup/")}
-              >
-                Go to Signup
-              </button>
-            </div>
-          </div>
-        </PageLayout>
-      </>
-    );
-  }
+
 
   // Remove current request immediately so that the user doesn't need to wait for timeout to send another request
   window.onunload = () => {
@@ -525,7 +569,7 @@ const MatchRequestPage = () => {
           {pageState.isTimerActive && (
             <div className="flex flex-col rounded-md bg-purple-500 m-2">
               <span className="text-left text-white pl-4">
-                {session.user.name}
+                {session!.user.name}
               </span>
               <div className="request">
                 {!pageState.isEditing && (
@@ -621,6 +665,8 @@ const MatchRequestPage = () => {
                 .includes(pageState.categoryFilter.toLowerCase()),
             )
             .map((request, index) => (
+              <div key={index}>{
+              request.id !== session.user.id &&
               <div
                 className="flex flex-col rounded-md bg-sky-500 m-2"
                 key={index}
@@ -650,6 +696,7 @@ const MatchRequestPage = () => {
                   </button>
                 </div>
               </div>
+}</div>
             ))}
         </div>
       </div>
@@ -705,4 +752,4 @@ const MatchRequestPage = () => {
   );
 };
 
-export default MatchRequestPage;
+export default WithAuthWrapper(MatchRequestPage);

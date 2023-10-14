@@ -30,14 +30,29 @@ type UserRequest = {
 const ee = new EventEmitter();
 
 export const matchRequestRouter = createTRPCRouter({
-  getOtherRequests: protectedProcedure.query(async ({ ctx }) => {
+  getAllRequests: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.prismaPostgres.matchRequest.findMany({
-      where: {
-        id: { not: ctx.session?.user.id },
-      },
+
     });
   }),
-
+  getOwnRequest: protectedProcedure.query(async ({ ctx }) => {
+    const ownRequest = await ctx.prismaPostgres.matchRequest.findUnique({
+      where: {
+        userId: ctx.session?.user.id,
+      },
+    });
+    if (ownRequest === null) {
+      return {
+        message: "This user has no requests",
+        success: false,
+      }
+    }
+    return {
+      ownRequest,
+      message: "Success",
+      success: true,
+    };
+  }),
   getJoinRequests: protectedProcedure.query(async ({ ctx }) => {
     return await ctx.prismaPostgres.joinRequest.findMany({
       where: {
@@ -66,6 +81,9 @@ export const matchRequestRouter = createTRPCRouter({
           msg: "Request already exists",
           partner: "",
           isSuccess: false,
+          difficulty,
+          category,
+          requestId: existingRequest.id
         };
       }
 
@@ -73,6 +91,7 @@ export const matchRequestRouter = createTRPCRouter({
         .create({
           data: {
             id,
+            userId: ctx.session.user.id,
             name,
             difficulty,
             category,
@@ -88,11 +107,14 @@ export const matchRequestRouter = createTRPCRouter({
         msg: "Searching for partner...",
         partner: "",
         isSuccess: true,
+        difficulty,
+        category,
+        requestId: request.id
       };
     }),
 
   cancelRequest: protectedProcedure
-    .input(userObject)
+    .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const { id } = input;
 

@@ -100,6 +100,7 @@ model User {
     codeSpace           CodeSpace[]
     role                Role                  @default(USER)
     codeSessionAuthRecv CodeSessionUserAuth[] @relation(name: "auth_receiver")
+    matchRequest        MatchRequest?
 }
 
 model VerificationToken {
@@ -112,9 +113,12 @@ model VerificationToken {
 
 model MatchRequest {
     id          String  @id
+    userId      String  @unique
     name        String?
     difficulty  Int
     category    String
+    user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    createdAt   DateTime    @default(now())
 }
 
 model JoinRequest {

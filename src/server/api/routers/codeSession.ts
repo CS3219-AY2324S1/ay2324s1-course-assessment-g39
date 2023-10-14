@@ -96,7 +96,7 @@ async function authoriseCodeSession({
   return codeSession;
 }
 
-async function deleteCodeSession(codeSessionId: string) {
+export async function deleteCodeSession(codeSessionId: string) {
   codeSessionsCode.has(codeSessionId) && codeSessionsCode.delete(codeSessionId);
   return await prismaPostgres.codeSession.delete({
     where: {
