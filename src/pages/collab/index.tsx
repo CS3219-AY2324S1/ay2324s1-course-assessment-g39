@@ -52,9 +52,6 @@ const MatchRequestPage = () => {
   });
   const timer = useRef<NodeJS.Timer | null>(null);
 
-  useEffect(() => {
-    console.log("Suceeded in matching with");
-  }, [matchUsers.matchedString])
 
   useEffect(() => {
     if (pageState.isTimerActive) {
@@ -309,7 +306,7 @@ const MatchRequestPage = () => {
   });
 
   const confirmRequestMutation = api.matchRequest.confirmMatch.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (data: { user1Id: string, user2Id: string }) => {
       matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
       console.log("Joining session...");
     },

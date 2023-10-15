@@ -3,6 +3,8 @@ import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { z } from "zod";
 import { prismaPostgres } from "~/server/db";
 import { deleteCodeSession } from "./codeSession";
+import { observable } from "@trpc/server/observable";
+import { EventEmitter } from "stream";
 
 
 // rootUser cannot be logged into
@@ -43,10 +45,26 @@ const deleteSharedCodeSession_z = z.object({
  */
 const sharedCodeSessions: Map<string, string> = new Map<string, string>();
 
+const ee = new EventEmitter();
 export const sharedCodeSessionRouter = createTRPCRouter({
+
+    sharedCodeSessionSubscription: protectedProcedure
+        .subscription(({ ctx }) => {
+            return observable<{ user1: string, user2: string, sessionId: string }>((emit) => {
+                const f = ({ user1, user2, sessionId }: { user1: string, user2: string, sessionId: string }) => {
+                    emit.next({ user1, user2, sessionId });
+                };
+                ee.on("createSubscription", f);
+
+                return () => {
+                    ee.off("createSubscription", f);
+                }
+            })
+        }), 
     /**
      * Endpoint that creates a code session given two users.
      * Returns the codeSession id to be used with codeSession.ts
+     * Only the larger user sends this
      */
     createSharedCodeSession: protectedProcedure
         .input(createSharedCodeSession_z)
@@ -99,8 +117,11 @@ export const sharedCodeSessionRouter = createTRPCRouter({
                 sharedCodeSessions.delete(input.user1);
                 sharedCodeSessions.delete(input.user2);
             }
-            if (sharedCodeSessions.has(input.user1) 
-                && sharedCodeSessions.has(input.user2)) {
+            if (sharedCodeSessions.get(input.user1) 
+                === sharedCodeSessions.get(input.user2)
+            && sharedCodeSessions.has(input.user1)) {
+                
+                ee.emit("createSubscription", { user1: input.user1, user2: input.user2, sessionId: sharedCodeSessions.get(input.user1) });
                 return {
                     sessionId: sharedCodeSessions.get(input.user1),
                 }
@@ -131,6 +152,7 @@ export const sharedCodeSessionRouter = createTRPCRouter({
                     }
                 ]
             })
+            ee.emit("createSubscription", { user1: input.user1, user2: input.user2, sessionId: sharedSession.id });
             return {
                 sessionId: sharedSession.id
             };
