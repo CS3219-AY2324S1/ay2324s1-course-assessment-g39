@@ -31,7 +31,7 @@ export default function useCodeSession(
       codeSession: codeSessionId,
     },
     {
-      enabled: data != null && !loadedCode,
+      enabled: data != null,
       onError(data) {
         toast.error(
           "Failed to fetch session. If using shared session, only one shared session can be used at a time per user.",
