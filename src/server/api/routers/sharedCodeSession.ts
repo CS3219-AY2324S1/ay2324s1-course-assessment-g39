@@ -70,15 +70,37 @@ export const sharedCodeSessionRouter = createTRPCRouter({
             })
             // do not allow a user to have another session in memory
             // if one already exists
+            if (sharedCodeSessions.get(input.user1) !==
+            sharedCodeSessions.get(input.user2)) {
+                const codesessionIds: string[] = [];
+                if (sharedCodeSessions.has(input.user1)) codesessionIds.push(sharedCodeSessions.get(input.user1)!);
+                if (sharedCodeSessions.has(input.user2)) codesessionIds.push(sharedCodeSessions.get(input.user2)!);
+                const codeSessions = tx.codeSession.findMany({
+                    where: {
+                        AND: {
+                            userId: rId,
+                            id: {
+                                in: codesessionIds
+                            }
+                        }
+                    }
+                })
+                await tx.codeSpace.deleteMany({
+                    where: {
+                        AND: {
+                            userId: rId,
+                            id: {
+                                in: (await codeSessions).map(data => data.codeSpaceId)
+                            }
+                        }
+                    }
+                })
+                // create new shared code session
+                sharedCodeSessions.delete(input.user1);
+                sharedCodeSessions.delete(input.user2);
+            }
             if (sharedCodeSessions.has(input.user1) 
                 && sharedCodeSessions.has(input.user2)) {
-                if (sharedCodeSessions.get(input.user1) !==
-                    sharedCodeSessions.get(input.user2)) {
-                        throw new TRPCError({
-                            code: "BAD_REQUEST",
-                            message: "Multiple shared sessions not supported per user."
-                        })
-                    }
                 return {
                     sessionId: sharedCodeSessions.get(input.user1),
                 }
