@@ -43,9 +43,12 @@ export default function useQuestions(): UseQuestionsReturn {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<CodeOutput | undefined>(undefined);
   const [testCaseId, setTestCaseId] = useState<string>("");
-  const [currentTest, setCurrentTestCase] = useState<TestCase | undefined>();
-  const [currentLanguage, setCurrentLanguage] = useState<Language | undefined>();
-
+  const [testCaseIdList, setTestCaseIdList] = useState<
+    {
+      description: string;
+      id: string;
+    }[]
+  >([]);
   const [environmentId, setEnvironmentId] = useState<string | null>(null);
   const questions =
     api.question.getAllReduced.useQuery(undefined, {
@@ -61,7 +64,7 @@ export default function useQuestions(): UseQuestionsReturn {
     id: questionId,
   });
 
-  const environments =
+  const environmentsQuery =
     api.question.getOneEnvironments.useQuery(
       {
         id: questionId,
@@ -76,27 +79,9 @@ export default function useQuestions(): UseQuestionsReturn {
         enabled: !!questionId,
         refetchOnWindowFocus: false,
       },
-    ).data ?? [];
-
-  const languages = api.judge.getSpecificLanguages.useQuery({
-    languages: environments.map(({ languageId }) => languageId),
-  });
-
-  const currentEnvironment = environments.find(
-    (val) => val.id === environmentId,
-  );
-
-  useEffect(() => {
-    setCurrentLanguage(
-      languages.data?.find((val) => val.id === currentEnvironment?.languageId),
     );
-  }, [languages]);
 
-  useEffect(() => {
-    setCurrentTestCase(testCases?.data?.find(
-      (testcase) => testcase.id === testCaseId,
-    ));
-  }, [testCaseId])
+   
 
   const runTestCase = api.judge.runTestCase.useMutation({
     onSuccess: (data) => {
@@ -120,13 +105,45 @@ export default function useQuestions(): UseQuestionsReturn {
       refetchOnWindowFocus: false,
     },
   );
+  
+  
+  const environments = environmentsQuery?.data;
+
+  const languages = api.judge.getSpecificLanguages.useQuery({
+    languages: environments?.map(({ languageId }) => languageId) ?? [],
+  });
+
+  const currentEnvironment = environments?.find(
+    (val) => val.id === environmentId,
+  ) ?? environments?.at(0);
+
+  const currentLanguage = languages.data?.find(
+    (val) => val.id === currentEnvironment?.languageId
+  ) ?? languages.data?.at(0);
+
+  const currentTest = testCases.data?.find((val) => {
+    val.id === testCaseId
+  }) ?? testCases.data?.at(0);
+
+  // update test case id when environment changes
+  useEffect(() => {
+    setTestCaseId(testCases?.data?.find((testcase) => testcase.environmentId === currentEnvironment?.id)?.id ?? "");
+  }, [currentEnvironment, testCases])
+
+
+  useEffect(() => {
+    setTestCaseIdList(
+      testCases?.data?.map(({ id, description }) => ({ id, description })) ??
+        [],
+    );
+  }, [testCases?.data]);
 
   return {
     output,
     questionTitleList: questions,
     currentQuestion: question.data,
     runSelecteTestCase(code) {
-      if (questionId && environmentId) {
+      if (questionId && environmentId && testCaseId) {
         runTestCase.mutate({ testCaseId, source_code: code });
       } else {
         toast.error("Test case not selected");
@@ -134,18 +151,18 @@ export default function useQuestions(): UseQuestionsReturn {
     },
     loading,
     setQuestionId,
-    testCaseIdList:
-      testCases?.data?.map(({ id, description }) => ({ id, description })) ??
-      [],
+    testCaseIdList,
     setTestCaseId,
     currentTestCase: currentTest,
     languages: languages.data ?? [],
     currentLanguage,
     setCurrentLanguage: (language: Language) => {
-      const env = environments.find((env) => env.languageId == language.id);
+      const env = environments?.find(
+        (env) => env.languageId === language.id,
+      );
       env && setEnvironmentId(env.id);
     },
     template: currentEnvironment?.template ?? "",
-    environmentId: environmentId ?? "",
+    environmentId: currentEnvironment?.id ?? "",
   };
 }
