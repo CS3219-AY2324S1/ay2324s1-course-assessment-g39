@@ -10,7 +10,7 @@ type UseQuestionsReturn = {
      * List of questions
      */
     questionTitleList: { title: string, id: string }[],
-    testCaseIdList: { test: string, id: string }[],
+    testCaseIdList: { description: string, id: string }[],
     /**
      * The current selected question in formated markdown
      */
@@ -19,7 +19,7 @@ type UseQuestionsReturn = {
     /**
      * Submits code with the given language and number
      */
-    submitCode: (code: string, language: number) => void,
+    runSelecteTestCase: (code: string) => void,
     /**
      * Indicates if the submitted code is still running
      */
@@ -104,12 +104,17 @@ export default function useQuestions(): UseQuestionsReturn {
             enabled: !!environmentId,
             refetchOnWindowFocus: false,
         },
-        ).data ?? [];
+        );
+
+    useEffect(() => {
+      if (!testCases.data) return;
+      setTestCaseId(testCases.data.at(0)?.id ?? "");
+    }, [testCases])
     return {
         output,
         questionTitleList: questions,
         currentQuestion: question.data,
-        submitCode(code, language_id) {
+        runSelecteTestCase(code) {
           if (questionId && environmentId) {
             runTestCase.mutate({ testCaseId, source_code: code });
           } else {
@@ -118,9 +123,9 @@ export default function useQuestions(): UseQuestionsReturn {
         },
         loading,
         setQuestionId,
-        testCaseIdList: testCases.map(({ id, test }) => ({ id, test  })),
+        testCaseIdList: testCases?.data?.map(({ id, description }) => ({ id, description  })) ?? [],
         setTestCaseId,
-        currentTestCase: testCases.find((testcase) => testcase.id === testCaseId),
+        currentTestCase: testCases?.data?.find((testcase) => testcase.id === testCaseId),
         languages: languages.data ?? [],
         currentLanguage,
         setCurrentLanguage: (language: Language) => {
