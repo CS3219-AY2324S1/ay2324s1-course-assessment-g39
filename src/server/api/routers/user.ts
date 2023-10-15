@@ -97,40 +97,6 @@ export const userRouter = createTRPCRouter({
         data: { password: passwordHash },
       });
     }),
-
-  // getByUsername: publicProcedure
-  //   .input(z.object({ username: z.string() }))
-  //   .query(async ({ ctx, input }) => {
-  //     const usersByName = await ctx.prismaPostgres.user.findMany({
-  //       take: 10,
-  //       where: {
-  //         name: input.username,
-  //       },
-  //     });
-
-  //     return usersByName;
-  //   }),
-
-  // getCurrentUser: protectedProcedure.query(async ({ ctx }) => {
-  //   const user = await prisma.user.findUnique({
-  //     where: {
-  //       id: ctx.session.user.id,
-  //     },
-  //   });
-
-  //   if (!user?.email || !user.name) {
-  //     throw new TRPCError({
-  //       code: "INTERNAL_SERVER_ERROR",
-  //       message: "User not found",
-  //     });
-  //   }
-
-  //   return {
-  //     ...user,
-  //     name: user.name,
-  //     email: user.email,
-  //   };
-  // }),
 });
 
 export { id_z, name_z, email_z, emailVerified_z, image_z, password_z };

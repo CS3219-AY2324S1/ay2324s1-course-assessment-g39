@@ -2,12 +2,15 @@ import { signIn } from "next-auth/react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import toast from "react-hot-toast";
+import { useRouter } from "next/router";
 
 const email_z = z.string().email().min(1);
 const password_z = z.string().min(6);
 
-type Props = { className?: string };
+type Props = { className?: string; onError: (e: Error) => void };
 const LoginWithCredentials = (props: Props) => {
+  const router = useRouter();
   const createUserInput_z = z.object({
     email: email_z,
     password: password_z,
@@ -21,10 +24,15 @@ const LoginWithCredentials = (props: Props) => {
     const res = await signIn("credentials", {
       email: formData.email,
       password: formData.password,
-      redirect: true,
-      callbackUrl: "/",
+      redirect: false,
     });
-
+    if (res?.ok) {
+      toast.success("Successfully signed in");
+      // reload is necessary to have ctx.session be updated
+      return void router.push("/").then(() => window.location.reload());
+    }
+    const error = new Error(res?.error ?? "");
+    props.onError(error);
   });
   return (
     <div className={props.className}>

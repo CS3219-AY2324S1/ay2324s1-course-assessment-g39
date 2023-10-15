@@ -8,12 +8,16 @@ import {
 import { PeerPrepRectLogo } from "~/assets/logo";
 import LoginWithCredentials from "~/components/Login";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 // Signin page with credentials & oauth provider sign in
 type SignInProps = InferGetServerSidePropsType<typeof getServerSideProps>;
 const SignIn = ({ providers }: SignInProps) => {
   const { data: session } = useSession();
 
+  const onError = (e: Error) => {
+    toast.error(`Failed to sign in: ${e.message}`);
+  };
   if (session && session.user) {
     return (
       <>
@@ -69,7 +73,7 @@ const SignIn = ({ providers }: SignInProps) => {
                     })}
               </div>
               <div className="py-4"></div>
-              <LoginWithCredentials />
+              <LoginWithCredentials onError={onError} />
               <div className="pt-4" />
               <p className="text-sm font-light text-gray-500 dark:text-gray-400">
                 Don&quot;t have an account?{" "}
