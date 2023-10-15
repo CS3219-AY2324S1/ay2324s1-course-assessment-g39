@@ -44,7 +44,15 @@ export default function useQuestions(): UseQuestionsReturn {
   const [output, setOutput] = useState<CodeOutput | undefined>(undefined);
   const [testCaseId, setTestCaseId] = useState<string>("");
   const [currentTest, setCurrentTestCase] = useState<TestCase | undefined>();
-  const [currentLanguage, setCurrentLanguage] = useState<Language | undefined>();
+  const [testCaseIdList, setTestCaseIdList] = useState<
+    {
+      description: string;
+      id: string;
+    }[]
+  >([]);
+  const [currentLanguage, setCurrentLanguage] = useState<
+    Language | undefined
+  >();
 
   const [environmentId, setEnvironmentId] = useState<string | null>(null);
   const questions =
@@ -86,18 +94,6 @@ export default function useQuestions(): UseQuestionsReturn {
     (val) => val.id === environmentId,
   );
 
-  useEffect(() => {
-    setCurrentLanguage(
-      languages.data?.find((val) => val.id === currentEnvironment?.languageId),
-    );
-  }, [languages]);
-
-  useEffect(() => {
-    setCurrentTestCase(testCases?.data?.find(
-      (testcase) => testcase.id === testCaseId,
-    ));
-  }, [testCaseId])
-
   const runTestCase = api.judge.runTestCase.useMutation({
     onSuccess: (data) => {
       setOutput(data);
@@ -121,6 +117,27 @@ export default function useQuestions(): UseQuestionsReturn {
     },
   );
 
+  useEffect(() => {
+    if (!currentLanguage) return;
+    const env = environments.find(
+      (env) => env.languageId === currentLanguage.id,
+    );
+    env && setEnvironmentId(env.id);
+  }, [currentLanguage, environments]);
+
+  useEffect(() => {
+    setCurrentTestCase(
+      testCases?.data?.find((testcase) => testcase.id === testCaseId),
+    );
+  }, [testCaseId, testCases?.data]);
+
+  useEffect(() => {
+    setTestCaseIdList(
+      testCases?.data?.map(({ id, description }) => ({ id, description })) ??
+        [],
+    );
+  }, [testCases?.data]);
+
   return {
     output,
     questionTitleList: questions,
@@ -134,16 +151,13 @@ export default function useQuestions(): UseQuestionsReturn {
     },
     loading,
     setQuestionId,
-    testCaseIdList:
-      testCases?.data?.map(({ id, description }) => ({ id, description })) ??
-      [],
+    testCaseIdList,
     setTestCaseId,
     currentTestCase: currentTest,
     languages: languages.data ?? [],
     currentLanguage,
     setCurrentLanguage: (language: Language) => {
-      const env = environments.find((env) => env.languageId == language.id);
-      env && setEnvironmentId(env.id);
+      setCurrentLanguage(language);
     },
     template: currentEnvironment?.template ?? "",
     environmentId: environmentId ?? "",
