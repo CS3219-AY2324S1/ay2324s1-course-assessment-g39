@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { api } from "~/utils/api";
 import { LoadingPage } from "~/components/Loading";
 import useQuestions from "~/hooks/useQuestions";
-import { CodeOutput, Language, Question, TestCase } from "~/types/global";
+import { CodeOutput, Language, ModifyQuestionProps, ModifyTestCaseProps, Question, TestCase } from "~/types/global";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import {
@@ -19,26 +19,9 @@ import {
 } from "@uiw/codemirror-extensions-langs";
 import QuestionView from "~/components/QuestionView";
 import { StyledButton } from "~/components/StyledButton";
+import { getLanguage } from "~/utils/utils";
 
-export function getLanguage(language: string): LanguageName | undefined {
-  const l = language.toLowerCase();
 
-  if (!l.includes("c++") && (l.includes("gcc") || l.includes("clang"))) {
-    return "c";
-  }
-  if (l.includes("c++")) {
-    return "cpp";
-  }
-  if (l.includes("java")) {
-    return "java";
-  }
-
-  if (l.includes("python")) {
-    return "python";
-  }
-  // default to markdown
-  return undefined;
-}
 
 const SharedEditor = ({
   onSave,
@@ -98,18 +81,6 @@ const SharedEditor = ({
   );
 };
 
-// todo: dup code
-type ModifyQuestionProps = {
-  questionTitleList: { id: string; title: string }[];
-  setQuestionId: (id: string) => void;
-  currentQuestion: Question | null | undefined;
-};
-
-type ModifyTestCaseProps = {
-  testCaseIdList: { id: string; description: string }[];
-  currentTestCase: TestCase | undefined;
-  setTestCaseId: (testCaseId: string) => void;
-};
 
 // todo: toolbar for options
 const Toolbar = ({
@@ -178,7 +149,7 @@ const Toolbar = ({
           className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           value={modifyTestCaseProps.currentTestCase?.id}
           onChange={(e) => {
-            modifyQuestionProps.setQuestionId(e.target.value);
+            modifyTestCaseProps.setTestCaseId(e.target.value);
           }}
         >
           {modifyTestCaseProps.testCaseIdList.map((testcase) => {

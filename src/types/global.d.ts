@@ -7,6 +7,18 @@ export class Question {
 }
 
 
+// todo: dup code
+type ModifyQuestionProps = {
+  questionTitleList: { id: string; title: string }[];
+  setQuestionId: (id: string) => void;
+  currentQuestion: Question | null | undefined;
+};
+
+type ModifyTestCaseProps = {
+  testCaseIdList: { id: string; description: string }[];
+  currentTestCase: TestCase | undefined;
+  setTestCaseId: (testCaseId: string) => void;
+};
 
 export type Language = {
   id: number;

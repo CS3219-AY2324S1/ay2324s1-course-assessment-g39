@@ -33,7 +33,8 @@ type UseQuestionsReturn = {
     setTestCaseId: (testCaseId: string) => void,
     languages: Language[],
     currentLanguage: Language | undefined,
-    setCurrentLanguage: (lang: Language) => void
+    setCurrentLanguage: (lang: Language) => void,
+    environmentId: string
     
 };
 
@@ -133,7 +134,8 @@ export default function useQuestions(): UseQuestionsReturn {
           const env = environments.find((env) => env.languageId == language.id);
           env && setEnvironmentId(env.id);
         },
-        template: currentEnvironment?.template ?? ""
+        template: currentEnvironment?.template ?? "",
+        environmentId: environmentId ?? ""
         
     }
 }
