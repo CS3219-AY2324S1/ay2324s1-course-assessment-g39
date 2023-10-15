@@ -43,17 +43,12 @@ export default function useQuestions(): UseQuestionsReturn {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState<CodeOutput | undefined>(undefined);
   const [testCaseId, setTestCaseId] = useState<string>("");
-  const [currentTest, setCurrentTestCase] = useState<TestCase | undefined>();
   const [testCaseIdList, setTestCaseIdList] = useState<
     {
       description: string;
       id: string;
     }[]
   >([]);
-  const [currentLanguage, setCurrentLanguage] = useState<
-    Language | undefined
-  >();
-
   const [environmentId, setEnvironmentId] = useState<string | null>(null);
   const questions =
     api.question.getAllReduced.useQuery(undefined, {
@@ -69,7 +64,7 @@ export default function useQuestions(): UseQuestionsReturn {
     id: questionId,
   });
 
-  const environments =
+  const environmentsQuery =
     api.question.getOneEnvironments.useQuery(
       {
         id: questionId,
@@ -84,15 +79,9 @@ export default function useQuestions(): UseQuestionsReturn {
         enabled: !!questionId,
         refetchOnWindowFocus: false,
       },
-    ).data ?? [];
+    );
 
-  const languages = api.judge.getSpecificLanguages.useQuery({
-    languages: environments.map(({ languageId }) => languageId),
-  });
-
-  const currentEnvironment = environments.find(
-    (val) => val.id === environmentId,
-  );
+   
 
   const runTestCase = api.judge.runTestCase.useMutation({
     onSuccess: (data) => {
@@ -116,20 +105,31 @@ export default function useQuestions(): UseQuestionsReturn {
       refetchOnWindowFocus: false,
     },
   );
+  
+  
+  const environments = environmentsQuery?.data;
 
-  useEffect(() => {
-    if (!currentLanguage) return;
-    const env = environments.find(
-      (env) => env.languageId === currentLanguage.id,
-    );
-    env && setEnvironmentId(env.id);
-  }, [currentLanguage, environments]);
+  const languages = api.judge.getSpecificLanguages.useQuery({
+    languages: environments?.map(({ languageId }) => languageId) ?? [],
+  });
 
+  const currentEnvironment = environments?.find(
+    (val) => val.id === environmentId,
+  );
+
+  const currentLanguage = languages.data?.find(
+    (val) => val.id === currentEnvironment?.languageId
+  );
+
+  const currentTest = testCases.data?.find((val) => {
+    val.id === testCaseId
+  })
+
+  // update test case id when environment changes
   useEffect(() => {
-    setCurrentTestCase(
-      testCases?.data?.find((testcase) => testcase.id === testCaseId),
-    );
-  }, [testCaseId, testCases?.data]);
+    setTestCaseId(testCases?.data?.find((testcase) => testcase.environmentId === currentEnvironment?.id)?.id ?? "");
+  }, [currentEnvironment, testCases])
+
 
   useEffect(() => {
     setTestCaseIdList(
@@ -143,7 +143,7 @@ export default function useQuestions(): UseQuestionsReturn {
     questionTitleList: questions,
     currentQuestion: question.data,
     runSelecteTestCase(code) {
-      if (questionId && environmentId) {
+      if (questionId && environmentId && testCaseId) {
         runTestCase.mutate({ testCaseId, source_code: code });
       } else {
         toast.error("Test case not selected");
@@ -157,9 +157,12 @@ export default function useQuestions(): UseQuestionsReturn {
     languages: languages.data ?? [],
     currentLanguage,
     setCurrentLanguage: (language: Language) => {
-      setCurrentLanguage(language);
+      const env = environments?.find(
+        (env) => env.languageId === language.id,
+      );
+      env && setEnvironmentId(env.id);
     },
     template: currentEnvironment?.template ?? "",
-    environmentId: environmentId ?? "",
+    environmentId: currentEnvironment?.id ?? "",
   };
 }
