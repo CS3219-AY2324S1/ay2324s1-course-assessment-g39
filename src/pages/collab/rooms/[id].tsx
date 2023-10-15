@@ -71,7 +71,7 @@ const SharedEditor = ({
     }
   });
 
-  if (!loadedCode) {
+  if (!loadedCode || saving) {
     return <LoadingPage />;
   }
   const internalLanguage = getLanguage(currentLanguage?.name ?? "");
