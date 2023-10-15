@@ -23,7 +23,6 @@ export default function Questions() {
     const questions = makeMap(api.question.getAll.useQuery(undefined, {
         onSuccess: (data) => {
             const mappedData = data.map((q) => ({
-                id: q.id,
                 ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q)
             }));
             setViewQns(makeMap(mappedData, 'id'));
