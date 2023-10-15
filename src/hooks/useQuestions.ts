@@ -6,6 +6,7 @@ import { api } from "~/utils/api";
 
 type UseQuestionsReturn = {
     output: CodeOutput | undefined,
+    template: string,
     /**
      * List of questions
      */
@@ -131,8 +132,8 @@ export default function useQuestions(): UseQuestionsReturn {
         setCurrentLanguage: (language: Language) => {
           const env = environments.find((env) => env.languageId == language.id);
           env && setEnvironmentId(env.id);
-        }
+        },
+        template: currentEnvironment?.template ?? ""
         
-
     }
 }

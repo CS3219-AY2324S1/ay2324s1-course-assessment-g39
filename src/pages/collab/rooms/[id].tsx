@@ -15,13 +15,12 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import {
   loadLanguage,
-  langNames,
-  langs,
+  LanguageName,
 } from "@uiw/codemirror-extensions-langs";
 import QuestionView from "~/components/QuestionView";
 import { StyledButton } from "~/components/StyledButton";
 
-function getLanguage(language: string) {
+export function getLanguage(language: string): LanguageName | undefined {
   const l = language.toLowerCase();
 
   if (!l.includes("c++") && (l.includes("gcc") || l.includes("clang"))) {
@@ -282,6 +281,8 @@ const Room = () => {
         <div className="room-question-wrapper grid grid-rols-8">
           <QuestionView
             question={useQuestionObject.currentQuestion}
+            template={useQuestionObject.template}
+            language={getLanguage(useQuestionObject.currentLanguage?.name ?? "") ?? "c"}
             className="row-span-6 p-3"
           />
           <Output
