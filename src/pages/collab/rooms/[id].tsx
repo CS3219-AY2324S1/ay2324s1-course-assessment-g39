@@ -10,38 +10,38 @@ import { useEffect, useState } from "react";
 import { api } from "~/utils/api";
 import { LoadingPage } from "~/components/Loading";
 import useQuestions from "~/hooks/useQuestions";
-import { Language, Question } from "~/types/global";
-import { loadLanguage, langNames, langs } from '@uiw/codemirror-extensions-langs';
-import toast from "react-hot-toast";
+import { Language } from "~/types/global";
+import {
+  loadLanguage,
+  langNames,
+  langs,
+} from "@uiw/codemirror-extensions-langs";
 import QuestionView from "~/components/QuestionView";
 
-
-
 function getLanguage(language: string) {
-    const l = language.toLowerCase();
-    if (!l.includes("c++") || l.includes('gcc') || l.includes('clang')) {
-        return 'c';
-    }
-    if (l.includes("c++")) {
-        return 'cpp';
-    }
-    if (l.includes("python")) {
-      return 'python';
-    }
+  const l = language.toLowerCase();
+  if (!l.includes("c++") || l.includes("gcc") || l.includes("clang")) {
     return "c";
+  }
+  if (l.includes("c++")) {
+    return "cpp";
+  }
+  if (l.includes("python")) {
+    return "python";
+  }
+  return "c";
 }
-
 
 const SharedEditor = ({
   onSave,
   judgeLanguages,
   currentLanguage,
-  setCurrentLanguage
+  setCurrentLanguage,
 }: {
   onSave: (saving: boolean) => void;
   judgeLanguages: Language[];
   currentLanguage: Language | undefined;
-  setCurrentLanguage: (lang: Language) => void 
+  setCurrentLanguage: (lang: Language) => void;
 }) => {
   const router = useRouter();
   const roomId = router.query.id;
@@ -66,54 +66,65 @@ const SharedEditor = ({
     }
   });
 
-
   if (!loadedCode) {
     return <LoadingPage />;
   }
-  
-  const lang = loadLanguage(getLanguage('C++'));
+
+  const lang = loadLanguage(getLanguage("C++"));
   return (
     <div className="h-full w-full">
-      Language
-      <select
-        name="language"
-        id="language"
-        value={currentLanguage?.name}
-        onChange={(e) => 
-          {
-             const lang = judgeLanguages.at(parseInt(e.target.value))
-             lang && setCurrentLanguage(lang);
-          }}
-        className="mt-3 bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-        required
-      >
-        {judgeLanguages.map((language, i) => (
-          <option key={language.id} value={i}>
-            {`[${language.id}] ` + language.name}
-          </option>
-        ))}
-      </select>
-      {lang !== null && <CodeMirror
-        theme="dark"
-        onChange={(_, viewUpdate) =>
-          setCode({
-            changes: viewUpdate.changes,
-          })
-        }
-        minHeight="500"
-        value={code.toString()}
-        extensions={[
-            lang
-        ]}
-      />}
+      {lang !== null && (
+        <CodeMirror
+          theme="dark"
+          onChange={(_, viewUpdate) =>
+            setCode({
+              changes: viewUpdate.changes,
+            })
+          }
+          minHeight="500"
+          value={code.toString()}
+          extensions={[lang]}
+        />
+      )}
       {lang === null && <div>Invalid code language selected</div>}
     </div>
   );
 };
 
 // todo: toolbar for options
-const Toolbar = ({ judgeLanguages, currentLanguage }) => {
-
+const Toolbar = ({
+  judgeLanguages,
+  currentLanguage,
+  setCurrentLanguage,
+}: {
+  judgeLanguages: Language[];
+  currentLanguage: Language | undefined;
+  setCurrentLanguage: (language: Language) => void;
+}) => {
+  return (
+    <div className="bg-slate-900 text-white items-center p-3 grid grid-cols-8 gap-x-5">
+      <div className="flex flex-row col-span-2">
+        Language&nbsp;
+        <select
+          name="language"
+          id="language"
+          value={currentLanguage?.name}
+          onChange={(e) => {
+            const lang = judgeLanguages.at(parseInt(e.target.value));
+            lang && setCurrentLanguage(lang);
+          }}
+          className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          required
+        >
+          {judgeLanguages.map((language, i) => (
+            <option key={language.id} value={i}>
+              {`[${language.id}] ` + language.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
 };
 
 /**
@@ -125,15 +136,23 @@ const Room = () => {
   const [saving, setSaving] = useState(false);
 
   return (
-    <div className="flex flex-row h-full">
-      <QuestionView question={useQuestionObject.currentQuestion} />
-      <div className="room-editor-wrapper">
-      <SharedEditor
-        onSave={setSaving}
+    <div className="w-full h-full flex flex-col bg-slate-600 text-white">
+      <Toolbar
         judgeLanguages={useQuestionObject.languages}
         currentLanguage={useQuestionObject.currentLanguage}
         setCurrentLanguage={useQuestionObject.setCurrentLanguage}
       />
+
+      <div className="flex flex-row h-full">
+        <QuestionView question={useQuestionObject.currentQuestion} />
+        <div className="room-editor-wrapper bg-slate-600">
+          <SharedEditor
+            onSave={setSaving}
+            judgeLanguages={useQuestionObject.languages}
+            currentLanguage={useQuestionObject.currentLanguage}
+            setCurrentLanguage={useQuestionObject.setCurrentLanguage}
+          />
+        </div>
       </div>
     </div>
   );

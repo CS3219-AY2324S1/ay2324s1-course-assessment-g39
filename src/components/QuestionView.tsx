@@ -15,7 +15,10 @@ const QuestionView = ({
 
   if (!question) return <LoadingPage />;
   return (
-    <div className="h-full w-full" dangerouslySetInnerHTML={{ __html: html }} />
+    <div
+      className="h-full w-full p-5"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 };
 
