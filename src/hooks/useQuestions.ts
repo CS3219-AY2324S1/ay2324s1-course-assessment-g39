@@ -99,7 +99,7 @@ export default function useQuestions(): UseQuestionsReturn {
     },
     {
       onSuccess(data) {
-        setTestCaseId(data?.at(0)?.id);
+        setTestCaseId(data?.at(0)?.id ?? "");
       },
       onError: (e) => {
         toast.error("Failed to fetch test cases: " + e.message);
