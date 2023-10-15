@@ -26,6 +26,8 @@ export default function useMatchUsers(): UseMatchUsersResult {
 
     return {
         setMatchedUsers(user1, user2) {
+            const smallerUser = user1 < user2 ? user1 : user2;
+            if (smallerUser === session?.user.id) return; // the larger user does the matching
             matchedUsers.mutate({ user1, user2 });
         }
     }
