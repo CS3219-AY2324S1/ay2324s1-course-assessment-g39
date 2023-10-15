@@ -62,9 +62,8 @@ export default function useCodeSession(
           const newCode = changes.apply(code);
           setCode(newCode);
         } catch (e) {
-          // force a refetch
-          setLoadedCode(false);
-          toast.error("Refetching, code out of sync");
+          // removed error prompt cause can lead to spam
+          // toast.error("Refetching, code out of sync. Try refreshing if problem persists");
           void codeSessionQuery.refetch();
         }
       },
@@ -86,7 +85,6 @@ export default function useCodeSession(
     if (data == null) return;
 
     if (!(codeSessionQuery?.data?.code != undefined)) return;
-    if (loadedCode) return;
     const text = CMText.of(codeSessionQuery.data.code.split("\n"));
     setCode(text);
 
