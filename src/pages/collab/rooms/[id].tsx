@@ -172,7 +172,7 @@ const Toolbar = ({
         </select>
       </div>
       <div className="flex flex-row col-span-2">
-        Question&nbsp;
+        Test Case&nbsp;
         <select
           name="Test Case"
           className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
