@@ -116,4 +116,31 @@ export const questionRouter = createTRPCRouter({
         },
       });
     }),
+    deleteTestCase: maintainerProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await ctx.prismaMongo.testCase.delete({
+          where: {
+            id: input.id
+          }
+        })
+      }),
+    createTestCase: maintainerProcedure
+      .input(z.object({ 
+        description: z.string(),
+        hint: z.string(),
+        test: z.string(),
+        input: z.string().optional(),
+        output: z.string().optional(),
+        timeLimit: z.number(),
+        memoryLimit: z.number(),
+        environmentId: z.string()
+       }))
+       .mutation(async ({ ctx, input }) => {
+        await ctx.prismaMongo.testCase.create({
+          data: {
+            ...input
+          }
+        })
+      })
 });
