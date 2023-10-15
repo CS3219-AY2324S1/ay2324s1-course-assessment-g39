@@ -115,15 +115,15 @@ export default function useQuestions(): UseQuestionsReturn {
 
   const currentEnvironment = environments?.find(
     (val) => val.id === environmentId,
-  );
+  ) ?? environments?.at(0);
 
   const currentLanguage = languages.data?.find(
     (val) => val.id === currentEnvironment?.languageId
-  );
+  ) ?? languages.data?.at(0);
 
   const currentTest = testCases.data?.find((val) => {
     val.id === testCaseId
-  })
+  }) ?? testCases.data?.at(0);
 
   // update test case id when environment changes
   useEffect(() => {
