@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { api } from "~/utils/api";
 import { LoadingPage } from "~/components/Loading";
 import useQuestions from "~/hooks/useQuestions";
-import { Language, Question, TestCase } from "~/types/global";
+import { CodeOutput, Language, Question, TestCase } from "~/types/global";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import {
@@ -79,8 +79,8 @@ const SharedEditor = ({
     ? loadLanguage(internalLanguage)
     : markdown({ base: markdownLanguage, codeLanguages: languages });
   return (
-    <div className="h-full w-full">
-      {internalLanguage}
+    <div className="h-full w-full grid-span-1">
+      Editor language: {internalLanguage}
       {lang !== null && (
         <CodeMirror
           theme="dark"
@@ -198,6 +198,43 @@ const Toolbar = ({
   );
 };
 
+const Output = ({
+  output,
+  className,
+}: {
+  output: CodeOutput | undefined;
+  className: string | undefined;
+}) => (
+  <div className={className}>
+    <label className="w-full mb-10 flex-1 block text-sm font-medium text-gray-300 dark:text-white">
+      <em>Stdout</em>
+      <textarea
+        name="output"
+        id="output"
+        className="mt-3 h-full min-h-[3rem] w-full p-2 font-mono box-border bg-gray-500 border border-gray-300 text-gray-900 sm:text-sm rounded-lg  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white "
+        value={output?.stdout ?? ""}
+        readOnly
+      />
+      <em>Stderr</em>
+      <textarea
+        name="output"
+        id="output"
+        className="mt-3 h-full min-h-[5rem] w-full p-2 font-mono box-border bg-gray-500 border border-gray-300 text-gray-900 sm:text-sm rounded-lg  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white "
+        value={output?.stderr ?? ""}
+        readOnly
+      />
+      <em>Status</em>
+      <textarea
+        name="output"
+        id="output"
+        className="mt-3 h-full min-h-[2rem] w-full p-2 font-mono box-border bg-gray-500 border border-gray-300 text-gray-900 sm:text-sm rounded-lg  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white "
+        value={output?.status.description ?? ""}
+        readOnly
+      />
+    </label>
+  </div>
+);
+
 /**
  * A shared room for a user to use
  * @returns
@@ -240,7 +277,16 @@ const Room = () => {
       />
 
       <div className="flex flex-row h-full">
-        <QuestionView question={useQuestionObject.currentQuestion} />
+        <div className="room-question-wrapper grid grid-rols-8">
+          <QuestionView
+            question={useQuestionObject.currentQuestion}
+            className="row-span-6 p-3"
+          />
+          <Output
+            output={useQuestionObject.output}
+            className="row-span-2 w-full h-full border-2 p-3 border-black"
+          />
+        </div>
         <div className="room-editor-wrapper bg-slate-600">
           <SharedEditor
             onSave={setSaving}

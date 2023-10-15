@@ -5,8 +5,10 @@ import { parseMD } from "~/utils/utils";
 
 const QuestionView = ({
   question,
+  className,
 }: {
   question: Question | null | undefined;
+  className: string | undefined;
 }) => {
   const [html, setHTML] = useState("");
   useEffect(() => {
@@ -15,10 +17,9 @@ const QuestionView = ({
 
   if (!question) return <LoadingPage />;
   return (
-    <div
-      className="room-question-wrapper"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className={`h-full overflow-auto ${className}`}>
+      <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
+    </div>
   );
 };
 
