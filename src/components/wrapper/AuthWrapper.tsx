@@ -1,9 +1,7 @@
 // components/layouts/protectedLayouts.tsx
 
-import type { NextComponentType, NextPageContext } from "next";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
-import { useEffect } from "react";
 import UserDenied from "~/components/UserDenied";
 import { LoadingPage } from "../Loading";
 import { PageLayout } from "../Layout";
@@ -22,11 +20,11 @@ type Props = {
  */
 
 export const AuthWrapper = ({ children }: Props): JSX.Element => {
+  const router = useRouter();
   const { status: sessionStatus } = useSession({ required: true });
   const authorized = sessionStatus === "authenticated";
+  // const unAuthorized = sessionStatus === "unauthenticated";
   const loading = sessionStatus === "loading";
-
-
 
   // if the user refreshed the page or somehow navigated to the protected page
   if (loading) {
@@ -49,7 +47,6 @@ export function WithAuthWrapper<Props extends JSX.IntrinsicAttributes>(
 ) {
   // eslint-disable-next-line react/display-name
   return (pageProps: Props) => {
-  
     return (
       <AuthWrapper>
         <Component {...pageProps} />
