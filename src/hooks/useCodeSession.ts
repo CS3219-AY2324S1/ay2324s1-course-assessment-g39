@@ -43,7 +43,10 @@ export default function useCodeSession(
   
   const updateSession = api.codeSession.updateSession.useMutation({
     onError(data) {
-        codeSessionQuery.refetch();
+        toast.error(
+            "Failed to update session"
+        );
+        void codeSessionQuery.refetch();
     }
   });
   api.codeSession.suscribeToSession.useSubscription(
@@ -51,6 +54,9 @@ export default function useCodeSession(
     {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onData(update: { clientId: string; changes: any }) {
+        if (update.clientId == clientId) {
+          return;
+        }
         const changes = ChangeSet.fromJSON(update.changes);
         try {
           const newCode = changes.apply(code);
@@ -89,6 +95,8 @@ export default function useCodeSession(
 
   const updateCode = (update: { changes: ChangeSet }) => {
     if (!loadedCode) return;
+    const newCode = update.changes.apply(code);
+    setCode(newCode);
     updateSession.mutate({
       update: {
         clientId: clientId,
