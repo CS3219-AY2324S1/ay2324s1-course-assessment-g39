@@ -3,6 +3,7 @@ export class Question {
   body = "";
   difficulty = 0;
   category = "";
+  id = "";
 }
 
 

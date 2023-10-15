@@ -110,11 +110,11 @@ export default function useQuestions(): UseQuestionsReturn {
         questionTitleList: questions,
         currentQuestion: question.data,
         submitCode(code, language_id) {
-        if (questionId && environmentId) {
-          runTestCase.mutate({ testCaseId, source_code: code });
-        } else {
-          toast.error("Test case not selected");
-        }
+          if (questionId && environmentId) {
+            runTestCase.mutate({ testCaseId, source_code: code });
+          } else {
+            toast.error("Test case not selected");
+          }
         },
         loading,
         setQuestionId,

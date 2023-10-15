@@ -4,7 +4,9 @@ import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { api } from '~/utils/api';
 
-export default function useCodeSession(codeSessionId: string): [CMText, (v: { changes: ChangeSet }) => void, loadedCode: boolean] {
+export type CodeSessionResult = [CMText, (v: { changes: ChangeSet }) => void, loadedCode: boolean];
+
+export default function useCodeSession(codeSessionId: string): CodeSessionResult {
     const { data } = useSession();
     const [code, setCode] = useState<CMText>(CMText.of(['']));
     const [loadedCode, setLoadedCode] = useState(false);
