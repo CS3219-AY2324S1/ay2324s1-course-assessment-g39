@@ -46,16 +46,16 @@ const Toolbar = ({
         <select
           name="language"
           id="language"
-          value={currentLanguage?.name}
+          value={currentLanguage?.id}
           onChange={(e) => {
-            const lang = judgeLanguages.at(parseInt(e.target.value));
+            const lang = judgeLanguages.find((l) => l.id === parseInt(e.target.value ));
             lang && setCurrentLanguage(lang);
           }}
           className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           required
         >
           {judgeLanguages.map((language, i) => (
-            <option key={language.id} value={i}>
+            <option key={language.id} value={language.id}>
               {language.name}
             </option>
           ))}
