@@ -27,7 +27,7 @@ const SignIn = ({ providers }: SignInProps) => {
               To access the SignIn page,{" "}
               <button
                 className="px-1 text-neutral-400 rounded-md underline"
-                onClick={() => signOut({ callbackUrl: "/sign-in" })}
+                onClick={() => void signOut({ callbackUrl: "/sign-in" })}
               >
                 log out
               </button>
@@ -59,7 +59,7 @@ const SignIn = ({ providers }: SignInProps) => {
                           <button
                             className="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                             onClick={() =>
-                              signIn(provider.id, { callbackUrl: "/" })
+                              void signIn(provider.id, { callbackUrl: "/" })
                             }
                           >
                             Sign in with {provider.name}
@@ -72,7 +72,7 @@ const SignIn = ({ providers }: SignInProps) => {
               <LoginWithCredentials />
               <div className="pt-4" />
               <p className="text-sm font-light text-gray-500 dark:text-gray-400">
-                Don't have an account?{" "}
+                Don&quot;t have an account?{" "}
                 <Link
                   href="/sign-up"
                   className="font-medium text-primary-600 hover:underline dark:text-primary-500"

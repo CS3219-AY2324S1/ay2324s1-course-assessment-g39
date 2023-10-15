@@ -2,8 +2,6 @@ import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure, maintainerProcedure } from "~/server/api/trpc";
 
-
-
 const questionObject = z.object({
   title: z.string(),
   body: z.string(),
@@ -68,5 +66,47 @@ export const questionRouter = createTRPCRouter({
       return {
         message: `Question deleted`,
       };
+    }),
+
+  getOne: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.prismaMongo.question.findUnique({
+        where: {
+          id: input.id,
+        },
+      });
+    }),
+
+    getOneEnvironments: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.prismaMongo.environment.findMany({
+        where: {
+          questionId: input.id,
+        },
+      });
+    }),
+
+    getOneEnvironmentTestCases: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.prismaMongo.testCase.findMany({
+        where: {
+          environmentId: input.id,
+        },
+      });
     }),
 });

@@ -65,29 +65,53 @@ model Session {
     user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model User {
-    id            String            @id @default(cuid())
-    name          String
-    email         String            @unique
-    emailVerified DateTime?
-    image         String?
-    password      String?
-    role          Role              @default(USER)
-    accounts      Account[]
-    sessions      Session[]
-    attempts      QuestionAttempt[]
+model CodeSpace {
+    id          String       @default(cuid())
+    userId      String
+    code        String
+    name        String       @default("")
+    user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    codeSession CodeSession?
+
+    @@id([id, userId])
 }
 
-model QuestionAttempt {
-    userId      String
-    questionId  String
-    answerId    String
-    attemptedOn DateTime @default(now())
-    // storing result in postgres because its easier to access if we want to list the results
-    result      AnswerResult 
-    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model CodeSession {
+    // unique id for session sharing
+    id              String                @id @unique @default(cuid())
+    userId          String // the primary owner of the codeSession
+    codeSpaceId     String                @unique
+    codeSpace       CodeSpace             @relation(fields: [codeSpaceId, userId], references: [id, userId], onDelete: Cascade)
+    codeSessionAuth CodeSessionUserAuth[]
 
-    @@unique([userId, questionId, answerId])
+    @@unique([codeSpaceId, userId]) // Can only have one code session per code space
+}
+
+// temporary auth to authorise other users
+// many to many relation for session - users auth
+model CodeSessionUserAuth {
+    codeSessionId    String
+    authorisedUserId String // the user the authorisation is for
+    createdAt        DateTime    @default(now()) // to be updated on timeout
+    authUser         User        @relation(name: "auth_receiver", fields: [authorisedUserId], references: [id], onDelete: Cascade)
+    codeSession      CodeSession @relation(fields: [codeSessionId], references: [id], onDelete: Cascade)
+
+    @@id([codeSessionId, authorisedUserId])
+}
+
+model User {
+    id                  String                @id @default(cuid())
+    name                String?
+    email               String?               @unique
+    emailVerified       DateTime?
+    image               String?
+    password            String?
+    accounts            Account[]
+    sessions            Session[]
+    codeSpace           CodeSpace[]
+    attempts            QuestionAttempt[]
+    role                Role                  @default(USER)
+    codeSessionAuthRecv CodeSessionUserAuth[] @relation(name: "auth_receiver")
 }
 
 model VerificationToken {
@@ -115,4 +139,18 @@ model JoinRequest {
 
     @@index([fromId])
     @@index([toId]) 
+}
+
+
+model QuestionAttempt {
+    userId      String
+    questionId  String
+    answerId    String
+    attemptedOn DateTime @default(now())
+    // storing result in postgres because its easier to access if we want to list the results
+    result      AnswerResult 
+    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, questionId, answerId])
+
 }

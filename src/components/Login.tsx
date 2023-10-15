@@ -30,7 +30,7 @@ const LoginWithCredentials = (props: Props) => {
     <div className={props.className}>
       <form
         className="flex flex-col items-stretch space-y-4 md:space-y-6"
-        onSubmit={handleSignIn}
+        onSubmit={(formData) => void handleSignIn(formData)}
       >
         <div>
           <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
