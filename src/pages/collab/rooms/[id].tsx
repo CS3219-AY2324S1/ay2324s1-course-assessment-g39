@@ -132,7 +132,7 @@ const Toolbar = ({
 }) => {
   return (
     <div className="bg-slate-900 text-white items-center p-3 grid grid-cols-8 gap-x-5">
-      <div className="flex flex-row col-span-2">
+      <label className="flex flex-row col-span-2">
         Language&nbsp;
         <select
           name="language"
@@ -151,8 +151,8 @@ const Toolbar = ({
             </option>
           ))}
         </select>
-      </div>
-      <div className="flex flex-row col-span-2">
+      </label>
+      <label className="flex flex-row col-span-2">
         Question&nbsp;
         <select
           name="question"
@@ -170,8 +170,9 @@ const Toolbar = ({
             );
           })}
         </select>
-      </div>
+      </label>
       <div className="flex flex-row col-span-2">
+        <label>
         Test Case&nbsp;
         <select
           name="Test Case"
@@ -189,6 +190,7 @@ const Toolbar = ({
             );
           })}
         </select>
+        </label>
       </div>
       <div className="flex flex-row col-span-2 gap-2">
         <StyledButton onClick={runTest}>Run selected test</StyledButton>
