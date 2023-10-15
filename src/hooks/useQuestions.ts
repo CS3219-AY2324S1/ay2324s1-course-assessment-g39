@@ -98,6 +98,9 @@ export default function useQuestions(): UseQuestionsReturn {
       id: environmentId!,
     },
     {
+      onSuccess(data) {
+        setTestCaseId(data?.at(0)?.id);
+      },
       onError: (e) => {
         toast.error("Failed to fetch test cases: " + e.message);
       },
@@ -125,10 +128,6 @@ export default function useQuestions(): UseQuestionsReturn {
     val.id === testCaseId
   });
 
-  // update test case id when environment changes
-  useEffect(() => {
-    setTestCaseId(testCases?.data?.find((testcase) => testcase.environmentId === currentEnvironment?.id)?.id ?? "");
-  }, [currentEnvironment, testCases])
 
 
   useEffect(() => {
