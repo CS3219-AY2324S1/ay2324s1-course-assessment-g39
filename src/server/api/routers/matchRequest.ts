@@ -8,14 +8,15 @@ import { EventEmitter } from "events";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { prismaPostgres } from "~/server/db";
-import { MatchType } from "@prisma-db-psql/client"
+import { MatchType } from "@prisma-db-psql/client";
+import { Mutex } from "~/utils/utils";
 
 const userObject = z.object({
   id: z.string(),
   name: z.string(),
   difficulty: z.number().min(0).max(5),
   category: z.string(),
-  matchType: z.enum(["AUTO", "MANUAL"])
+  matchType: z.enum(["AUTO", "MANUAL"]),
 });
 
 const addJoinRequestObject = z.object({
@@ -31,32 +32,32 @@ type UserRequest = {
   category: string;
 };
 
+const mutex = new Mutex();
+
 const ee = new EventEmitter();
 
 export const matchRequestRouter = createTRPCRouter({
-  getAllOtherRequests: protectedProcedure
-  .query(async ({ ctx }) => {
+  getAllOtherRequests: protectedProcedure.query(async ({ ctx }) => {
     const requests = await ctx.prismaPostgres.matchRequest.findMany({
       where: {
         NOT: [
           {
             OR: [
               {
-                userId: ctx.session.user.id
+                userId: ctx.session.user.id,
               },
               {
-                matchType: "AUTO"
-              }
-            ]
-          }
-        ]
-      }
+                matchType: "AUTO",
+              },
+            ],
+          },
+        ],
+      },
     });
     return {
       requests,
-      count: await ctx.prismaPostgres.matchRequest.count()
-    }
-
+      count: await ctx.prismaPostgres.matchRequest.count(),
+    };
   }),
   getOwnRequest: protectedProcedure.query(async ({ ctx }) => {
     const ownRequest = await ctx.prismaPostgres.matchRequest.findUnique({
@@ -68,7 +69,7 @@ export const matchRequestRouter = createTRPCRouter({
       return {
         message: "This user has no requests",
         success: false,
-      }
+      };
     }
     return {
       ownRequest,
@@ -106,7 +107,7 @@ export const matchRequestRouter = createTRPCRouter({
           isSuccess: false,
           difficulty,
           category,
-          requestId: existingRequest.id
+          requestId: existingRequest.id,
         };
       }
 
@@ -118,7 +119,7 @@ export const matchRequestRouter = createTRPCRouter({
             name,
             difficulty,
             category,
-            matchType
+            matchType,
           },
         })
         .then((req) => {
@@ -128,12 +129,15 @@ export const matchRequestRouter = createTRPCRouter({
       ee.emit("add", request);
 
       return {
-        msg: request.matchType == "MANUAL" ? "Room created" : "Searching for partner...",
+        msg:
+          request.matchType == "MANUAL"
+            ? "Room created"
+            : "Searching for partner...",
         partner: "",
         isSuccess: true,
         difficulty,
         category,
-        requestId: request.id
+        requestId: request.id,
       };
     }),
 
@@ -200,9 +204,11 @@ export const matchRequestRouter = createTRPCRouter({
     }),
 
   subscribeToAllRequests: protectedProcedure.subscription(() => {
-    return observable<UserRequest & {
-      mode: "add" | "remove" | "update"
-    }>((emit) => {
+    return observable<
+      UserRequest & {
+        mode: "add" | "remove" | "update";
+      }
+    >((emit) => {
       // todo(gab): Consider using only one since currently the subscription only tells to refetch
       const onAdd = (data: UserRequest) => {
         emit.next({
@@ -219,16 +225,16 @@ export const matchRequestRouter = createTRPCRouter({
       const onUpdate = (data: UserRequest) => {
         emit.next({
           ...data,
-          mode: "update"
-        })
-      }
-      ee.on("update", onUpdate)
+          mode: "update",
+        });
+      };
+      ee.on("update", onUpdate);
       ee.on("add", onAdd);
       ee.on("remove", onRemove);
       return () => {
         ee.off("add", onAdd);
         ee.off("remove", onRemove);
-        ee.off("update", onUpdate)
+        ee.off("update", onUpdate);
       };
     });
   }),
@@ -263,60 +269,73 @@ export const matchRequestRouter = createTRPCRouter({
         ee.emit("join", { joiningUser, joiningUserId, originalRequestId });
       }
     }),
-    notifyAutomaticRequests: protectedProcedure
-      .input(z.object({ requestId: z.string() }))
-      .mutation(({ ctx, input }) => {
-        ee.emit("findAutomatic", { requestId: input.requestId, userId: ctx.session.user.id })
-      })
-      ,
+  notifyAutomaticRequests: protectedProcedure
+    .input(z.object({ requestId: z.string() }))
+    .mutation(({ ctx, input }) => {
+      ee.emit("findAutomatic", {
+        requestId: input.requestId,
+        userId: ctx.session.user.id,
+      });
+    }),
   /**
    * Endpoint needed to ensure that no too users are matched repeatedly
    */
-  subscribeToAutomaticRequests: protectedProcedure  
-    .subscription(({ ctx }) => {
-      return observable<{user1Id: string, user2Id: string}>((emit) => {
-        // when a request is found, emit the two users
-        async function find({requestId, userId}: { requestId: string, userId: string}) {
-          const req = await prismaPostgres.matchRequest.findUnique({
-            where: {
-              id: requestId
-            }
-          });
-          if (!req) return;
+  subscribeToAutomaticRequests: protectedProcedure.subscription(({ ctx }) => {
+    return observable<{ user1Id: string; user2Id: string }>((emit) => {
+      // when a request is found, emit the two users
+      async function find({
+        requestId,
+        userId,
+      }: {
+        requestId: string;
+        userId: string;
+      }) {
+        const req = await prismaPostgres.matchRequest.findUnique({
+          where: {
+            id: requestId,
+          },
+        });
+        
+        if (!req) return;
+        const toRunSync = async () => {
           const other = await prismaPostgres.matchRequest.findFirst({
             where: {
               category: req.category,
               difficulty: req.difficulty,
               matchType: "AUTO",
               NOT: {
-                id: requestId
-              }
-            }
+                id: requestId,
+              },
+            },
           });
           if (other) {
             await prismaPostgres.matchRequest.deleteMany({
               where: {
                 userId: {
-                  in: [userId, other.userId]
-                }
-              }
-            });
-
-            emit.next({
-              user1Id: ctx.session.user.id,
-              user2Id: other.id
+                  in: [userId, other.userId],
+                },
+              },
             });
           }
-        }
-        const findSync = (arg1: { requestId: string, userId: string }) => {
-          void find(arg1);
-        }
-        ee.on("findAutomatic", findSync);
-        return () => {
-          ee.off("findAutomatic", findSync);
-        }
-      })
-    }),
+          return other;
+          };
+          const other = await mutex.runExclusive(toRunSync);
+          if (!other) return;      
+          emit.next({
+            user1Id: ctx.session.user.id,
+            user2Id: other.id,
+          });
+      }
+      
+      const findSync = (arg1: { requestId: string; userId: string }) => {
+        void find(arg1);
+      };
+      ee.on("findAutomatic", findSync);
+      return () => {
+        ee.off("findAutomatic", findSync);
+      };
+    });
+  }),
   // Users listens to other users who want to join their session
   subscribeToJoinRequests: protectedProcedure.subscription(() => {
     return observable<{
@@ -345,13 +364,14 @@ export const matchRequestRouter = createTRPCRouter({
       const { acceptId, requestId } = input;
       const r2 = await ctx.prismaPostgres.matchRequest.findUnique({
         where: {
-          id: requestId
-        }
-      })
-      if (!r2) throw new TRPCError({
-        code: "BAD_REQUEST", 
-        message: "Failed to match requests"
-      })
+          id: requestId,
+        },
+      });
+      if (!r2)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to match requests",
+        });
       await ctx.prismaPostgres.matchRequest.deleteMany({
         where: {
           OR: [
@@ -360,25 +380,23 @@ export const matchRequestRouter = createTRPCRouter({
             },
             {
               userId: acceptId,
-            }
-          ]
+            },
+          ],
         },
       });
 
-      
       ee.emit("confirm", { user1Id: acceptId, user2Id: r2.userId });
       // needed for matching information
       return {
         user1Id: acceptId,
-        user2Id: r2.userId
-      }
+        user2Id: r2.userId,
+      };
     }),
 
   // Users listens for confirmation from other user to join the session
   subscribeToConfirmation: protectedProcedure.subscription(() => {
     return observable<{ user1Id: string; user2Id: string }>((emit) => {
       const onConfirm = (data: { user1Id: string; user2Id: string }) => {
-        
         emit.next(data);
       };
       ee.on("confirm", onConfirm);

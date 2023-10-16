@@ -19,6 +19,7 @@ export default function useMatchUsers(): UseMatchUsersResult {
     const matchUsersSubscription = api.sharedSession.sharedCodeSessionSubscription.useSubscription(undefined, {
         onData(data) {
             if (data.user1 === session?.user.id|| data.user2 === session?.user.id) {
+                console.log("Routing");
                 void router.push(`/collab/rooms/${data.sessionId}`);
             }
         }
