@@ -25,10 +25,8 @@ cleanup() {
 # Trap Ctrl+C signal and call cleanup function
 trap cleanup EXIT
 
-
 # Run other commands
 yarn
-
 yarn docker:up && sleep 5
 
 # yarn prisma:studio -- &
