@@ -93,7 +93,7 @@ export const judgeRouter = createTRPCRouter({
         source_code: pendedSourceCode,
         language_id: environment.languageId,
         stdin: testCase.input,
-        stdout: testCase.output,
+        expected_output: testCase.output,
         cpu_time_limit: testCase.timeLimit,
         memory_limit: testCase.memoryLimit
           ? Math.max(testCase.memoryLimit, 2048)
