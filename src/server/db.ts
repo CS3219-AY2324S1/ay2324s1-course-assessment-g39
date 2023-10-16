@@ -28,6 +28,9 @@ export const prismaMongo =
     log: logLevels,
   });
 
+export type PrismaMongoT = typeof prismaMongo;
+export type PrismaPostgresT = typeof prismaPostgres;
+
 if (NODE_ENV !== "production") {
   globalForPrisma.prismaPostgres = prismaPostgres;
   globalForPrisma.prismaMongo = prismaMongo;
