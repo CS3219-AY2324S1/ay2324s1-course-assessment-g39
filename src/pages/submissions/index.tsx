@@ -25,12 +25,14 @@ const UserSubmissions = ({ userId }: { userId: string }) => {
       answerId: "1",
       attemptedOn: mockDate,
       result: "ACCEPTED",
+      language: "Python 3",
     },
     {
       questionTitle: "Some Question Title",
       answerId: "1",
       attemptedOn: mockDate,
       result: "WRONG_ANSWER",
+      language: "Python 3",
     },
   ];
 
@@ -95,7 +97,7 @@ const UserSubmissions = ({ userId }: { userId: string }) => {
                       {submission.result}
                     </button>
                   </td>
-                  <td className="px-6 py-4">Python 3</td>
+                  <td className="px-6 py-4">{submission.language}</td>
                 </tr>
               ))}
             </tbody>

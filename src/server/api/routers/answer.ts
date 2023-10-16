@@ -12,6 +12,7 @@ import { TRPCError } from "@trpc/server";
 import { appRouter } from "../root";
 import { Session } from "next-auth";
 import { api } from "~/utils/api";
+import axios from "axios";
 
 const createAnswerInput = z.object({
   body: z.string(),
@@ -78,7 +79,11 @@ const answerRouter = createTRPCRouter({
         },
       });
 
-      const languages = await api.judge.getLanguages.useQuery().data;
+      const languages = await axios
+        .get("http://localhost:2358/languages")
+        .then((res) => {
+          return res.data as { id: number; name: string }[];
+        });
       const language = languages?.find((l) => l.id === env.languageId)?.name;
       if (!language) {
         throw new TRPCError({

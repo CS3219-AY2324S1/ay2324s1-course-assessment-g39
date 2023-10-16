@@ -18,12 +18,6 @@ const SingleSubmissionDetailPage = (props: { submissionId: string }) => {
   const { data: submission, isLoading } = api.answer.getAnswerBody.useQuery({
     answerId: props.submissionId,
   });
-  //   const { data: languages, isLoading: isLanguagesLoading } = api.judge.getLanguages.useQuery(undefined, {
-  //     onError: (e) => {
-  //       toast.error("Failed to fetch language: " + e.message);
-  //     },
-  //   });
-  //   const language = languages?.find((l) => l.id === data.envlanguageId
 
   if (isLoading) {
     return (
@@ -46,7 +40,7 @@ const SingleSubmissionDetailPage = (props: { submissionId: string }) => {
       <main className="h-screen bg-slate-900 text-slate-100 overflow-auto p-3">
         <div className="relative overflow-x-auto">
           {MOCK_SUBMISSION ? (
-            <div>{MOCK_SUBMISSION.body}</div>
+            <code>{MOCK_SUBMISSION.body}</code>
           ) : (
             <div>submission not found</div>
           )}
