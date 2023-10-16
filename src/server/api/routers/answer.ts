@@ -150,29 +150,8 @@ const answerRouter = createTRPCRouter({
     }),
 
   getAnswerBody: protectedProcedure
-    .input(
-      z.object({
-        answerId: z.string(),
-        // questionId: z.string(),
-      }),
-    )
+    .input(z.object({ answerId: z.string() }))
     .query(async ({ ctx, input }) => {
-      //   const user = ctx.session.user;
-      //   const attempt = await prismaPostgres.questionAttempt.findUnique({
-      //     where: {
-      //       userId_questionId_answerId: {
-      //         userId: user.id,
-      //         questionId: input.questionId,
-      //         answerId: input.answerId,
-      //       },
-      //     },
-      //   });
-      //   if (!attempt) {
-      //     throw new TRPCError({
-      //       code: "UNAUTHORIZED",
-      //       message: "Not authorised for this answer",
-      //     });
-      //   }
       const result = await prismaMongo.answer.findUnique({
         where: { id: input.answerId },
       });
