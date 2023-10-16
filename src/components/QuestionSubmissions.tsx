@@ -1,9 +1,6 @@
 import Head from "next/head";
-import router, { useRouter } from "next/router";
-import { PageLayout } from "~/components/Layout";
-import { api } from "~/utils/api";
+import router from "next/router";
 import { useSession } from "next-auth/react";
-import { LoadingPage } from "~/components/Loading";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);

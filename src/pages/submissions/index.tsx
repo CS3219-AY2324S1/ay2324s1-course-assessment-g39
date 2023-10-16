@@ -18,23 +18,23 @@ const UserSubmissions = ({ userId }: { userId: string }) => {
   });
 
   // MOCK DATA remove when tested with real data
-  const mockDate = new Date("2022-12-17T03:24:00");
-  const mockUserSubmissions = [
-    {
-      questionTitle: "Some Question Title",
-      answerId: "1",
-      attemptedOn: mockDate,
-      result: "ACCEPTED",
-      language: "Python 3",
-    },
-    {
-      questionTitle: "Some Question Title",
-      answerId: "1",
-      attemptedOn: mockDate,
-      result: "WRONG_ANSWER",
-      language: "Python 3",
-    },
-  ];
+  // const mockDate = new Date("2022-12-17T03:24:00");
+  // const mockUserSubmissions = [
+  //   {
+  //     questionTitle: "Some Question Title",
+  //     answerId: "1",
+  //     attemptedOn: mockDate,
+  //     result: "ACCEPTED",
+  //     language: "Python 3",
+  //   },
+  //   {
+  //     questionTitle: "Some Question Title",
+  //     answerId: "1",
+  //     attemptedOn: mockDate,
+  //     result: "WRONG_ANSWER",
+  //     language: "Python 3",
+  //   },
+  // ];
 
   const { data: userSubmissions = [], isLoading: userSubmissionsLoading } =
     api.answer.getUserSubmissions.useQuery();
@@ -78,8 +78,7 @@ const UserSubmissions = ({ userId }: { userId: string }) => {
               </tr>
             </thead>
             <tbody className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-              {/* {userSubmissions.map((submission) => ( */}
-              {mockUserSubmissions.map((submission) => (
+              {userSubmissions.map((submission) => (
                 <tr className="hover:bg-gray-700">
                   <td className="px-6 py-4">
                     {dayjs(submission.attemptedOn).fromNow()}
