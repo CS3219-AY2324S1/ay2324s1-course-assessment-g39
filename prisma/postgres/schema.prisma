@@ -123,34 +123,32 @@ model VerificationToken {
 }
 
 model MatchRequest {
-    id          String  @id
-    name        String?
-    difficulty  Int
-    category    String
+    id         String  @id
+    name       String?
+    difficulty Int
+    category   String
 }
 
 model JoinRequest {
-    id          Int     @id @default(autoincrement())
-    fromName    String
-    fromId      String
-    toId        String
+    id       Int    @id @default(autoincrement())
+    fromName String
+    fromId   String
+    toId     String
 
     @@unique([fromId, toId])
-
     @@index([fromId])
-    @@index([toId]) 
+    @@index([toId])
 }
-
 
 model QuestionAttempt {
     userId      String
     questionId  String
+    language    String
     answerId    String
-    attemptedOn DateTime @default(now())
+    attemptedOn DateTime     @default(now())
     // storing result in postgres because its easier to access if we want to list the results
-    result      AnswerResult 
-    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    result      AnswerResult
+    user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([userId, questionId, answerId])
-
 }

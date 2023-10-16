@@ -41,7 +41,7 @@ const UserSubmissions = ({ userId }: { userId: string }) => {
     return (
       <>
         <Head>
-          <title>Profile</title>
+          <title>Submission</title>
         </Head>
         <PageLayout>
           <LoadingPage />
@@ -53,13 +53,13 @@ const UserSubmissions = ({ userId }: { userId: string }) => {
   return (
     <>
       <Head>
-        <title>Profile</title>
+        <title>Submission</title>
       </Head>
       <main className="h-screen bg-slate-900 text-slate-100 overflow-auto p-3">
         <div className="relative overflow-x-auto">
           <div className="py-4">All my submissions</div>
           <table className="w-full text-sm text-left text-gray-500 dark:text-slate-300">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-slate-200">
+            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-slate-700 dark:text-slate-200">
               <tr>
                 <th scope="col" className="px-6 py-3">
                   Time Submitted
@@ -78,12 +78,23 @@ const UserSubmissions = ({ userId }: { userId: string }) => {
             <tbody className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
               {/* {userSubmissions.map((submission) => ( */}
               {mockUserSubmissions.map((submission) => (
-                <tr>
+                <tr className="hover:bg-gray-700">
                   <td className="px-6 py-4">
                     {dayjs(submission.attemptedOn).fromNow()}
                   </td>
                   <td className="px-6 py-4">{submission.questionTitle}</td>
-                  <td className="px-6 py-4">{submission.result}</td>
+                  <td className="px-6 py-4">
+                    <button
+                      className="hover:underline"
+                      onClick={() =>
+                        router.push(
+                          `/submissions/detail/${submission.answerId}`,
+                        )
+                      }
+                    >
+                      {submission.result}
+                    </button>
+                  </td>
                   <td className="px-6 py-4">Python 3</td>
                 </tr>
               ))}
