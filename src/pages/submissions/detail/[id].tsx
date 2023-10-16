@@ -1,10 +1,11 @@
+import { NextPage } from "next";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { PageLayout } from "~/components/Layout";
 import { LoadingPage } from "~/components/Loading";
 import { api } from "~/utils/api";
 
-const SingleSubmissionDetailPage = (props: { submissionId: string }) => {
+const SingleSubmissionDetailPage: NextPage = () => {
   const { query } = useRouter();
   const id = query.id ?? "";
   if (typeof id != "string") {
@@ -15,7 +16,7 @@ const SingleSubmissionDetailPage = (props: { submissionId: string }) => {
   // const MOCK_SUBMISSION = { body: "def sum(x,y): return x+y" };
 
   const { data: submission, isLoading } = api.answer.getAnswerBody.useQuery({
-    answerId: props.submissionId,
+    answerId: id,
   });
 
   if (isLoading) {
