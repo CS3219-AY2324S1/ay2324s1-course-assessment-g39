@@ -1,38 +1,45 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { PrismaMongoT, prismaMongo, prismaPostgres, PrismaPostgresT } from "~/server/db";
+import {
+    PrismaMongoT,
+    prismaMongo,
+    prismaPostgres,
+    PrismaPostgresT,
+} from "~/server/db";
 import type { AnswerResult } from "@prisma-db-psql/client";
-import type { Answer, TestCase } from "@prisma-db-mongo/client";
+import type { Answer } from "@prisma-db-mongo/client";
 import { TRPCError } from "@trpc/server";
-import { judgeRouter } from "./judge";
 import { appRouter } from "../root";
 import { Session } from "next-auth";
 
 const createAnswerInput = z.object({
     body: z.string(),
     userId: z.string(),
-    environmentId: z.string()
+    environmentId: z.string(),
 });
-async function runAnswer(answer: Answer, ctx: {
-    session: Session | null,
-    prismaPostgres: PrismaPostgresT,
-    prismaMongo: PrismaMongoT
-}): Promise<{
-    ans: AnswerResult
+async function runAnswer(
+    answer: Answer,
+    ctx: {
+        session: Session | null;
+        prismaPostgres: PrismaPostgresT;
+        prismaMongo: PrismaMongoT;
+    },
+): Promise<{
+    ans: AnswerResult;
 }> {
     const testCases = await prismaMongo.testCase.findMany({
         where: {
-            environmentId: answer.envId
-        }
-    })
+            environmentId: answer.envId,
+        },
+    });
     let allCorrect = true;
-    
+
     const caller = appRouter.createCaller(ctx);
     // todo: create  sumission batch
     for (const testCase of testCases) {
         const result = await caller.judge.runTestCase({
             testCaseId: testCase.id,
-            source_code: answer.body
+            source_code: answer.body,
         });
         if (result.status.id !== 3) {
             allCorrect = false;
@@ -40,9 +47,8 @@ async function runAnswer(answer: Answer, ctx: {
     }
     // todo: support other fields
     return {
-        ans: allCorrect ? "ACCEPTED" : "WRONG_ANSWER"
-    }
-
+        ans: allCorrect ? "ACCEPTED" : "WRONG_ANSWER",
+    };
 }
 
 const answerRouter = createTRPCRouter({
@@ -56,18 +62,19 @@ const answerRouter = createTRPCRouter({
             const user = ctx.session.user;
             const env = await prismaMongo.environment.findUnique({
                 where: {
-                    id: input.environmentId
-                }
+                    id: input.environmentId,
+                },
             });
-            if (!env) throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Invalid environment"
-            })
+            if (!env)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Invalid environment",
+                });
             const answer = await prismaMongo.answer.create({
                 data: {
                     body,
-                    envId: environmentId
-                }
+                    envId: environmentId,
+                },
             });
             // todo: generate the result from using some kind of code execution
             const result = await runAnswer(answer, ctx);
@@ -76,19 +83,51 @@ const answerRouter = createTRPCRouter({
                     answerId: answer.id,
                     questionId: env?.questionId,
                     userId: user.id,
-                    result: result.ans
-                }
-            })
+                    result: result.ans,
+                },
+            });
             return userAnswer;
         }),
-    getUserAnswers: protectedProcedure
-        .query(async ({ ctx }) => {
+
+    getUserSubmissions: protectedProcedure.query(async ({ ctx }) => {
+        const user = ctx.session.user;
+        const submissions = await prismaPostgres.questionAttempt.findMany({
+            where: {
+                userId: user.id,
+            },
+        });
+
+        const submissionsWithTitle = submissions.map(async (submission) => {
+            const question = await prismaMongo.question.findUnique({
+                where: { id: submission.questionId },
+            });
+            if (!question) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Failed to find question",
+                });
+            }
+
+            const { questionId, userId, ...filteredSubmission } = submission;
+            return {
+                ...filteredSubmission,
+                questionTitle: question.title,
+            };
+        });
+
+        return await Promise.all(submissionsWithTitle);
+    }),
+
+    getUserSubmissionsOfQuestion: protectedProcedure
+        .input(z.object({ questionId: z.string() }))
+        .query(async ({ ctx, input }) => {
             const user = ctx.session.user;
             return await prismaPostgres.questionAttempt.findMany({
                 where: {
-                    userId: user.id
-                }
-            })
+                    userId: user.id,
+                    questionId: input.questionId,
+                },
+            });
         }),
 
     getAnswerBody: protectedProcedure
@@ -101,36 +140,27 @@ const answerRouter = createTRPCRouter({
                         userId: user.id,
                         questionId: input.questionId,
                         answerId: input.answerId,
-                    }
-                }
-            })
+                    },
+                },
+            });
             if (!attempt) {
                 throw new TRPCError({
                     code: "UNAUTHORIZED",
-                    message: "Not authorised for this answer"
-                })
+                    message: "Not authorised for this answer",
+                });
             }
             const result = await prismaMongo.answer.findUnique({
                 where: {
-                    id: input.answerId
-                }
+                    id: input.answerId,
+                },
             });
-            if (!result) throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Failed to find answer"
-            })
-            return result
-        })
+            if (!result)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Failed to find answer",
+                });
+            return result;
+        }),
 });
 
 export default answerRouter;
-
-
-
-
-
-
-
-
-
-

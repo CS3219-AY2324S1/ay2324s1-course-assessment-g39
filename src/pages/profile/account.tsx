@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signOut, useSession } from "next-auth/react";
 import { LoadingPage } from "~/components/Loading";
+import QuestionSubmissions from "~/components/QuestionSubmissions";
 
 // TODO:
 // - add email verification
@@ -32,7 +33,6 @@ const ProfilePage: NextPage = () => {
     onUnauthenticated() {
       void router.push("/sign-in");
     },
-    // defaults redirects user to sign in page if not signed in
   });
 
   const updateInfoSchema = z.object({
@@ -253,6 +253,17 @@ const ProfilePage: NextPage = () => {
               </div>
             </>
           )}
+        </div>
+        <div className="border-b border-slate-100"></div>
+        <div className="p-4">
+          <div className="font-bold pb-2">
+            <button
+              className="font-medium text-slate-300 hover:underline dark:text-slate-400"
+              onClick={() => router.push("/submissions")}
+            >
+              View all submissions
+            </button>
+          </div>
         </div>
       </PageLayout>
     </>
