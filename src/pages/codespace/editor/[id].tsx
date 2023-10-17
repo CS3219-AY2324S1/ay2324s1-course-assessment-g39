@@ -12,17 +12,9 @@ import useDebounce from '~/hooks/useDebounce';
 function Editor() {
     const router = useRouter();
     const [code, setCode, loadedCode] = useCodeSession(router.query.id as string);
-    const [editorState, setEditorState] = useState<EditorState>(EditorState.create());
     
     const [saving, setSaving] = useState(false);
     const saveCodeSession = api.codeSession.saveSession.useQuery({ codeSessionId: router.query.id as string }, { enabled: saving });
-
-    useEffect(() => {
-        const editor = EditorState.create({
-            doc: code
-        });
-        setEditorState(editor);
-    }, [loadedCode]);
 
     useEffect(() => {
         setSaving(false);

@@ -7,15 +7,20 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
+import { NextRouter, useRouter } from "next/router";
 import Head from "next/head";
 
 import { api } from "~/utils/api";
 
 import { PageLayout } from "~/components/Layout";
 import LoadingIcon from "~/components/LoadingIcon";
+import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
+import { StyledButton } from "~/components/StyledButton";
+import useMatchUsers from "~/hooks/useMatchUsers";
+
 
 const MatchRequestPage = () => {
+  const matchUsers = useMatchUsers();
   const [pageState, setPageState] = useState({
     difficulty: -1,
     category: "",
@@ -29,9 +34,24 @@ const MatchRequestPage = () => {
     isEditing: false,
     difficultyFilter: "",
     categoryFilter: "",
+    cursor: undefined,
+    automaticMatching: false
   });
-
+  const simplifiedSetPage = (values: Partial<typeof pageState>) => {
+    setPageState((prev) => 
+      {return {
+    ...prev,
+    ...values
+      }})
+    };
+  // saved data
+  const [submittedData, setSubmittedData] = useState({
+    difficulty: -1,
+    category: "",
+    requestId: ""
+  });
   const timer = useRef<NodeJS.Timer | null>(null);
+
 
   useEffect(() => {
     if (pageState.isTimerActive) {
@@ -144,13 +164,61 @@ const MatchRequestPage = () => {
 
   const router = useRouter();
   const { data: session, status } = useSession();
-
   const utils = api.useContext();
 
+  const ownRequest = api.matchRequest.getOwnRequest.useQuery(undefined, {
+    onSuccess(data) {
+      updateOwnRequest(data);
+      if (data.ownRequest?.matchType === "AUTO") {
+        notifyAuto.mutate({
+          requestId: data.ownRequest.id
+        })
+      }
+    }
+  });
+
+  const waitForRequest = () => {
+    simplifiedSetPage({
+      isTimerActive: true,
+      isWaiting: true,
+      statusMessage: pageState.automaticMatching ? "Searching for partner..." : "Created room",
+    });
+  };
+
+  /**
+   * Updates the current users request
+   * @returns 
+   */
+  function updateOwnRequest(data: typeof ownRequest.data) {
+    if (!data?.success
+      || !data?.ownRequest) {
+      return;
+    }
+    const { difficulty, id: requestId, category, createdAt, ..._ } 
+      = data.ownRequest;
+      
+    const curr = new Date();
+    const timeDiff = Math.round((curr.getTime() - createdAt.getTime()) / 1000);
+    
+    simplifiedSetPage({
+      difficulty,
+      category,
+      hasSubmitted: true,
+      waitingTime: timeDiff
+    });
+    setSubmittedData({
+      difficulty,
+      requestId,
+      category
+    });
+    waitForRequest();
+  }
+
+  // not needed -> can 
   api.matchRequest.subscribeToAllRequests.useSubscription(undefined, {
     onData(request) {
-      console.log(request);
-      void Promise.resolve(utils.matchRequest.invalidate());
+      void allOtherRequests.refetch();
+      void ownRequest.refetch();
     },
     onError(err) {
       console.log("Subscription error: ", err);
@@ -167,8 +235,7 @@ const MatchRequestPage = () => {
 
   api.matchRequest.subscribeToConfirmation.useSubscription(undefined, {
     onData(request) {
-      console.log(request);
-      if (request.acceptId == session?.user.id) {
+      if (request.user1Id === session?.user.id || request.user2Id === session?.user.id) {
         clearInterval(timer.current!);
         setPageState((prev) => ({
           ...prev,
@@ -177,7 +244,7 @@ const MatchRequestPage = () => {
           isWaiting: false,
         }));
         timer.current = null;
-
+        matchUsers.setMatchedUsers(request.user1Id, request.user2Id)
         // TODO: join session
         console.log("Joining session...");
       }
@@ -196,23 +263,28 @@ const MatchRequestPage = () => {
     },
   });
 
-  const allOtherRequests = api.matchRequest.getOtherRequests.useInfiniteQuery(
-    {},
-  );
+  // infinite query requires a cursor, and is not like we have an infinite number
+  // https://trpc.io/docs/client/react/useInfiniteQuery 
+  const allOtherRequests = api.matchRequest.getAllOtherRequests.useQuery();
+
+  api.matchRequest.subscribeToAutomaticRequests.useSubscription(undefined, {
+    onData(data) {
+      if (data.user1Id === session?.user.id || data.user2Id === session?.user.id) {
+        console.log("Success");
+        matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
+      }
+     }
+  });
 
   const allJoinRequests = api.matchRequest.getJoinRequests.useInfiniteQuery({});
 
-  const queueSize = allOtherRequests.data
-    ? allOtherRequests.data.pages.flat(2).length +
-      (pageState.isTimerActive ? 1 : 0)
-    : pageState.isTimerActive
-    ? 1
-    : 0;
+  const queueSize = allOtherRequests.data?.count ?? 0;
 
+  const notifyAuto = api.matchRequest.notifyAutomaticRequests.useMutation();
   const addRequestMutation = api.matchRequest.addRequest.useMutation({
-    onSuccess: (data) => {
-      console.log(data);
-    },
+    onError(err) {
+      toast.error(err.message);
+    }
   });
 
   const cancelRequestMutation = api.matchRequest.cancelRequest.useMutation({
@@ -234,7 +306,8 @@ const MatchRequestPage = () => {
   });
 
   const confirmRequestMutation = api.matchRequest.confirmMatch.useMutation({
-    onSuccess: () => {
+    onSuccess: (data: { user1Id: string, user2Id: string }) => {
+      matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
       console.log("Joining session...");
     },
   });
@@ -252,39 +325,19 @@ const MatchRequestPage = () => {
       return;
     }
 
-    if (!session?.user) {
-      toast.error("You must be logged in to use this feature");
-      return;
-    }
-
-    setPageState((prev) => ({
-      ...prev,
-      isWaiting: true,
-      isTimerActive: true,
-      statusMessage: "Searching for partner...",
-    }));
-
-    setPageState((prev) => ({
-      ...prev,
-      id: session.user.id,
-    }));
-
     addRequestMutation.mutate({
-      id: session.user.id,
-      name: session.user.name!,
+      id: session!.user.id,
+      name: session!.user.name!,
       difficulty: pageState.difficulty,
       category: pageState.category,
+      matchType: pageState.automaticMatching ? "AUTO" : "MANUAL"
     });
-
-    void Promise.resolve(allOtherRequests.refetch());
+    
   };
 
   const cancelRequest = () => {
     cancelRequestMutation.mutate({
-      id: pageState.id,
-      name: session?.user?.name ?? "",
-      difficulty: pageState.difficulty,
-      category: pageState.category,
+      id: submittedData.requestId,
     });
     clearInterval(timer.current!);
     setPageState((prev) => ({
@@ -323,7 +376,7 @@ const MatchRequestPage = () => {
 
   const updateRequest = () => {
     editRequestMutation.mutate({
-      id: pageState.id,
+      id: submittedData.requestId,
       difficulty: pageState.difficulty,
       category: pageState.category,
     });
@@ -372,28 +425,7 @@ const MatchRequestPage = () => {
     declineMatchMutation.mutate({ acceptId, requestId });
   };
 
-  if (status !== "authenticated") {
-    return (
-      <>
-        <Head>
-          <title>Profile</title>
-        </Head>
-        <PageLayout>
-          <div className="w-full h-full flex flex-col justify-center items-center">
-            <div className="align-middle">404 User not found</div>
-            <div>
-              <button
-                className="text-neutral-400 rounded-md underline"
-                onClick={() => void router.push("/signup/")}
-              >
-                Go to Signup
-              </button>
-            </div>
-          </div>
-        </PageLayout>
-      </>
-    );
-  }
+
 
   // Remove current request immediately so that the user doesn't need to wait for timeout to send another request
   window.onunload = () => {
@@ -406,7 +438,7 @@ const MatchRequestPage = () => {
       {pageState.isWaiting && (
         <div className="queue-status-bar absolute left-1/2 w-80 -translate-x-1/2 justify-self-center rounded-md bg-black text-white">
           {pageState.isTimerActive && <LoadingIcon />}
-          <span>{pageState.statusMessage}</span>
+          <div>{pageState.statusMessage}</div>
           {pageState.isTimerActive && (
             <button onClick={cancelRequest} className="h-6 w-6 rounded-full">
               <FontAwesomeIcon
@@ -480,6 +512,16 @@ const MatchRequestPage = () => {
             </span>
           )}
         </div>
+        <div className="flex flex-row dark:text-white">
+        <input type={"checkbox"} 
+              checked={pageState.automaticMatching}
+              onChange={() => simplifiedSetPage({ automaticMatching: !pageState.automaticMatching })} 
+              disabled={pageState.isWaiting} 
+               />
+          <label>
+            Automatic matching
+          </label>
+        </div>
         <button
           className={`mt-5 rounded-md ${
             pageState.isTimerActive ? "bg-purple-800" : "bg-purple-500"
@@ -495,7 +537,7 @@ const MatchRequestPage = () => {
         <span className="absolute left-1/2 -translate-x-1/2 top-0 text-white ">
           {`All requests (${queueSize} online users)`}
         </span>
-        <div className="absolute w-full" style={{ top: "15%", right: "0.5%" }}>
+        <div className="w-full" style={{ top: "15%", right: "0.5%" }}>
           <div className="flex justify-evenly">
             <input
               className="h-8 focus:outline-none rounded-md text-center"
@@ -522,10 +564,10 @@ const MatchRequestPage = () => {
           </div>
         </div>
         <div className="overflow-y-auto flex flex-col">
-          {pageState.isTimerActive && (
+          {pageState.isTimerActive && ownRequest?.data?.ownRequest?.matchType === "MANUAL" && (
             <div className="flex flex-col rounded-md bg-purple-500 m-2">
               <span className="text-left text-white pl-4">
-                {session.user.name}
+                {session!.user.name}
               </span>
               <div className="request">
                 {!pageState.isEditing && (
@@ -607,20 +649,19 @@ const MatchRequestPage = () => {
               </div>
             </div>
           )}
-          {allOtherRequests.data?.pages
-            .flat(2)
+          {allOtherRequests.data?.requests
             .filter(
               (request) =>
                 difficultyLevels[request.difficulty]
                   ?.toLowerCase()
                   .includes(pageState.difficultyFilter.toLowerCase()),
-            )
-            .filter((request) =>
+            ).filter((request) =>
               request.category
                 .toLowerCase()
                 .includes(pageState.categoryFilter.toLowerCase()),
-            )
-            .map((request, index) => (
+            ).map((request, index) => (
+              <div key={index}>{
+              request.id !== session!.user.id &&
               <div
                 className="flex flex-col rounded-md bg-sky-500 m-2"
                 key={index}
@@ -650,6 +691,7 @@ const MatchRequestPage = () => {
                   </button>
                 </div>
               </div>
+}</div>
             ))}
         </div>
       </div>
@@ -705,4 +747,4 @@ const MatchRequestPage = () => {
   );
 };
 
-export default MatchRequestPage;
+export default WithAuthWrapper(MatchRequestPage);

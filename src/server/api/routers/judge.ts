@@ -1,9 +1,10 @@
 import axios from "axios";
-import { z } from "zod";
+import { number, z } from "zod";
 import {
   createTRPCRouter,
   maintainerProcedure,
   protectedProcedure,
+  publicProcedure,
 } from "../trpc";
 
 // TODO: Multifile
@@ -46,6 +47,15 @@ export const judgeRouter = createTRPCRouter({
       return res.data as Language[];
     });
   }),
+  getSpecificLanguages: protectedProcedure
+    .input(z.object({ languages: z.array(z.number()) }))
+    .query(async ({ input }) => {
+    const languageIdSet = new Set<number>();
+    input.languages.forEach((val) => languageIdSet.add(val));
+    return axios.get("http://localhost:2358/languages").then((res) => {
+      return (res.data as Language[]).filter((value) => languageIdSet.has(value.id));
+    });
+  }),
   run: maintainerProcedure
     .input(executionObject)
     .mutation(async ({ input }) => {
@@ -83,7 +93,7 @@ export const judgeRouter = createTRPCRouter({
         source_code: pendedSourceCode,
         language_id: environment.languageId,
         stdin: testCase.input,
-        stdout: testCase.output,
+        expected_output: testCase.output,
         cpu_time_limit: testCase.timeLimit,
         memory_limit: testCase.memoryLimit
           ? Math.max(testCase.memoryLimit, 2048)
