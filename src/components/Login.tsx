@@ -8,7 +8,11 @@ import { useRouter } from "next/router";
 const email_z = z.string().email().min(1);
 const password_z = z.string().min(6);
 
-type Props = { className?: string; onError: (e: Error) => void };
+type Props = {
+  className?: string;
+  onError: (e: Error) => void;
+  setIsLoading: (isLoading: boolean) => void;
+};
 const LoginWithCredentials = (props: Props) => {
   const router = useRouter();
   const createUserInput_z = z.object({
@@ -27,13 +31,23 @@ const LoginWithCredentials = (props: Props) => {
       redirect: false,
     });
     if (res?.ok) {
-      toast.success("Successfully signed in");
-      // reload is necessary to have ctx.session be updated
-      return void router.push("/").then(() => window.location.reload());
+      props.setIsLoading(true);
+      const DURATION_TO_LOAD = 1200;
+      toast.success("Successfully logged in, redirecting...", {
+        duration: DURATION_TO_LOAD,
+      });
+      return setTimeout(() => {
+        // don't reload the page for a while to show the toast
+        // reload is necessary to have ctx.session be updated
+        void router.push("/").then(() => window.location.reload());
+      }, DURATION_TO_LOAD);
+    } else {
+      console.log("Login with Credentials error", res?.error);
+      const error = new Error("Unable to login with credentials");
+      props.onError(error);
     }
-    const error = new Error(res?.error ?? "");
-    props.onError(error);
   });
+
   return (
     <div className={props.className}>
       <form
