@@ -10,18 +10,23 @@ import { useEffect, useState } from "react";
 import { api } from "~/utils/api";
 import { LoadingPage } from "~/components/Loading";
 import useQuestions from "~/hooks/useQuestions";
-import { CodeOutput, Language, ModifyQuestionProps, ModifyTestCaseProps, Question, TestCase } from "~/types/global";
+import {
+  CodeOutput,
+  Language,
+  ModifyQuestionProps,
+  ModifyTestCaseProps,
+  Question,
+  TestCase,
+} from "~/types/global";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import {
-  loadLanguage,
-  LanguageName,
-} from "@uiw/codemirror-extensions-langs";
+import { loadLanguage, LanguageName } from "@uiw/codemirror-extensions-langs";
 import QuestionView from "~/components/QuestionView";
 import { StyledButton } from "~/components/StyledButton";
 import { getLanguage } from "~/utils/utils";
-
-
+import { Tabs, TabList, Tab, TabPanel } from "react-tabs";
+import { useSession } from "next-auth/react";
+import { Message } from "~/server/api/routers/communication";
 
 const SharedEditor = ({
   onSave,
@@ -81,7 +86,6 @@ const SharedEditor = ({
   );
 };
 
-
 // todo: toolbar for options
 const Toolbar = ({
   judgeLanguages,
@@ -109,7 +113,9 @@ const Toolbar = ({
           id="language"
           value={currentLanguage?.id}
           onChange={(e) => {
-            const lang = judgeLanguages.find((l) => l.id === parseInt(e.target.value ));
+            const lang = judgeLanguages.find(
+              (l) => l.id === parseInt(e.target.value),
+            );
             lang && setCurrentLanguage(lang);
           }}
           className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
@@ -143,23 +149,23 @@ const Toolbar = ({
       </label>
       <div className="flex flex-row col-span-2">
         <label>
-        Test Case&nbsp;
-        <select
-          name="Test Case"
-          className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          value={modifyTestCaseProps.currentTestCase?.id}
-          onChange={(e) => {
-            modifyTestCaseProps.setTestCaseId(e.target.value);
-          }}
-        >
-          {modifyTestCaseProps.testCaseIdList.map((testcase) => {
-            return (
-              <option key={testcase.id} value={testcase.id}>
-                {testcase.description}
-              </option>
-            );
-          })}
-        </select>
+          Test Case&nbsp;
+          <select
+            name="Test Case"
+            className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            value={modifyTestCaseProps.currentTestCase?.id}
+            onChange={(e) => {
+              modifyTestCaseProps.setTestCaseId(e.target.value);
+            }}
+          >
+            {modifyTestCaseProps.testCaseIdList.map((testcase) => {
+              return (
+                <option key={testcase.id} value={testcase.id}>
+                  {testcase.description}
+                </option>
+              );
+            })}
+          </select>
         </label>
       </div>
       <div className="flex flex-row col-span-2 gap-2">
@@ -207,6 +213,128 @@ const Output = ({
   </div>
 );
 
+const Chatbox = ({
+  sessionId,
+  userId,
+  userName,
+  className,
+}: {
+  sessionId: string;
+  userId: string;
+  userName: string;
+  className?: string | undefined;
+}) => {
+  const [chatState, setChatState] = useState({
+    messages: [] as Message[],
+    currentMessage: "",
+    partnerName: "",
+    partnerIsTyping: false,
+  });
+
+  const utils = api.useContext();
+
+  const allSessionMessages = api.messages.getAllSessionMessages.useQuery({
+    sessionId,
+  });
+
+  const addMessageMutation = api.messages.addMessage.useMutation();
+
+  api.messages.subscribeToSessionMessages.useSubscription(
+    { sessionId },
+    {
+      onData: (_data) => {
+        void allSessionMessages.refetch();
+      },
+      onError(err) {
+        console.log("Subscription error: ", err);
+        void Promise.resolve(utils.messages.invalidate());
+      },
+    },
+  );
+
+  const addWhoIsTypingMutation = api.messages.addWhoIsTyping.useMutation();
+
+  api.messages.subscribeToWhoIsTyping.useSubscription(
+    { sessionId, userId },
+    {
+      onData: (data: { otherUser: string; isTyping: boolean }) => {
+        setChatState((state) => ({
+          ...state,
+          partnerName: data.otherUser,
+          partnerIsTyping: data.isTyping,
+        }));
+      },
+      onError(err) {
+        console.log("Subscription error: ", err);
+        void Promise.resolve(utils.messages.invalidate());
+      },
+    },
+  );
+
+  const sendMessage = () => {
+    addMessageMutation.mutate({
+      sessionId,
+      senderId: userId,
+      senderName: userName,
+      message: chatState.currentMessage,
+    });
+    setChatState((state) => ({
+      ...state,
+      currentMessage: "",
+      partnerIsTyping: false,
+    }));
+  };
+
+  const onTyping = (value: string) => {
+    addWhoIsTypingMutation.mutate({
+      sessionId,
+      userId,
+      userName,
+      isTyping: chatState.currentMessage.length > 0,
+    });
+    setChatState((prev) => {
+      return {
+        ...prev,
+        currentMessage: value,
+      };
+    });
+  };
+
+  return (
+    <div className={className}>
+      <div className="overflow-y-auto flex flex-col h-[19rem]">
+        {allSessionMessages.data?.map((message, index) => {
+          return (
+            <div key={index}>
+              <p>
+                {message.senderName} {message.createdAt.toLocaleTimeString()}
+              </p>
+              <p>{message.message}</p>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex">
+        {chatState.partnerIsTyping && (
+          <p>{chatState.partnerName} is typing...</p>
+        )}
+        <input
+          className="w-3/4 rounded-md p-2 text-center focus:outline-none"
+          type="text"
+          value={chatState.currentMessage}
+          onChange={(e) => onTyping(e.target.value)}
+        />
+        <button
+          className="w-1/4 rounded-md p-2 text-center focus:outline-none"
+          onClick={sendMessage}
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  );
+};
+
 /**
  * A shared room for a user to use
  * @returns
@@ -218,6 +346,7 @@ const Room = () => {
   const router = useRouter();
   const roomId = router.query.id;
   const codeSession = useCodeSession(roomId as string);
+  const { data: session, status } = useSession();
 
   function submit() {
     // todo: submit code and store the results using the answer router
@@ -253,13 +382,35 @@ const Room = () => {
           <QuestionView
             question={useQuestionObject.currentQuestion}
             template={useQuestionObject.template}
-            language={getLanguage(useQuestionObject.currentLanguage?.name ?? "") ?? "c"}
+            language={
+              getLanguage(useQuestionObject.currentLanguage?.name ?? "") ?? "c"
+            }
             className="row-span-6 p-3"
           />
-          <Output
-            output={useQuestionObject.output}
-            className="row-span-2 w-full h-full border-2 p-3 border-black"
-          />
+          <Tabs>
+            <TabList>
+              <Tab>Output</Tab>
+              <Tab>Chat</Tab>
+              <Tab>Video Call</Tab>
+            </TabList>
+            <TabPanel>
+              <Output
+                output={useQuestionObject.output}
+                className="row-span-2 w-full h-full p-3"
+              />
+            </TabPanel>
+            <TabPanel>
+              <Chatbox
+                sessionId={roomId as string}
+                userId={session?.user.id ?? ""}
+                userName={session?.user.name ?? ""}
+                className="row-span-2 w-full h-full p-3 flex flex-col text-black"
+              />
+            </TabPanel>
+            <TabPanel>
+              <p>Lorem Ipsum</p>
+            </TabPanel>
+          </Tabs>
         </div>
         <div className="room-editor-wrapper bg-slate-600">
           <SharedEditor

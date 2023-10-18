@@ -170,3 +170,14 @@ model QuestionAttempt {
     @@unique([userId, questionId, answerId])
 
 }
+
+model SessionMessage {
+    sessionId   String
+    senderId    String
+    senderName  String
+    message     String
+    createdAt   DateTime    @default(now())
+
+    @@index([sessionId])
+    @@unique([sessionId, senderId, createdAt])
+}
