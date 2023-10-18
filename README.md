@@ -8,8 +8,18 @@ This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3
 
 Start Docker engine and initialize the `.env` file. Then:
 
+If you want to use zipped existing data managed by git lfs
+
 ```bash
-    unzip data.zip                  # (optional) if you want to use the existing data...
+    brew install git-lfs #install git (use windows appropriate commands if not mac)
+    git lfs install #init Git LFS in your git repository
+    git lfs track "*.zip" #specify which files to be managed by Git LFS
+    git lfs pull -I data.zip # git pull, specifying object's OID (ie retrieve binary data from Git LFS Object)
+    # iinw you can also use git add and git commit (to the same OID of data.zip)
+    unzip data.zip #
+```
+
+```bash
     mkdir data/{postgres,mongo,s3}  # (optional) ...or if you want to persist new data
     yarn
     yarn docker:up
