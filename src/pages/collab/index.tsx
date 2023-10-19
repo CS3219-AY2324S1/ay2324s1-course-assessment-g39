@@ -2,22 +2,33 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { useEffect, useRef, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { toast } from "react-hot-toast";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
 import Head from "next/head";
+import { useRouter } from "next/router";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "react-hot-toast";
 
 import { api } from "~/utils/api";
 
 import { PageLayout } from "~/components/Layout";
 import LoadingIcon from "~/components/LoadingIcon";
+import { difficulties, type Difficulty } from "../../types/global.d";
+
+const _difficultyColors = [
+  "bg-green-500",
+  "bg-yellow-500",
+  "bg-red-500",
+];
+
+const difficultyColors = Object.fromEntries(
+  difficulties.map((difficulty, index) => [difficulty, _difficultyColors[index]]),
+);
 
 const MatchRequestPage = () => {
   const [pageState, setPageState] = useState({
-    difficulty: -1,
+    difficulty: difficulties[0] as Difficulty,
     category: "",
     id: "",
     statusMessage: "",
@@ -75,26 +86,9 @@ const MatchRequestPage = () => {
     }
   });
 
-  const difficultyMissingMessage = "Please select a difficulty";
   const categoryMissingMessage = "Please enter a category";
 
-  const difficultyLevels = [
-    "Very Easy",
-    "Easy",
-    "Medium",
-    "Hard",
-    "Very Hard",
-    "Insane",
-  ];
 
-  const difficultyColors = [
-    "bg-green-500",
-    "bg-lime-500",
-    "bg-yellow-500",
-    "bg-amber-500",
-    "bg-orange-500",
-    "bg-red-500",
-  ];
 
   const onDifficultySelect = () => {
     const difficultyDropdownMenu = document.querySelector(
@@ -113,19 +107,12 @@ const MatchRequestPage = () => {
   ) => {
     event.preventDefault();
 
-    const value = event.currentTarget.getAttribute("value");
+    const value = event.currentTarget.getAttribute("value") as Difficulty;
 
     setPageState((prev) => ({
       ...prev,
-      difficulty: parseInt(value!),
+      difficulty: value,
     }));
-
-    if (pageState.difficulty == -1) {
-      setPageState((prev) => ({
-        ...prev,
-        isDifficultyMissing: false,
-      }));
-    }
 
     const displayedDifficulty = document.querySelector(
       ".difficulty-menu .select",
@@ -204,10 +191,10 @@ const MatchRequestPage = () => {
 
   const queueSize = allOtherRequests.data
     ? allOtherRequests.data.pages.flat(2).length +
-      (pageState.isTimerActive ? 1 : 0)
+    (pageState.isTimerActive ? 1 : 0)
     : pageState.isTimerActive
-    ? 1
-    : 0;
+      ? 1
+      : 0;
 
   const addRequestMutation = api.matchRequest.addRequest.useMutation({
     onSuccess: (data) => {
@@ -246,12 +233,6 @@ const MatchRequestPage = () => {
   });
 
   const addRequest = () => {
-    if (pageState.difficulty == -1 || pageState.category == "") {
-      if (!pageState.hasSubmitted)
-        setPageState((prev) => ({ ...prev, hasSubmitted: true }));
-      return;
-    }
-
     if (!session?.user) {
       toast.error("You must be logged in to use this feature");
       return;
@@ -313,11 +294,11 @@ const MatchRequestPage = () => {
   ) => {
     event.preventDefault();
 
-    const value = event.currentTarget.getAttribute("value");
+    const value = event.currentTarget.getAttribute("value") as Difficulty;
 
     setPageState((prev) => ({
       ...prev,
-      difficulty: parseInt(value!),
+      difficulty: value,
     }));
   };
 
@@ -331,8 +312,7 @@ const MatchRequestPage = () => {
       ".difficulty-menu .select",
     );
     if (displayedDifficulty)
-      displayedDifficulty.innerHTML =
-        difficultyLevels[pageState.difficulty] ?? displayedDifficulty.innerHTML;
+      displayedDifficulty.innerHTML = pageState.difficulty ?? displayedDifficulty.innerHTML;
     console.log("Request updated");
     setPageState((prev) => {
       return {
@@ -448,7 +428,7 @@ const MatchRequestPage = () => {
               <span>Select Difficulty</span>
             </div>
             <ul className="dropdown-menu">
-              {difficultyLevels.map((difficulty, index) => (
+              {difficulties.map((difficulty, index) => (
                 <li
                   key={index}
                   value={index}
@@ -459,12 +439,6 @@ const MatchRequestPage = () => {
               ))}
             </ul>
           </div>
-
-          {pageState.hasSubmitted && pageState.difficulty == -1 && (
-            <span className="text-xs text-red-500">
-              {difficultyMissingMessage}
-            </span>
-          )}
         </div>
         <div className="category-selection">
           <span className="choose">Enter Category</span>
@@ -481,9 +455,8 @@ const MatchRequestPage = () => {
           )}
         </div>
         <button
-          className={`mt-5 rounded-md ${
-            pageState.isTimerActive ? "bg-purple-800" : "bg-purple-500"
-          } p-2 text-lg text-white`}
+          className={`mt-5 rounded-md ${pageState.isTimerActive ? "bg-purple-800" : "bg-purple-500"
+            } p-2 text-lg text-white`}
           type="button"
           onClick={addRequest}
           disabled={pageState.isTimerActive}
@@ -530,12 +503,10 @@ const MatchRequestPage = () => {
               <div className="request">
                 {!pageState.isEditing && (
                   <div
-                    className={`w-1/3 flex justify-center items-center ${
-                      difficultyColors[pageState.difficulty]
-                    } rounded-md`}
+                    className={`w-1/3 flex justify-center items-center ${difficultyColors[pageState.difficulty]} rounded-md`}
                   >
                     <span className="text-white">
-                      {difficultyLevels[pageState.difficulty]}
+                      {pageState.difficulty}
                     </span>
                   </div>
                 )}
@@ -545,16 +516,15 @@ const MatchRequestPage = () => {
                     onClick={onRequestDifficultySelect}
                   >
                     <div
-                      className={`request-select ${
-                        difficultyColors[pageState.difficulty]
-                      }`}
+                      className={`request-select ${difficultyColors[pageState.difficulty]
+                        }`}
                     >
                       <span className="text-white">
-                        {difficultyLevels[pageState.difficulty]}
+                        {pageState.difficulty}
                       </span>
                     </div>
                     <ul className="request-dropdown-menu">
-                      {difficultyLevels.map((difficulty, index) => (
+                      {difficulties.map((difficulty, index) => (
                         <li
                           key={index}
                           value={index}
@@ -611,7 +581,7 @@ const MatchRequestPage = () => {
             .flat(2)
             .filter(
               (request) =>
-                difficultyLevels[request.difficulty]
+                request.difficulty
                   ?.toLowerCase()
                   .includes(pageState.difficultyFilter.toLowerCase()),
             )
@@ -630,12 +600,11 @@ const MatchRequestPage = () => {
                 </span>
                 <div className="flex justify-evenly rounded-md p-2">
                   <div
-                    className={`w-1/3 flex justify-center items-center ${
-                      difficultyColors[request.difficulty]
-                    } rounded-md`}
+                    className={`w-1/3 flex justify-center items-center ${difficultyColors[request.difficulty]
+                      } rounded-md`}
                   >
                     <span className="text-white">
-                      {difficultyLevels[request.difficulty]}
+                      {request.difficulty}
                     </span>
                   </div>
                   <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
