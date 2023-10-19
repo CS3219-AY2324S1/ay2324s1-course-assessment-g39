@@ -157,16 +157,15 @@ model JoinRequest {
     @@index([toId])
 }
 
-
 model QuestionAttempt {
     userId      String
     questionId  String
+    language    String
     answerId    String
-    attemptedOn DateTime @default(now())
+    attemptedOn DateTime     @default(now())
     // storing result in postgres because its easier to access if we want to list the results
-    result      AnswerResult 
-    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    result      AnswerResult
+    user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([userId, questionId, answerId])
-
 }
