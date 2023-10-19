@@ -2,10 +2,12 @@ import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure, maintainerProcedure } from "~/server/api/trpc";
 
+const difficulties = ["EASY", "MEDIUM", "HARD"] as const;
+
 const questionObject = z.object({
   title: z.string(),
   body: z.string(),
-  difficulty: z.number(),
+  difficulty: z.enum(difficulties),
   category: z.string(),
 });
 
@@ -13,7 +15,7 @@ const questionUpdateObject = z.object({
   id: z.string(),
   title: z.string().optional(),
   body: z.string().optional(),
-  difficulty: z.number().optional(),
+  difficulty: z.enum(difficulties).optional(),
   category: z.string().optional(),
 });
 
