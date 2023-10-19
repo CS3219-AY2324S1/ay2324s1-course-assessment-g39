@@ -290,7 +290,7 @@ const Chatbox = ({
       sessionId,
       userId,
       userName,
-      isTyping: chatState.currentMessage.length > 0,
+      isTyping: value.length > 0,
     });
     setChatState((prev) => {
       return {
