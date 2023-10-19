@@ -11,13 +11,19 @@ datasource db {
     url      = env("MONGO_URL")
 }
 
+enum Difficulty {
+    EASY
+    MEDIUM
+    HARD
+}
+
 model Question {
     id           String        @id @default(cuid()) @map("_id")
     createdAt    DateTime      @default(now())
     updatedAt    DateTime      @updatedAt
     title        String        @unique
     body         String
-    difficulty   Int
+    difficulty   Difficulty
     category     String
     environments Environment[]
 }

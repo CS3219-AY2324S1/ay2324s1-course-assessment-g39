@@ -79,7 +79,7 @@ const UserSubmissions = ({ userId }: { userId: string }) => {
             </thead>
             <tbody className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
               {userSubmissions.map((submission) => (
-                <tr className="hover:bg-gray-700">
+                <tr className="hover:bg-gray-700" key={submission.answerId}>
                   <td className="px-6 py-4">
                     {dayjs(submission.attemptedOn).fromNow()}
                   </td>
@@ -88,7 +88,7 @@ const UserSubmissions = ({ userId }: { userId: string }) => {
                     <button
                       className="hover:underline"
                       onClick={() =>
-                        router.push(
+                        void router.push(
                           `/submissions/detail/${submission.answerId}`,
                         )
                       }

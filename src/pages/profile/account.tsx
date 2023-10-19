@@ -259,7 +259,7 @@ const ProfilePage: NextPage = () => {
           <div className="font-bold pb-2">
             <button
               className="font-medium text-slate-300 hover:underline dark:text-slate-400"
-              onClick={() => router.push("/submissions")}
+              onClick={() => void router.push("/submissions")}
             >
               View all submissions
             </button>

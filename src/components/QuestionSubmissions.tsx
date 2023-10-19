@@ -78,7 +78,7 @@ const QuestionSubmissions = ({ userId }: { userId: string }) => {
             <tbody className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
               {/* {userSubmissions.map((submission) => ( */}
               {mockUserSubmissions.map((submission) => (
-                <tr>
+                <tr key={submission.answerId}>
                   <td className="px-6 py-4">
                     {dayjs(submission.attemptedOn).fromNow()}
                   </td>

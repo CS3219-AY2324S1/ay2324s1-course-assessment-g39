@@ -1,11 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type HTMLAttributes } from "react";
 import { z } from "zod";
-import { api } from "~/utils/api";
 import useDebounce from "~/hooks/useDebounce";
-import { type Question } from "../types/global";
+import { api } from "~/utils/api";
+import { difficulties, type Difficulty, type Question } from "~/types/global";
 import { parseMD, pasteText } from "../utils/utils";
 import { StyledCheckbox } from "./StyledCheckbox";
-import { StyledTextarea } from "./StyledInput";
+import { StyledSelect, StyledTextarea } from "./StyledInput";
 
 const MIN_TEXTAREA_HEIGHT_px = 41;
 const MAX_TEXTAREA_HEIGHT_px = MIN_TEXTAREA_HEIGHT_px * 2;
@@ -48,7 +48,7 @@ export const QuestionRow = (props: QuestionRowProps) => {
   const prevBodyState = useRef(bodyState);
   const [html, setHTML] = useState('');
 
-  const textAreaRefs = useRef<(HTMLTextAreaElement | null)[]>([null, null, null, null]);
+  const textAreaRefs = useRef<(HTMLTextAreaElement | null)[]>([null, null, null]);
   const rendererRef = useRef<HTMLDivElement | null>(null);
 
   const getPresignedUrl = api.form.createPresignedUrl.useQuery(undefined, {
@@ -197,19 +197,19 @@ export const QuestionRow = (props: QuestionRowProps) => {
       ref={rendererRef}
     />
 
-    <StyledTextarea name="difficulty" value={difficulty ?? 0} onChange={(e) => onQuestionChange({ ...question, difficulty: parseInt(e.target.value) || 0 })}
-
-      ref={(r) => {
-        textAreaRefs.current[2] = r;
-      }} type="number" highlight={difficulty !== initialQuestion.difficulty}
-
-      disabled={!editable} />
+    <StyledSelect name="difficulty" value={difficulty} onChange={(e) => onQuestionChange({ ...question, difficulty: e.target.value as Difficulty })} span={1}
+      highlight={difficulty !== initialQuestion.difficulty}
+      disabled={!editable} >
+      {
+        difficulties.map((d, i) => <option key={i} value={d}>{d}</option>)
+      }
+    </StyledSelect>
 
     <StyledTextarea name="category" value={category}
       style={{
         minHeight: `${MIN_TEXTAREA_HEIGHT_px}px`,
       }} onChange={(e) => onQuestionChange({ ...question, category: e.target.value })} span={2} highlight={category !== initialQuestion.category} ref={(r) => {
-        textAreaRefs.current[3] = r;
+        textAreaRefs.current[2] = r;
       }}
       disabled={!editable} />
   </div>;

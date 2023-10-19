@@ -2,13 +2,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { useEffect, useRef, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { toast } from "react-hot-toast";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useSession } from "next-auth/react";
 import { NextRouter, useRouter } from "next/router";
 import Head from "next/head";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "react-hot-toast";
 
 import { api } from "~/utils/api";
 
@@ -18,11 +18,22 @@ import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
 import { StyledButton } from "~/components/StyledButton";
 import useMatchUsers from "~/hooks/useMatchUsers";
 
+import { difficulties, type Difficulty } from "../../types/global";
+
+const _difficultyColors = ["bg-green-500", "bg-yellow-500", "bg-red-500"];
+
+const difficultyColors = Object.fromEntries(
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  difficulties.map((difficulty, index) => [
+    difficulty,
+    _difficultyColors[index],
+  ]),
+);
 
 const MatchRequestPage = () => {
   const matchUsers = useMatchUsers();
   const [pageState, setPageState] = useState({
-    difficulty: -1,
+    difficulty: difficulties[0] as Difficulty,
     category: "",
     id: "",
     statusMessage: "",
@@ -35,23 +46,27 @@ const MatchRequestPage = () => {
     difficultyFilter: "",
     categoryFilter: "",
     cursor: undefined,
-    automaticMatching: false
+    automaticMatching: false,
   });
   const simplifiedSetPage = (values: Partial<typeof pageState>) => {
-    setPageState((prev) => 
-      {return {
-    ...prev,
-    ...values
-      }})
-    };
+    setPageState((prev) => {
+      return {
+        ...prev,
+        ...values,
+      };
+    });
+  };
   // saved data
-  const [submittedData, setSubmittedData] = useState({
-    difficulty: -1,
+  const [submittedData, setSubmittedData] = useState<{
+    difficulty: Difficulty;
+    category: string;
+    requestId: string;
+  }>({
+    difficulty: difficulties[0],
     category: "",
-    requestId: ""
+    requestId: "",
   });
   const timer = useRef<NodeJS.Timer | null>(null);
-
 
   useEffect(() => {
     if (pageState.isTimerActive) {
@@ -95,26 +110,7 @@ const MatchRequestPage = () => {
     }
   });
 
-  const difficultyMissingMessage = "Please select a difficulty";
   const categoryMissingMessage = "Please enter a category";
-
-  const difficultyLevels = [
-    "Very Easy",
-    "Easy",
-    "Medium",
-    "Hard",
-    "Very Hard",
-    "Insane",
-  ];
-
-  const difficultyColors = [
-    "bg-green-500",
-    "bg-lime-500",
-    "bg-yellow-500",
-    "bg-amber-500",
-    "bg-orange-500",
-    "bg-red-500",
-  ];
 
   const onDifficultySelect = () => {
     const difficultyDropdownMenu = document.querySelector(
@@ -133,19 +129,12 @@ const MatchRequestPage = () => {
   ) => {
     event.preventDefault();
 
-    const value = event.currentTarget.getAttribute("value");
+    const value = event.currentTarget.getAttribute("value") as Difficulty;
 
     setPageState((prev) => ({
       ...prev,
-      difficulty: parseInt(value!),
+      difficulty: value,
     }));
-
-    if (pageState.difficulty == -1) {
-      setPageState((prev) => ({
-        ...prev,
-        isDifficultyMissing: false,
-      }));
-    }
 
     const displayedDifficulty = document.querySelector(
       ".difficulty-menu .select",
@@ -171,50 +160,56 @@ const MatchRequestPage = () => {
       updateOwnRequest(data);
       if (data.ownRequest?.matchType === "AUTO") {
         notifyAuto.mutate({
-          requestId: data.ownRequest.id
-        })
+          requestId: data.ownRequest.id,
+        });
       }
-    }
+    },
   });
 
   const waitForRequest = () => {
     simplifiedSetPage({
       isTimerActive: true,
       isWaiting: true,
-      statusMessage: pageState.automaticMatching ? "Searching for partner..." : "Created room",
+      statusMessage: pageState.automaticMatching
+        ? "Searching for partner..."
+        : "Created room",
     });
   };
 
   /**
    * Updates the current users request
-   * @returns 
+   * @returns
    */
   function updateOwnRequest(data: typeof ownRequest.data) {
-    if (!data?.success
-      || !data?.ownRequest) {
+    if (!data?.success || !data?.ownRequest) {
       return;
     }
-    const { difficulty, id: requestId, category, createdAt, ..._ } 
-      = data.ownRequest;
-      
+    const {
+      difficulty,
+      id: requestId,
+      category,
+      createdAt,
+      ..._
+    } = data.ownRequest;
+
     const curr = new Date();
     const timeDiff = Math.round((curr.getTime() - createdAt.getTime()) / 1000);
-    
+
     simplifiedSetPage({
       difficulty,
       category,
       hasSubmitted: true,
-      waitingTime: timeDiff
+      waitingTime: timeDiff,
     });
     setSubmittedData({
       difficulty,
       requestId,
-      category
+      category,
     });
     waitForRequest();
   }
 
-  // not needed -> can 
+  // not needed -> can
   api.matchRequest.subscribeToAllRequests.useSubscription(undefined, {
     onData(request) {
       void allOtherRequests.refetch();
@@ -235,7 +230,10 @@ const MatchRequestPage = () => {
 
   api.matchRequest.subscribeToConfirmation.useSubscription(undefined, {
     onData(request) {
-      if (request.user1Id === session?.user.id || request.user2Id === session?.user.id) {
+      if (
+        request.user1Id === session?.user.id ||
+        request.user2Id === session?.user.id
+      ) {
         clearInterval(timer.current!);
         setPageState((prev) => ({
           ...prev,
@@ -244,7 +242,7 @@ const MatchRequestPage = () => {
           isWaiting: false,
         }));
         timer.current = null;
-        matchUsers.setMatchedUsers(request.user1Id, request.user2Id)
+        matchUsers.setMatchedUsers(request.user1Id, request.user2Id);
         // TODO: join session
         console.log("Joining session...");
       }
@@ -264,16 +262,19 @@ const MatchRequestPage = () => {
   });
 
   // infinite query requires a cursor, and is not like we have an infinite number
-  // https://trpc.io/docs/client/react/useInfiniteQuery 
+  // https://trpc.io/docs/client/react/useInfiniteQuery
   const allOtherRequests = api.matchRequest.getAllOtherRequests.useQuery();
 
   api.matchRequest.subscribeToAutomaticRequests.useSubscription(undefined, {
     onData(data) {
-      if (data.user1Id === session?.user.id || data.user2Id === session?.user.id) {
+      if (
+        data.user1Id === session?.user.id ||
+        data.user2Id === session?.user.id
+      ) {
         console.log("Success");
         matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
       }
-     }
+    },
   });
 
   const allJoinRequests = api.matchRequest.getJoinRequests.useInfiniteQuery({});
@@ -284,7 +285,7 @@ const MatchRequestPage = () => {
   const addRequestMutation = api.matchRequest.addRequest.useMutation({
     onError(err) {
       toast.error(err.message);
-    }
+    },
   });
 
   const cancelRequestMutation = api.matchRequest.cancelRequest.useMutation({
@@ -306,7 +307,7 @@ const MatchRequestPage = () => {
   });
 
   const confirmRequestMutation = api.matchRequest.confirmMatch.useMutation({
-    onSuccess: (data: { user1Id: string, user2Id: string }) => {
+    onSuccess: (data: { user1Id: string; user2Id: string }) => {
       matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
       console.log("Joining session...");
     },
@@ -319,7 +320,7 @@ const MatchRequestPage = () => {
   });
 
   const addRequest = () => {
-    if (pageState.difficulty == -1 || pageState.category == "") {
+    if (pageState.category == "") {
       if (!pageState.hasSubmitted)
         setPageState((prev) => ({ ...prev, hasSubmitted: true }));
       return;
@@ -330,9 +331,8 @@ const MatchRequestPage = () => {
       name: session!.user.name!,
       difficulty: pageState.difficulty,
       category: pageState.category,
-      matchType: pageState.automaticMatching ? "AUTO" : "MANUAL"
+      matchType: pageState.automaticMatching ? "AUTO" : "MANUAL",
     });
-    
   };
 
   const cancelRequest = () => {
@@ -366,11 +366,11 @@ const MatchRequestPage = () => {
   ) => {
     event.preventDefault();
 
-    const value = event.currentTarget.getAttribute("value");
+    const value = event.currentTarget.getAttribute("value") as Difficulty;
 
     setPageState((prev) => ({
       ...prev,
-      difficulty: parseInt(value!),
+      difficulty: value,
     }));
   };
 
@@ -385,7 +385,7 @@ const MatchRequestPage = () => {
     );
     if (displayedDifficulty)
       displayedDifficulty.innerHTML =
-        difficultyLevels[pageState.difficulty] ?? displayedDifficulty.innerHTML;
+        pageState.difficulty ?? displayedDifficulty.innerHTML;
     console.log("Request updated");
     setPageState((prev) => {
       return {
@@ -424,8 +424,6 @@ const MatchRequestPage = () => {
   const declineMatch = (acceptId: string, requestId: string) => {
     declineMatchMutation.mutate({ acceptId, requestId });
   };
-
-
 
   // Remove current request immediately so that the user doesn't need to wait for timeout to send another request
   window.onunload = () => {
@@ -480,7 +478,7 @@ const MatchRequestPage = () => {
               <span>Select Difficulty</span>
             </div>
             <ul className="dropdown-menu">
-              {difficultyLevels.map((difficulty, index) => (
+              {difficulties.map((difficulty, index) => (
                 <li
                   key={index}
                   value={index}
@@ -491,12 +489,6 @@ const MatchRequestPage = () => {
               ))}
             </ul>
           </div>
-
-          {pageState.hasSubmitted && pageState.difficulty == -1 && (
-            <span className="text-xs text-red-500">
-              {difficultyMissingMessage}
-            </span>
-          )}
         </div>
         <div className="category-selection">
           <span className="choose">Enter Category</span>
@@ -513,14 +505,17 @@ const MatchRequestPage = () => {
           )}
         </div>
         <div className="flex flex-row dark:text-white">
-        <input type={"checkbox"} 
-              checked={pageState.automaticMatching}
-              onChange={() => simplifiedSetPage({ automaticMatching: !pageState.automaticMatching })} 
-              disabled={pageState.isWaiting} 
-               />
-          <label>
-            Automatic matching
-          </label>
+          <input
+            type={"checkbox"}
+            checked={pageState.automaticMatching}
+            onChange={() =>
+              simplifiedSetPage({
+                automaticMatching: !pageState.automaticMatching,
+              })
+            }
+            disabled={pageState.isWaiting}
+          />
+          <label>Automatic matching</label>
         </div>
         <button
           className={`mt-5 rounded-md ${
@@ -564,134 +559,134 @@ const MatchRequestPage = () => {
           </div>
         </div>
         <div className="overflow-y-auto flex flex-col">
-          {pageState.isTimerActive && ownRequest?.data?.ownRequest?.matchType === "MANUAL" && (
-            <div className="flex flex-col rounded-md bg-purple-500 m-2">
-              <span className="text-left text-white pl-4">
-                {session!.user.name}
-              </span>
-              <div className="request">
-                {!pageState.isEditing && (
-                  <div
-                    className={`w-1/3 flex justify-center items-center ${
-                      difficultyColors[pageState.difficulty]
-                    } rounded-md`}
-                  >
-                    <span className="text-white">
-                      {difficultyLevels[pageState.difficulty]}
-                    </span>
-                  </div>
-                )}
-                {pageState.isEditing && (
-                  <div
-                    className="request-dropdown"
-                    onClick={onRequestDifficultySelect}
-                  >
+          {pageState.isTimerActive &&
+            ownRequest?.data?.ownRequest?.matchType === "MANUAL" && (
+              <div className="flex flex-col rounded-md bg-purple-500 m-2">
+                <span className="text-left text-white pl-4">
+                  {session!.user.name}
+                </span>
+                <div className="request">
+                  {!pageState.isEditing && (
                     <div
-                      className={`request-select ${
+                      className={`w-1/3 flex justify-center items-center ${
                         difficultyColors[pageState.difficulty]
-                      }`}
+                      } rounded-md`}
                     >
-                      <span className="text-white">
-                        {difficultyLevels[pageState.difficulty]}
-                      </span>
+                      <span className="text-white">{pageState.difficulty}</span>
                     </div>
-                    <ul className="request-dropdown-menu">
-                      {difficultyLevels.map((difficulty, index) => (
-                        <li
-                          key={index}
-                          value={index}
-                          onClick={(event) => selectRequestDifficulty(event)}
-                        >
-                          {difficulty}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {!pageState.isEditing && (
-                  <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
-                    <span className="text-white">{pageState.category}</span>
-                  </div>
-                )}
-                {pageState.isEditing && (
-                  <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
-                    <input
-                      className="w-full rounded-md p-2 text-center focus:outline-none bg-stone-700 text-white "
-                      type="text"
-                      value={pageState.category}
-                      onChange={(e) => onCategoryChange(e.target.value)}
-                    />
-                  </div>
-                )}
-                {!pageState.isEditing && (
-                  <button
-                    className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
-                    type="button"
-                    onClick={() =>
-                      setPageState((prev) => ({
-                        ...prev,
-                        isEditing: !prev.isEditing,
-                      }))
-                    }
-                  >
-                    Edit
-                  </button>
-                )}
-                {pageState.isEditing && (
-                  <button
-                    className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
-                    type="button"
-                    onClick={updateRequest}
-                  >
-                    Save
-                  </button>
-                )}
+                  )}
+                  {pageState.isEditing && (
+                    <div
+                      className="request-dropdown"
+                      onClick={onRequestDifficultySelect}
+                    >
+                      <div
+                        className={`request-select ${
+                          difficultyColors[pageState.difficulty]
+                        }`}
+                      >
+                        <span className="text-white">
+                          {pageState.difficulty}
+                        </span>
+                      </div>
+                      <ul className="request-dropdown-menu">
+                        {difficulties.map((difficulty, index) => (
+                          <li
+                            key={index}
+                            value={index}
+                            onClick={(event) => selectRequestDifficulty(event)}
+                          >
+                            {difficulty}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {!pageState.isEditing && (
+                    <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
+                      <span className="text-white">{pageState.category}</span>
+                    </div>
+                  )}
+                  {pageState.isEditing && (
+                    <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
+                      <input
+                        className="w-full rounded-md p-2 text-center focus:outline-none bg-stone-700 text-white "
+                        type="text"
+                        value={pageState.category}
+                        onChange={(e) => onCategoryChange(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  {!pageState.isEditing && (
+                    <button
+                      className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
+                      type="button"
+                      onClick={() =>
+                        setPageState((prev) => ({
+                          ...prev,
+                          isEditing: !prev.isEditing,
+                        }))
+                      }
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {pageState.isEditing && (
+                    <button
+                      className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
+                      type="button"
+                      onClick={updateRequest}
+                    >
+                      Save
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
           {allOtherRequests.data?.requests
             .filter(
               (request) =>
-                difficultyLevels[request.difficulty]
+                request.difficulty
                   ?.toLowerCase()
                   .includes(pageState.difficultyFilter.toLowerCase()),
-            ).filter((request) =>
+            )
+            .filter((request) =>
               request.category
                 .toLowerCase()
                 .includes(pageState.categoryFilter.toLowerCase()),
-            ).map((request, index) => (
-              <div key={index}>{
-              request.id !== session!.user.id &&
-              <div
-                className="flex flex-col rounded-md bg-sky-500 m-2"
-                key={index}
-              >
-                <span className="text-left text-white pl-4">
-                  {request.name}
-                </span>
-                <div className="flex justify-evenly rounded-md p-2">
+            )
+            .map((request, index) => (
+              <div key={index}>
+                {request.id !== session!.user.id && (
                   <div
-                    className={`w-1/3 flex justify-center items-center ${
-                      difficultyColors[request.difficulty]
-                    } rounded-md`}
+                    className="flex flex-col rounded-md bg-sky-500 m-2"
+                    key={index}
                   >
-                    <span className="text-white">
-                      {difficultyLevels[request.difficulty]}
+                    <span className="text-left text-white pl-4">
+                      {request.name}
                     </span>
+                    <div className="flex justify-evenly rounded-md p-2">
+                      <div
+                        className={`w-1/3 flex justify-center items-center ${
+                          difficultyColors[request.difficulty]
+                        } rounded-md`}
+                      >
+                        <span className="text-white">{request.difficulty}</span>
+                      </div>
+                      <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
+                        <span className="text-white">{request.category}</span>
+                      </div>
+                      <button
+                        className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
+                        type="button"
+                        onClick={() => addJoinRequest(request.id)}
+                      >
+                        Request to join
+                      </button>
+                    </div>
                   </div>
-                  <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
-                    <span className="text-white">{request.category}</span>
-                  </div>
-                  <button
-                    className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
-                    type="button"
-                    onClick={() => addJoinRequest(request.id)}
-                  >
-                    Request to join
-                  </button>
-                </div>
+                )}
               </div>
-}</div>
             ))}
         </div>
       </div>
