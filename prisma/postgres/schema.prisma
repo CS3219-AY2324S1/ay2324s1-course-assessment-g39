@@ -114,6 +114,12 @@ model User {
     codeSessionAuthRecv CodeSessionUserAuth[] @relation(name: "auth_receiver")
 }
 
+enum Difficulty {
+    EASY
+    MEDIUM
+    HARD
+}
+
 model VerificationToken {
     identifier String
     token      String   @unique
@@ -125,7 +131,7 @@ model VerificationToken {
 model MatchRequest {
     id         String  @id
     name       String?
-    difficulty Int
+    difficulty Difficulty
     category   String
 }
 

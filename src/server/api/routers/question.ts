@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure, maintainerProcedure } from "~/server/api/trpc";
-
-const difficulties = ["EASY", "MEDIUM", "HARD"] as const;
+import { difficulties } from "../../../types/global.d";
 
 const questionObject = z.object({
   title: z.string(),
