@@ -481,7 +481,7 @@ const MatchRequestPage = () => {
               {difficulties.map((difficulty, index) => (
                 <li
                   key={index}
-                  value={index}
+                  value={difficulty}
                   onClick={(event) => selectDifficulty(event)}
                 >
                   {difficulty}
