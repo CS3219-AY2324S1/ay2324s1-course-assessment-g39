@@ -4,29 +4,26 @@
 
 import { useRouter } from "next/router";
 import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
-import useCodeSession, { CodeSessionResult } from "~/hooks/useCodeSession";
+import useCodeSession, { type CodeSessionResult } from "~/hooks/useCodeSession";
 import CodeMirror from "@uiw/react-codemirror";
 import { useEffect, useState } from "react";
 import { api } from "~/utils/api";
 import { LoadingPage } from "~/components/Loading";
 import useQuestions from "~/hooks/useQuestions";
 import {
-  CodeOutput,
-  Language,
-  ModifyQuestionProps,
-  ModifyTestCaseProps,
-  Question,
-  TestCase,
+  type CodeOutput,
+  type Language,
+  type ModifyQuestionProps,
+  type ModifyTestCaseProps,
 } from "~/types/global";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { loadLanguage, LanguageName } from "@uiw/codemirror-extensions-langs";
+import { loadLanguage } from "@uiw/codemirror-extensions-langs";
 import QuestionView from "~/components/QuestionView";
 import { StyledButton } from "~/components/StyledButton";
 import { getLanguage } from "~/utils/utils";
 import { Tabs, TabList, Tab, TabPanel } from "react-tabs";
 import { useSession } from "next-auth/react";
-import { Message } from "~/server/api/routers/communication";
 import useSessionComm from "~/hooks/useSessionComm";
 
 const SharedEditor = ({
@@ -47,7 +44,7 @@ const SharedEditor = ({
   );
   useEffect(() => {
     onSave(saving);
-  }, [saving]);
+  }, [onSave, saving]);
   useEffect(() => {
     setSaving(false);
   }, [saveCodeSession]);
@@ -122,7 +119,7 @@ const Toolbar = ({
           className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           required
         >
-          {judgeLanguages.map((language, i) => (
+          {judgeLanguages.map((language, _i) => (
             <option key={language.id} value={language.id}>
               {language.name}
             </option>
