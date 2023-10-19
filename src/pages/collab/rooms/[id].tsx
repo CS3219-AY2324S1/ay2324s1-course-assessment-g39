@@ -27,6 +27,7 @@ import { getLanguage } from "~/utils/utils";
 import { Tabs, TabList, Tab, TabPanel } from "react-tabs";
 import { useSession } from "next-auth/react";
 import { Message } from "~/server/api/routers/communication";
+import useSessionComm from "~/hooks/useSessionComm";
 
 const SharedEditor = ({
   onSave,
@@ -224,121 +225,41 @@ const Chatbox = ({
   userName: string;
   className?: string | undefined;
 }) => {
-  const [chatState, setChatState] = useState({
-    messages: [] as Message[],
-    currentMessage: "",
-    partnerName: "",
-    partnerIsTyping: false,
-  });
-
-  const utils = api.useContext();
-
-  const allSessionMessages = api.messages.getAllSessionMessages.useQuery({
-    sessionId,
-  });
-
-  const addMessageMutation = api.messages.addMessage.useMutation();
-
-  api.messages.subscribeToSessionMessages.useSubscription(
-    { sessionId },
-    {
-      onData: (_data) => {
-        void allSessionMessages.refetch();
-        // TODO: Fix autoscroll to bottom
-        const messagesContainer = document.getElementById("messages-container");
-        if (messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-      },
-      onError(err) {
-        console.log("Subscription error: ", err);
-        void Promise.resolve(utils.messages.invalidate());
-      },
-    },
-  );
-
-  const addWhoIsTypingMutation = api.messages.addWhoIsTyping.useMutation();
-
-  api.messages.subscribeToWhoIsTyping.useSubscription(
-    { sessionId, userId },
-    {
-      onData: (data: { otherUser: string; isTyping: boolean }) => {
-        setChatState((state) => ({
-          ...state,
-          partnerName: data.otherUser,
-          partnerIsTyping: data.isTyping,
-        }));
-      },
-      onError(err) {
-        console.log("Subscription error: ", err);
-        void Promise.resolve(utils.messages.invalidate());
-      },
-    },
-  );
-
-  const sendMessage = () => {
-    // Don't send empty messages, or messages with only whitespace. Could change this later
-    if (chatState.currentMessage.trim().length === 0) return;
-
-    addMessageMutation.mutate({
-      sessionId,
-      senderId: userId,
-      senderName: userName,
-      message: chatState.currentMessage,
-    });
-    setChatState((state) => ({
-      ...state,
-      currentMessage: "",
-      partnerIsTyping: false,
-    }));
-  };
-
-  const onTyping = (value: string) => {
-    addWhoIsTypingMutation.mutate({
-      sessionId,
-      userId,
-      userName,
-      isTyping: value.length > 0,
-    });
-    setChatState((prev) => {
-      return {
-        ...prev,
-        currentMessage: value,
-      };
-    });
-  };
-
-  const userTypingMessage = chatState.partnerIsTyping
-    ? chatState.partnerName + " is typing..."
-    : "";
+  const [
+    allSessionMessages,
+    sendMessage,
+    onTyping,
+    currentMessage,
+    userTypingMessage,
+  ] = useSessionComm(sessionId, userId, userName);
 
   return (
     <div className={className}>
-      <div className="messages-container overflow-y-scroll flex flex-col h-[19rem]">
-        {allSessionMessages.data?.map((message, index) => {
+      <div className="messages-container overflow-y-auto flex flex-col h-[18.5rem]">
+        {allSessionMessages?.map((message, index) => {
           return (
             <div
               key={index}
-              className="rounded-md dark:bg-gray-700 text-white p-2 my-2"
+              className="w-full rounded-md dark:bg-gray-700 text-white p-2 my-2"
             >
               <div className="flex justify-between">
                 <span>{message.senderName}</span>
                 <span>Sent at {message.createdAt.toLocaleTimeString()}</span>
               </div>
-              <p>{message.message}</p>
+              <p className="w-[27.875rem] whitespace-normal break-words">
+                {message.message}
+              </p>
             </div>
           );
         })}
       </div>
       <div className="flex flex-col mt-2">
-        {chatState.partnerIsTyping && (
-          <p className="text-white mb-2">{userTypingMessage}</p>
-        )}
+        <p className="text-white mb-2">{userTypingMessage}</p>
         <div className="flex">
           <input
             className="w-full rounded-md p-2 focus:ring-primary-600 focus:border-primary-600"
             type="text"
-            value={chatState.currentMessage}
+            value={currentMessage}
             onChange={(e) => onTyping(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           />
