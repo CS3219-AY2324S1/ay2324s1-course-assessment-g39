@@ -244,6 +244,11 @@ const Chatbox = ({
     {
       onData: (_data) => {
         void allSessionMessages.refetch();
+        // TODO: Fix autoscroll to bottom
+        const messagesContainer = document.getElementById("messages-container");
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
       },
       onError(err) {
         console.log("Subscription error: ", err);
@@ -272,6 +277,9 @@ const Chatbox = ({
   );
 
   const sendMessage = () => {
+    // Don't send empty messages, or messages with only whitespace. Could change this later
+    if (chatState.currentMessage.trim().length === 0) return;
+
     addMessageMutation.mutate({
       sessionId,
       senderId: userId,
@@ -300,36 +308,41 @@ const Chatbox = ({
     });
   };
 
+  const userTypingMessage = chatState.partnerIsTyping
+    ? chatState.partnerName + " is typing..."
+    : "";
+
   return (
     <div className={className}>
-      <div className="overflow-y-auto flex flex-col h-[19rem]">
+      <div className="messages-container overflow-y-scroll flex flex-col h-[19rem]">
         {allSessionMessages.data?.map((message, index) => {
           return (
-            <div key={index}>
-              <p>
-                {message.senderName} {message.createdAt.toLocaleTimeString()}
-              </p>
+            <div
+              key={index}
+              className="rounded-md dark:bg-gray-700 text-white p-2 my-2"
+            >
+              <div className="flex justify-between">
+                <span>{message.senderName}</span>
+                <span>Sent at {message.createdAt.toLocaleTimeString()}</span>
+              </div>
               <p>{message.message}</p>
             </div>
           );
         })}
       </div>
-      <div className="flex">
+      <div className="flex flex-col mt-2">
         {chatState.partnerIsTyping && (
-          <p>{chatState.partnerName} is typing...</p>
+          <p className="text-white mb-2">{userTypingMessage}</p>
         )}
-        <input
-          className="w-3/4 rounded-md p-2 text-center focus:outline-none"
-          type="text"
-          value={chatState.currentMessage}
-          onChange={(e) => onTyping(e.target.value)}
-        />
-        <button
-          className="w-1/4 rounded-md p-2 text-center focus:outline-none"
-          onClick={sendMessage}
-        >
-          Send
-        </button>
+        <div className="flex">
+          <input
+            className="w-full rounded-md p-2 focus:ring-primary-600 focus:border-primary-600"
+            type="text"
+            value={chatState.currentMessage}
+            onChange={(e) => onTyping(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          />
+        </div>
       </div>
     </div>
   );

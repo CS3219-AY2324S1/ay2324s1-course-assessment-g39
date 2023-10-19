@@ -66,6 +66,12 @@ export const messagesRouter = createTRPCRouter({
         });
 
       ee.emit("message", messageObject);
+      ee.emit("typing", {
+        sessionId,
+        userId: senderId,
+        userName: senderName,
+        isTyping: false,
+      });
 
       return messageObject;
     }),
