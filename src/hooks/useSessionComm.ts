@@ -53,6 +53,7 @@ export default function useSessionComm(
     { sessionId, userId },
     {
       onData: (data: { otherUser: string; isTyping: boolean }) => {
+        console.log(data);
         setChatState((state) => ({
           ...state,
           partnerName: data.otherUser,
@@ -79,7 +80,6 @@ export default function useSessionComm(
     setChatState((state) => ({
       ...state,
       currentMessage: "",
-      partnerIsTyping: false,
     }));
   };
 
