@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type
 import { z } from "zod";
 import useDebounce from "~/hooks/useDebounce";
 import { api } from "~/utils/api";
-import { difficulties, type Difficulty, type Question } from "~/types/global.d";
+import { difficulties, type Difficulty, type Question } from "~/types/global";
 import { parseMD, pasteText } from "../utils/utils";
 import { StyledCheckbox } from "./StyledCheckbox";
 import { StyledSelect, StyledTextarea } from "./StyledInput";

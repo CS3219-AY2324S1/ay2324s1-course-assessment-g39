@@ -5,6 +5,7 @@ import remarkRehype from "remark-rehype";
 import rehypeStringify from "rehype-stringify";
 import rehypeSanitize from "rehype-sanitize";
 import supersub from "remark-supersub";
+import { LanguageName } from "@uiw/codemirror-extensions-langs";
 
 export const makeMap = <T, K extends keyof T & string>(l: T[], k: K) =>
   new Map(l.map((q) => [q[k], q]));
@@ -34,6 +35,26 @@ export const pasteText = (
   );
 };
 
+export function getLanguage(language: string): LanguageName | undefined {
+  const l = language.toLowerCase();
+
+  if (!l.includes("c++") && (l.includes("gcc") || l.includes("clang"))) {
+    return "c";
+  }
+  if (l.includes("c++")) {
+    return "cpp";
+  }
+  if (l.includes("java")) {
+    return "java";
+  }
+
+  if (l.includes("python")) {
+    return "python";
+  }
+  // default to markdown
+  return undefined;
+}
+
 export const bracket = (
   inputRef: HTMLTextAreaElement | null | undefined,
   left: string,
@@ -48,3 +69,4 @@ export const bracket = (
   inputRef?.focus();
   inputRef?.setSelectionRange(start + left.length, end + left.length);
 };
+

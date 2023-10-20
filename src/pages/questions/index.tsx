@@ -2,7 +2,7 @@ import Head from "next/head";
 import { useState } from "react";
 
 import { api } from "~/utils/api";
-import { Question, type QuestionMap } from "../../types/global.d";
+import { Question, type QuestionMap } from "../../types/global";
 import { equals } from "../../utils/utils";
 import { QuestionRow } from "../../components/QuestionRow";
 import { StyledButton } from "../../components/StyledButton";
@@ -23,7 +23,6 @@ export default function Questions() {
     const questions = makeMap(api.question.getAll.useQuery(undefined, {
         onSuccess: (data) => {
             const mappedData = data.map((q) => ({
-                id: q.id,
                 ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q)
             }));
             setViewQns(makeMap(mappedData, 'id'));

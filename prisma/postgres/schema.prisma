@@ -73,6 +73,8 @@ model CodeSpace {
     user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
     codeSession CodeSession?
 
+    createdAt DateTime @default(now())
+
     @@id([id, userId])
 }
 
@@ -112,6 +114,8 @@ model User {
     attempts            QuestionAttempt[]
     role                Role                  @default(USER)
     codeSessionAuthRecv CodeSessionUserAuth[] @relation(name: "auth_receiver")
+    matchRequest        MatchRequest?
+    joinRequest         JoinRequest[]
 }
 
 enum Difficulty {
@@ -128,18 +132,31 @@ model VerificationToken {
     @@unique([identifier, token])
 }
 
+enum MatchType {
+    AUTO
+    MANUAL
+}
+
 model MatchRequest {
-    id         String  @id
-    name       String?
-    difficulty Difficulty
-    category   String
+    id          String        @id
+    userId      String        @unique
+    cursor      Int           @unique @default(autoincrement())
+    name        String?
+    difficulty  Difficulty
+    category    String
+    user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    matchType   MatchType     @default(MANUAL)
+    createdAt   DateTime      @default(now())
+    joinRequest JoinRequest[]
 }
 
 model JoinRequest {
-    id       Int    @id @default(autoincrement())
-    fromName String
-    fromId   String
-    toId     String
+    id        Int          @id @default(autoincrement())
+    fromName  String
+    fromId    String // a user id todo(gab): rename this to something btr
+    toId      String
+    fromUser  User         @relation(fields: [fromId], references: [id], onDelete: Cascade)
+    toRequest MatchRequest @relation(fields: [toId], references: [id], onDelete: Cascade)
 
     @@unique([fromId, toId])
     @@index([fromId])

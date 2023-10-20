@@ -6,6 +6,7 @@ import { EventEmitter } from "stream";
 import { Update } from '@codemirror/collab'
 import { ChangeSet, Text } from '@codemirror/state'
 import { observable } from "@trpc/server/observable";
+import { createRootUserIfNotExist } from "./sharedCodeSession";
 
 
 const createSessionObject = z.object({
@@ -26,7 +27,7 @@ const updateCodeSessionObject = z.object({
     changes: z.string(), // json changeset
     clientId: z.string()
   }),
-  codeSessionId: z.string(),
+  codeSessionId: z.string()
 });
 
 const createCodeSpaceObject = z.object({
@@ -40,7 +41,6 @@ const eventEmittors: Map<string, EventEmitter> = new Map<
 
 // temporary storage for modification -> deleted when code session ends + applied
 const codeSessionsCode: Map<string, Text> = new Map<string, Text>();
-const clientIDs: Set<string> = new Set<string>();
 
 function makeid(length: number) {
   let result = '';
@@ -96,7 +96,7 @@ async function authoriseCodeSession({
   return codeSession;
 }
 
-async function deleteCodeSession(codeSessionId: string) {
+export async function deleteCodeSession(codeSessionId: string) {
   codeSessionsCode.has(codeSessionId) && codeSessionsCode.delete(codeSessionId);
   return await prismaPostgres.codeSession.delete({
     where: {
@@ -196,18 +196,10 @@ export const codeSessionRouter = createTRPCRouter({
     }),
     getClientId: protectedProcedure
       .query(() => {
-        let val = makeid(15);
-        while (clientIDs.has(val)) {
-          val = makeid(15);
-        }
+        const val = makeid(15);
         return {
           clientId: val,
         }
-      }),
-    deleteClientId: protectedProcedure
-      .input(z.object({ clientId: z.string() }))
-      .query(({ input }) => {
-        clientIDs.has(input.clientId) && clientIDs.delete(input.clientId);
       }),
   /**
    * Endpoint called to create a session.
@@ -306,8 +298,8 @@ export const codeSessionRouter = createTRPCRouter({
         const values = await prismaPostgres.codeSpace.findUnique({
           where: {
             id_userId: {
-              id: codeSession?.id,
-              userId: codeSession?.userId
+              userId: codeSession.userId,
+              id: codeSession.codeSpaceId
             }
           }
         });
@@ -337,7 +329,7 @@ export const codeSessionRouter = createTRPCRouter({
         where: {
           id_userId: {
             id: codeSession.codeSpaceId,
-            userId: ctx.session.user.id
+            userId: codeSession.userId
           }
         },
         data: {
