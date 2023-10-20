@@ -19,7 +19,7 @@ type UseQuestionsReturn = {
   /**
    * Submits code with the given language and number
    */
-  runSelecteTestCase: (code: string) => void;
+  runSelectedTestCase: (code: string) => void;
   /**
    * Indicates if the submitted code is still running
    */
@@ -141,7 +141,7 @@ export default function useQuestions(): UseQuestionsReturn {
     output,
     questionTitleList: questions,
     currentQuestion: question.data,
-    runSelecteTestCase(code) {
+    runSelectedTestCase(code) {
       if (questionId && environmentId && testCaseId) {
         runTestCase.mutate({ testCaseId, source_code: code });
       } else {
