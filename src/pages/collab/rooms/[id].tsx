@@ -285,7 +285,7 @@ const Room = () => {
 
   function runTest() {
     // run test
-    useQuestionObject.runSelecteTestCase(codeSession[0].toString());
+    useQuestionObject.runSelectedTestCase(codeSession[0].toString());
   }
 
   return (
