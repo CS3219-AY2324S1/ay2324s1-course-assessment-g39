@@ -19,6 +19,10 @@ jobs:
           cmd: install # will run `yarn install` command
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # if needed
+
+      - name: Copy env
+        run: |
+          cp .env.example .env
       - name: Run prisma push
         uses: borales/actions-yarn@v4
         with:
