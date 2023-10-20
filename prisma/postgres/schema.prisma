@@ -118,6 +118,12 @@ model User {
     joinRequest         JoinRequest[]
 }
 
+enum Difficulty {
+    EASY
+    MEDIUM
+    HARD
+}
+
 model VerificationToken {
     identifier String
     token      String   @unique
@@ -136,7 +142,7 @@ model MatchRequest {
     userId      String        @unique
     cursor      Int           @unique @default(autoincrement())
     name        String?
-    difficulty  Int
+    difficulty  Difficulty
     category    String
     user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
     matchType   MatchType     @default(MANUAL)

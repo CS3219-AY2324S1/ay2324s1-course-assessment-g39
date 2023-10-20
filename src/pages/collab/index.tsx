@@ -2,13 +2,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { useEffect, useRef, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { toast } from "react-hot-toast";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useSession } from "next-auth/react";
 import { NextRouter, useRouter } from "next/router";
 import Head from "next/head";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "react-hot-toast";
 
 import { api } from "~/utils/api";
 
@@ -18,10 +18,22 @@ import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
 import { StyledButton } from "~/components/StyledButton";
 import useMatchUsers from "~/hooks/useMatchUsers";
 
+import { difficulties, type Difficulty } from "../../types/global";
+
+const _difficultyColors = ["bg-green-500", "bg-yellow-500", "bg-red-500"];
+
+const difficultyColors = Object.fromEntries(
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  difficulties.map((difficulty, index) => [
+    difficulty,
+    _difficultyColors[index],
+  ]),
+);
+
 const MatchRequestPage = () => {
   const matchUsers = useMatchUsers();
   const [pageState, setPageState] = useState({
-    difficulty: -1,
+    difficulty: difficulties[0] as Difficulty,
     category: "",
     id: "",
     statusMessage: "",
@@ -45,8 +57,12 @@ const MatchRequestPage = () => {
     });
   };
   // saved data
-  const [submittedData, setSubmittedData] = useState({
-    difficulty: -1,
+  const [submittedData, setSubmittedData] = useState<{
+    difficulty: Difficulty;
+    category: string;
+    requestId: string;
+  }>({
+    difficulty: difficulties[0],
     category: "",
     requestId: "",
   });
@@ -94,26 +110,7 @@ const MatchRequestPage = () => {
     }
   });
 
-  const difficultyMissingMessage = "Please select a difficulty";
   const categoryMissingMessage = "Please enter a category";
-
-  const difficultyLevels = [
-    "Very Easy",
-    "Easy",
-    "Medium",
-    "Hard",
-    "Very Hard",
-    "Insane",
-  ];
-
-  const difficultyColors = [
-    "bg-green-500",
-    "bg-lime-500",
-    "bg-yellow-500",
-    "bg-amber-500",
-    "bg-orange-500",
-    "bg-red-500",
-  ];
 
   const onDifficultySelect = () => {
     const difficultyDropdownMenu = document.querySelector(
@@ -132,19 +129,12 @@ const MatchRequestPage = () => {
   ) => {
     event.preventDefault();
 
-    const value = event.currentTarget.getAttribute("value");
+    const value = event.currentTarget.getAttribute("value") as Difficulty;
 
     setPageState((prev) => ({
       ...prev,
-      difficulty: parseInt(value!),
+      difficulty: value,
     }));
-
-    if (pageState.difficulty == -1) {
-      setPageState((prev) => ({
-        ...prev,
-        isDifficultyMissing: false,
-      }));
-    }
 
     const displayedDifficulty = document.querySelector(
       ".difficulty-menu .select",
@@ -330,7 +320,7 @@ const MatchRequestPage = () => {
   });
 
   const addRequest = () => {
-    if (pageState.difficulty == -1 || pageState.category == "") {
+    if (pageState.category == "") {
       if (!pageState.hasSubmitted)
         setPageState((prev) => ({ ...prev, hasSubmitted: true }));
       return;
@@ -376,11 +366,11 @@ const MatchRequestPage = () => {
   ) => {
     event.preventDefault();
 
-    const value = event.currentTarget.getAttribute("value");
+    const value = event.currentTarget.getAttribute("value") as Difficulty;
 
     setPageState((prev) => ({
       ...prev,
-      difficulty: parseInt(value!),
+      difficulty: value,
     }));
   };
 
@@ -395,7 +385,7 @@ const MatchRequestPage = () => {
     );
     if (displayedDifficulty)
       displayedDifficulty.innerHTML =
-        difficultyLevels[pageState.difficulty] ?? displayedDifficulty.innerHTML;
+        pageState.difficulty ?? displayedDifficulty.innerHTML;
     console.log("Request updated");
     setPageState((prev) => {
       return {
@@ -488,10 +478,10 @@ const MatchRequestPage = () => {
               <span>Select Difficulty</span>
             </div>
             <ul className="dropdown-menu">
-              {difficultyLevels.map((difficulty, index) => (
+              {difficulties.map((difficulty, index) => (
                 <li
                   key={index}
-                  value={index}
+                  value={difficulty}
                   onClick={(event) => selectDifficulty(event)}
                 >
                   {difficulty}
@@ -499,12 +489,6 @@ const MatchRequestPage = () => {
               ))}
             </ul>
           </div>
-
-          {pageState.hasSubmitted && pageState.difficulty == -1 && (
-            <span className="text-xs text-red-500">
-              {difficultyMissingMessage}
-            </span>
-          )}
         </div>
         <div className="category-selection">
           <span className="choose">Enter Category</span>
@@ -588,9 +572,7 @@ const MatchRequestPage = () => {
                         difficultyColors[pageState.difficulty]
                       } rounded-md`}
                     >
-                      <span className="text-white">
-                        {difficultyLevels[pageState.difficulty]}
-                      </span>
+                      <span className="text-white">{pageState.difficulty}</span>
                     </div>
                   )}
                   {pageState.isEditing && (
@@ -604,11 +586,11 @@ const MatchRequestPage = () => {
                         }`}
                       >
                         <span className="text-white">
-                          {difficultyLevels[pageState.difficulty]}
+                          {pageState.difficulty}
                         </span>
                       </div>
                       <ul className="request-dropdown-menu">
-                        {difficultyLevels.map((difficulty, index) => (
+                        {difficulties.map((difficulty, index) => (
                           <li
                             key={index}
                             value={index}
@@ -664,7 +646,7 @@ const MatchRequestPage = () => {
           {allOtherRequests.data?.requests
             .filter(
               (request) =>
-                difficultyLevels[request.difficulty]
+                request.difficulty
                   ?.toLowerCase()
                   .includes(pageState.difficultyFilter.toLowerCase()),
             )
@@ -689,9 +671,7 @@ const MatchRequestPage = () => {
                           difficultyColors[request.difficulty]
                         } rounded-md`}
                       >
-                        <span className="text-white">
-                          {difficultyLevels[request.difficulty]}
-                        </span>
+                        <span className="text-white">{request.difficulty}</span>
                       </div>
                       <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
                         <span className="text-white">{request.category}</span>

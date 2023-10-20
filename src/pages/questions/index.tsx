@@ -2,7 +2,7 @@ import Head from "next/head";
 import { useState } from "react";
 
 import { api } from "~/utils/api";
-import { Question, type QuestionMap } from "../../types/global.d";
+import { Question, type QuestionMap } from "../../types/global";
 import { equals } from "../../utils/utils";
 import { QuestionRow } from "../../components/QuestionRow";
 import { StyledButton } from "../../components/StyledButton";
@@ -39,28 +39,27 @@ export default function Questions() {
     }
 
     const addMutation = api.question.addOne.useMutation({
-        onSuccess: () => { void getAllQuery.invalidate() },
         onError: (e, { title }) => {
             toast.error(`Failed to add question '${title}':\n\t${e.message}`);
         }
     });
 
     const updateMutation = api.question.updateOne.useMutation({
-        onSuccess: () => { void getAllQuery.invalidate() },
         onError: (e, { title }) => {
             toast.error(`Failed to update question '${title}':\n\t${e.message}`);
         }
     });
 
     const deleteMutation = api.question.deleteOne.useMutation({
-        onSuccess: () => { void getAllQuery.invalidate() },
         onError: (e, { id }) => {
             toast.error(`Failed to delete question '${id}':\n\t${e.message}`);
         }
     });
 
     const pushNew = () => {
-        addMutation.mutate(new Question());
+        void addMutation.mutateAsync(new Question()).then(() => {
+            void getAllQuery.invalidate();
+        });
     };
 
     const saveUpdated = (id: string, q: Question) => {
@@ -79,13 +78,17 @@ export default function Questions() {
     };
 
     const pushUpdated = () => {
-        changedQns.forEach((id) => {
+        void Promise.all([...changedQns].map((id) => {
             if (!hasChanges(id)) return;
-            updateMutation.mutate({ id, ...viewQns.get(id) }, {
+            return updateMutation.mutateAsync({ id, ...viewQns.get(id) }, {
                 onSuccess: () => {
                     changedQns.delete(id) && setChangedQns(new Set(changedQns));
                 }
             });
+        })).then(() => {
+            void getAllQuery.invalidate()
+        }).then(() => {
+            clearUpdated()
         });
     };
 
@@ -98,6 +101,10 @@ export default function Questions() {
         setDeletedQns(new Set(deletedQns));
     }
 
+    const clearDeleted = () => {
+        setDeletedQns(new Set());
+    }
+
     const toggleAllDeleted = () => {
         if (deletedQns.size === viewQns.size) {
             setDeletedQns(new Set());
@@ -107,14 +114,18 @@ export default function Questions() {
     }
 
     const pushDeleted = () => {
-        deletedQns.forEach((id => {
+        void Promise.all([...deletedQns].map((id) => {
             if (!questions.has(id)) return;
-            deleteMutation.mutate({ id }, {
+            return deleteMutation.mutateAsync({ id }, {
                 onSuccess: () => {
                     deletedQns.delete(id) && setDeletedQns(new Set(deletedQns));
                 }
             });
-        }));
+        })).then(() => {
+            void getAllQuery.invalidate();
+        }).then(() => {
+            clearDeleted();
+        });
     }
 
     return (
@@ -147,7 +158,7 @@ export default function Questions() {
                                 initialQuestion={questions.get(id) ?? q}
                                 onQuestionChange={(q) => saveUpdated(id, q)}
                                 onQuestionDelete={() => saveDeleted(id)}
-                                className="bg-[var(--bg-1)] flex font-mono hover:bg-[var(--bg-2)] active:bg-[var(--bg-2)]" checked={deletedQns.has(id)} 
+                                className="bg-[var(--bg-1)] flex font-mono hover:bg-[var(--bg-2)] active:bg-[var(--bg-2)]" checked={deletedQns.has(id)}
                                 editable={allowedToModify} />
                         )) :
                             <div className="bg-[var(--bg-1)] flex flex-col items-center justify-center gap-4 h-[2.4rem] m-[1px]" ><i className="opacity-30">No items found.</i></div>}

@@ -100,11 +100,12 @@ export class Mutex {
 }
 
 type ReleaseFunction = () => void;
+import { type Difficulty, difficulties } from "../../../types/global";
 
 const userObject = z.object({
   id: z.string(),
   name: z.string(),
-  difficulty: z.number().min(0).max(5),
+  difficulty: z.enum(difficulties),
   category: z.string(),
   matchType: z.enum(["AUTO", "MANUAL"]),
 });
@@ -118,7 +119,7 @@ const addJoinRequestObject = z.object({
 type UserRequest = {
   id: string;
   name: string;
-  difficulty: number;
+  difficulty: Difficulty;
   category: string;
 };
 
@@ -259,7 +260,7 @@ export const matchRequestRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
-        difficulty: z.number().min(0).max(5),
+        difficulty: z.enum(difficulties),
         category: z.string(),
       }),
     )

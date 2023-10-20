@@ -41,7 +41,6 @@ const eventEmittors: Map<string, EventEmitter> = new Map<
 
 // temporary storage for modification -> deleted when code session ends + applied
 const codeSessionsCode: Map<string, Text> = new Map<string, Text>();
-const clientIDs: Set<string> = new Set<string>();
 
 function makeid(length: number) {
   let result = '';
@@ -197,18 +196,10 @@ export const codeSessionRouter = createTRPCRouter({
     }),
     getClientId: protectedProcedure
       .query(() => {
-        let val = makeid(15);
-        while (clientIDs.has(val)) {
-          val = makeid(15);
-        }
+        const val = makeid(15);
         return {
           clientId: val,
         }
-      }),
-    deleteClientId: protectedProcedure
-      .input(z.object({ clientId: z.string() }))
-      .query(({ input }) => {
-        clientIDs.has(input.clientId) && clientIDs.delete(input.clientId);
       }),
   /**
    * Endpoint called to create a session.

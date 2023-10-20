@@ -1,20 +1,24 @@
+export type Difficulty = "EASY" | "MEDIUM" | "HARD";
+
+export const difficulties = ["EASY", "MEDIUM", "HARD"] as const;
+
 export class Question {
   title = "";
   body = "";
-  difficulty = 0;
+  difficulty = "EASY" as Difficulty;
   category = "";
   id = "";
 }
 
 
 // todo: dup code
-type ModifyQuestionProps = {
+export type ModifyQuestionProps = {
   questionTitleList: { id: string; title: string }[];
   setQuestionId: (id: string) => void;
   currentQuestion: Question | null | undefined;
 };
 
-type ModifyTestCaseProps = {
+export type ModifyTestCaseProps = {
   testCaseIdList: { id: string; description: string }[];
   currentTestCase: TestCase | undefined;
   setTestCaseId: (testCaseId: string) => void;
