@@ -20,17 +20,21 @@ const Chatbox = ({
   ] = useSessionComm(sessionId, userId, userName);
 
   return (
-    <div className={className}>
-      <div className="messages-container overflow-y-auto flex flex-col h-[18.5rem]">
-        {allSessionMessages?.map((message, index) => {
+    <div className={className} style={{ height: "22rem" }}>
+      <div className="messages-container overflow-y-auto flex flex-col h-5/6">
+        {allSessionMessages?.map((message) => {
           return (
             <div
-              key={index}
-              className="w-full rounded-md dark:bg-gray-700 text-white p-2 my-2"
+              key={message.id}
+              className={`w-3/4 rounded-md ${
+                message.userId === userId
+                  ? "dark:bg-blue-900 ml-auto"
+                  : "dark:bg-gray-700"
+              } text-white p-2 my-2`}
             >
               <div className="flex justify-between">
-                <span>{message.senderName}</span>
-                <span>Sent at {message.createdAt.toLocaleTimeString()}</span>
+                <span>{message.userName}</span>
+                <span>Sent at {message.createdAt?.toLocaleTimeString()}</span>
               </div>
               <p className="w-[27.875rem] whitespace-normal break-words">
                 {message.message}

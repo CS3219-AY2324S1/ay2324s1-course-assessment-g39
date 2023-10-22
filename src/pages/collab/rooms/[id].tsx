@@ -267,7 +267,6 @@ const Room = () => {
             <TabList>
               <Tab>Output</Tab>
               <Tab>Chat</Tab>
-              <Tab>Video Call</Tab>
             </TabList>
             <TabPanel>
               <Output
@@ -282,9 +281,6 @@ const Room = () => {
                 userName={session?.user.name ?? ""}
                 className="row-span-2 w-full h-full p-3 flex flex-col text-black"
               />
-            </TabPanel>
-            <TabPanel>
-              <p>Lorem Ipsum</p>
             </TabPanel>
           </Tabs>
         </div>

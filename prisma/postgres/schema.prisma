@@ -116,6 +116,7 @@ model User {
     codeSessionAuthRecv CodeSessionUserAuth[] @relation(name: "auth_receiver")
     matchRequest        MatchRequest?
     joinRequest         JoinRequest[]
+    sessionMessage      SessionMessage[]
 }
 
 enum Difficulty {
@@ -178,12 +179,13 @@ model QuestionAttempt {
 }
 
 model SessionMessage {
+    id          String  @id @default(cuid())
     sessionId   String
-    senderId    String
-    senderName  String
+    userId    String
+    userName  String
     message     String
     createdAt   DateTime    @default(now())
+    user        User        @relation(fields: [userId], references: [id])
 
     @@index([sessionId])
-    @@unique([sessionId, senderId, createdAt])
 }

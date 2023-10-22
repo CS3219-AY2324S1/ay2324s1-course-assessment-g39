@@ -10,11 +10,13 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 const ee = new EventEmitter();
 
 export type Message = {
+  id?: string;
   sessionId: string;
-  senderId: string;
-  senderName: string;
-  message: string;
-  createdAt: Date;
+  userId: string;
+  userName: string;
+  message?: string;
+  createdAt?: Date;
+  isTyping: boolean;
 };
 
 // Methods include userId as well because users do not have unique names, so who is typing is decided by the userId
@@ -44,20 +46,20 @@ export const messagesRouter = createTRPCRouter({
     .input(
       z.object({
         sessionId: z.string(),
-        senderId: z.string(),
-        senderName: z.string(),
+        userId: z.string(),
+        userName: z.string(),
         message: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { sessionId, senderId, senderName, message } = input;
+      const { sessionId, userId, userName, message } = input;
 
       const messageObject = await ctx.prismaPostgres.sessionMessage
         .create({
           data: {
             sessionId,
-            senderId,
-            senderName,
+            userId,
+            userName,
             message,
           },
         })
@@ -68,8 +70,8 @@ export const messagesRouter = createTRPCRouter({
       ee.emit("message", messageObject);
       ee.emit("typing", {
         sessionId,
-        userId: senderId,
-        userName: senderName,
+        userId,
+        userName,
         isTyping: false,
       });
 
@@ -77,13 +79,21 @@ export const messagesRouter = createTRPCRouter({
     }),
 
   subscribeToSessionMessages: protectedProcedure
-    .input(z.object({ sessionId: z.string() }))
+    .input(z.object({ sessionId: z.string(), userId: z.string() }))
     .subscription(({ input }) => {
       return observable<Message>((emit) => {
         const onMessage = (data: Message) => {
           if (data.sessionId === input.sessionId) emit.next(data);
         };
+        const onTyping = (data: Message) => {
+          if (
+            data.sessionId === input.sessionId &&
+            data.userId !== input.userId
+          )
+            emit.next(data);
+        };
         ee.on("message", onMessage);
+        ee.on("typing", onTyping);
         return () => {
           ee.off("message", onMessage);
         };
@@ -103,36 +113,5 @@ export const messagesRouter = createTRPCRouter({
       ee.emit("typing", input);
 
       return input;
-    }),
-
-  subscribeToWhoIsTyping: protectedProcedure
-    .input(
-      z.object({
-        sessionId: z.string(),
-        userId: z.string(),
-      }),
-    )
-    .subscription(({ input }) => {
-      return observable<{
-        otherUser: string;
-        isTyping: boolean;
-      }>((emit) => {
-        const onTyping = (data: {
-          sessionId: string;
-          userId: string;
-          userName: string;
-          isTyping: boolean;
-        }) => {
-          if (
-            data.sessionId === input.sessionId &&
-            data.userId !== input.userId
-          )
-            emit.next({ otherUser: data.userName, isTyping: data.isTyping });
-        };
-        ee.on("typing", onTyping);
-        return () => {
-          ee.off("typing", onTyping);
-        };
-      });
     }),
 });

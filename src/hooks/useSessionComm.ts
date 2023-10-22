@@ -30,9 +30,24 @@ export default function useSessionComm(
   const addMessageMutation = api.messages.addMessage.useMutation();
 
   api.messages.subscribeToSessionMessages.useSubscription(
-    { sessionId },
+    { sessionId, userId },
     {
-      onData: (_data) => {
+      onData: (data) => {
+        if (data.message) {
+          if (data.userId !== userId)
+            setChatState((state) => ({
+              ...state,
+              partnerName: data.userName,
+              partnerIsTyping: data.isTyping,
+            }));
+        } else {
+          setChatState((state) => ({
+            ...state,
+            partnerName: data.userName,
+            partnerIsTyping: data.isTyping,
+          }));
+        }
+
         void allSessionMessages.refetch();
         // TODO: Fix autoscroll to bottom
         const messagesContainer = document.getElementById("messages-container");
@@ -49,32 +64,14 @@ export default function useSessionComm(
 
   const addWhoIsTypingMutation = api.messages.addWhoIsTyping.useMutation();
 
-  api.messages.subscribeToWhoIsTyping.useSubscription(
-    { sessionId, userId },
-    {
-      onData: (data: { otherUser: string; isTyping: boolean }) => {
-        console.log(data);
-        setChatState((state) => ({
-          ...state,
-          partnerName: data.otherUser,
-          partnerIsTyping: data.isTyping,
-        }));
-      },
-      onError(err) {
-        console.log("Subscription error: ", err);
-        void Promise.resolve(utils.messages.invalidate());
-      },
-    },
-  );
-
   const sendMessage = () => {
     // Don't send empty messages, or messages with only whitespace. Could change this later
     if (chatState.currentMessage.trim().length === 0) return;
 
     addMessageMutation.mutate({
       sessionId,
-      senderId: userId,
-      senderName: userName,
+      userId,
+      userName,
       message: chatState.currentMessage,
     });
     setChatState((state) => ({
