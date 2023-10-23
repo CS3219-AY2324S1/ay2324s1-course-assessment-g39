@@ -2,218 +2,81 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useForm, type SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
-import { NextRouter, useRouter } from "next/router";
-import Head from "next/head";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/router";
+import { useState } from "react";
+import { z } from "zod";
 import { toast } from "react-hot-toast";
+import { RouterOutputs, api } from "~/utils/api";
 
-import { api } from "~/utils/api";
-
-import { PageLayout } from "~/components/Layout";
-import LoadingIcon from "~/components/LoadingIcon";
 import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
-import { StyledButton } from "~/components/StyledButton";
 import useMatchUsers from "~/hooks/useMatchUsers";
 
-import { difficulties, type Difficulty } from "../../types/global";
+import { difficulties } from "../../types/global";
+import Head from "next/head";
+import { PageLayout } from "~/components/Layout";
 
-const _difficultyColors = ["bg-green-500", "bg-yellow-500", "bg-red-500"];
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import LoadingIcon from "~/components/LoadingIcon";
+import { LoadingSpinner } from "~/components/Loading";
+dayjs.extend(relativeTime);
 
-const difficultyColors = Object.fromEntries(
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  difficulties.map((difficulty, index) => [
-    difficulty,
-    _difficultyColors[index],
-  ]),
-);
-
+/**
+ * TODO
+ * - get rid of BE code for confirmation of join req
+ */
 const MatchRequestPage = () => {
-  const matchUsers = useMatchUsers();
-  const [pageState, setPageState] = useState({
-    difficulty: difficulties[0] as Difficulty,
-    category: "",
-    id: "",
-    statusMessage: "",
-    isWaiting: false,
-    requestFailed: false,
-    hasSubmitted: false,
-    isTimerActive: false,
-    waitingTime: 0,
-    isEditing: false,
-    difficultyFilter: "",
-    categoryFilter: "",
-    cursor: undefined,
-    automaticMatching: false,
-  });
-  const simplifiedSetPage = (values: Partial<typeof pageState>) => {
-    setPageState((prev) => {
-      return {
-        ...prev,
-        ...values,
-      };
-    });
-  };
-  // saved data
-  const [submittedData, setSubmittedData] = useState<{
-    difficulty: Difficulty;
-    category: string;
-    requestId: string;
-  }>({
-    difficulty: difficulties[0],
-    category: "",
-    requestId: "",
-  });
-  const timer = useRef<NodeJS.Timer | null>(null);
-
-  useEffect(() => {
-    if (pageState.isTimerActive) {
-      if (!timer.current)
-        timer.current = setInterval(() => {
-          setPageState((prev) => ({
-            ...prev,
-            waitingTime: prev.waitingTime + 1,
-          }));
-        }, 1000);
-
-      if (pageState.waitingTime > 0 && pageState.waitingTime % 600 === 0) {
-        toast((t) => (
-          <div className="flex flex-col justify-evenly">
-            <span className="text-center mb-2">
-              You have been waiting for {pageState.waitingTime / 60} minutes.
-              Would you like to continue?
-            </span>
-            <div className="flex justify-evenly">
-              <button
-                className="border bg-red-500 rounded-md text-white p-2"
-                onClick={() => {
-                  toast.dismiss(t.id);
-                  cancelRequest();
-                }}
-                type="button"
-              >
-                Cancel Request
-              </button>
-              <button
-                className="border bg-stone-500 rounded-md text-white p-2"
-                onClick={() => toast.dismiss(t.id)}
-                type="button"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        ));
-      }
-    }
-  });
-
-  const categoryMissingMessage = "Please enter a category";
-
-  const onDifficultySelect = () => {
-    const difficultyDropdownMenu = document.querySelector(
-      ".difficulty-menu .dropdown-menu",
-    );
-
-    if (!difficultyDropdownMenu?.classList.contains("active")) {
-      difficultyDropdownMenu?.classList.add("active");
-    } else {
-      difficultyDropdownMenu.classList.remove("active");
-    }
-  };
-
-  const selectDifficulty = (
-    event: React.MouseEvent<HTMLLIElement, MouseEvent>,
-  ) => {
-    event.preventDefault();
-
-    const value = event.currentTarget.getAttribute("value") as Difficulty;
-
-    setPageState((prev) => ({
-      ...prev,
-      difficulty: value,
-    }));
-
-    const displayedDifficulty = document.querySelector(
-      ".difficulty-menu .select",
-    );
-    if (displayedDifficulty)
-      displayedDifficulty.innerHTML = event.currentTarget.innerHTML;
-  };
-
-  const onCategoryChange = (value: string) => {
-    setPageState((prev) => ({
-      ...prev,
-      category: value,
-      isCategoryMissing: value ? false : true,
-    }));
-  };
-
   const router = useRouter();
-  const { data: session, status } = useSession();
   const utils = api.useContext();
-
-  const ownRequest = api.matchRequest.getOwnRequest.useQuery(undefined, {
-    onSuccess(data) {
-      updateOwnRequest(data);
-      if (data.ownRequest?.matchType === "AUTO") {
-        notifyAuto.mutate({
-          requestId: data.ownRequest.id,
-        });
-      }
-    },
-  });
-
-  const waitForRequest = () => {
-    simplifiedSetPage({
-      isTimerActive: true,
-      isWaiting: true,
-      statusMessage: pageState.automaticMatching
-        ? "Searching for partner..."
-        : "Created room",
-    });
-  };
-
-  /**
-   * Updates the current users request
-   * @returns
-   */
-  function updateOwnRequest(data: typeof ownRequest.data) {
-    if (!data?.success || !data?.ownRequest) {
-      return;
-    }
-    const {
-      difficulty,
-      id: requestId,
-      category,
-      createdAt,
-      ..._
-    } = data.ownRequest;
-
-    const curr = new Date();
-    const timeDiff = Math.round((curr.getTime() - createdAt.getTime()) / 1000);
-
-    simplifiedSetPage({
-      difficulty,
-      category,
-      hasSubmitted: true,
-      waitingTime: timeDiff,
-    });
-    setSubmittedData({
-      difficulty,
-      requestId,
-      category,
-    });
-    waitForRequest();
+  const { data: session } = useSession();
+  if (!session || !session.user) {
+    throw new Error("Session cannot be undefined since AuthWrapper wrapped");
   }
+  const matchUsers = useMatchUsers();
+  const [isCreatingMatchRequest, setIsCreatingMatchRequest] = useState(false);
+  const [difficultyFilter, setDifficultyFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
 
-  // not needed -> can
+  const { data: numOfMatchRequests } =
+    api.matchRequest.getNumOfMatchRequests.useQuery();
+
+  const { mutate: notifyOnAutomaticMatchedRequests } =
+    api.matchRequest.notifyOnAutomaticMatchedRequests.useMutation();
+  const { data: curUserMatchRequest, refetch: refetchCurrentUserRequest } =
+    api.matchRequest.getCurrentUserRequest.useQuery(undefined, {
+      onSuccess(data) {
+        if (data?.matchType === "AUTO") {
+          notifyOnAutomaticMatchedRequests();
+        }
+      },
+    });
+
+  const { mutate: createMatchRequest } =
+    api.matchRequest.createCurrentUserMatchRequest.useMutation({
+      onSuccess() {
+        setIsCreatingMatchRequest(false);
+        toast.success("Successfully created match request");
+      },
+      onError(err) {
+        toast.error(err.message);
+        toast.error("Error creating match request");
+      },
+    });
+
+  const { mutate: deleteMatchRequest } =
+    api.matchRequest.deleteCurrentUserMatchRequest.useMutation({});
+
+  const { mutate: updateMatchRequest } =
+    api.matchRequest.updateCurrentUserMatchRequest.useMutation({});
+
+  // subscprtions api -- START
   api.matchRequest.subscribeToAllRequests.useSubscription(undefined, {
     onData(request) {
-      void allOtherRequests.refetch();
-      void ownRequest.refetch();
+      void refetchGetManualRequests();
+      void refetchCurrentUserRequest();
     },
     onError(err) {
       console.log("Subscription error: ", err);
@@ -221,523 +84,339 @@ const MatchRequestPage = () => {
     },
   });
 
-  api.matchRequest.subscribeToJoinRequests.useSubscription(undefined, {
-    onData(request) {
-      console.log(request);
-      void Promise.resolve(utils.matchRequest.invalidate());
-    },
-  });
-
-  api.matchRequest.subscribeToConfirmation.useSubscription(undefined, {
-    onData(request) {
-      if (
-        request.user1Id === session?.user.id ||
-        request.user2Id === session?.user.id
-      ) {
-        clearInterval(timer.current!);
-        setPageState((prev) => ({
-          ...prev,
-          isTimerActive: false,
-          waitingTime: 0,
-          isWaiting: false,
-        }));
-        timer.current = null;
-        matchUsers.setMatchedUsers(request.user1Id, request.user2Id);
-        // TODO: join session
-        console.log("Joining session...");
-      }
-    },
-  });
-
-  api.matchRequest.subscribeToDeclineRequests.useSubscription(undefined, {
-    onData(request) {
-      console.log(request);
-      if (request.acceptId == session?.user.id) {
-        console.log("Declined match");
-        // Maybe include the request user's name in the toast message
-        toast.error("Your match request was declined.");
-      }
-      void Promise.resolve(utils.matchRequest.invalidate());
-    },
-  });
-
-  // infinite query requires a cursor, and is not like we have an infinite number
-  // https://trpc.io/docs/client/react/useInfiniteQuery
-  const allOtherRequests = api.matchRequest.getAllOtherRequests.useQuery();
-
   api.matchRequest.subscribeToAutomaticRequests.useSubscription(undefined, {
     onData(data) {
-      if (
-        data.user1Id === session?.user.id ||
-        data.user2Id === session?.user.id
-      ) {
+      const userId = session.user.id;
+      if (userId === data.user1Id || userId === data.user2Id) {
         console.log("Success");
         matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
       }
     },
   });
+  // subscprtions api -- END
 
-  const allJoinRequests = api.matchRequest.getJoinRequests.useInfiniteQuery({});
+  const {
+    data: manualRequests = [],
+    refetch: refetchGetManualRequests,
+    isLoading: requestsLoading,
+  } = api.matchRequest.getAllManualMatchRequests.useQuery();
 
-  const queueSize = allOtherRequests.data?.count ?? 0;
+  const { mutate: confirmMatch, variables: matchedIds } =
+    api.matchRequest.confirmMatch.useMutation({
+      onSuccess: () => {
+        if (!matchedIds) throw new Error("matchedIds is undefined");
+        const { userId1, userId2 } = matchedIds;
+        matchUsers.setMatchedUsers(userId1, userId2);
+      },
+    });
 
-  const notifyAuto = api.matchRequest.notifyAutomaticRequests.useMutation();
-  const addRequestMutation = api.matchRequest.addRequest.useMutation({
-    onError(err) {
-      toast.error(err.message);
-    },
-  });
-
-  const cancelRequestMutation = api.matchRequest.cancelRequest.useMutation({
-    onSuccess: (data) => {
-      console.log(data);
-    },
-  });
-
-  const editRequestMutation = api.matchRequest.editRequest.useMutation({
-    onSuccess: (data) => {
-      console.log(data);
-    },
-  });
-
-  const addJoinRequestMutation = api.matchRequest.addJoinRequest.useMutation({
-    onSuccess: () => {
-      console.log("Waiting for partner to accept...");
-    },
-  });
-
-  const confirmRequestMutation = api.matchRequest.confirmMatch.useMutation({
-    onSuccess: (data: { user1Id: string; user2Id: string }) => {
-      matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
-      console.log("Joining session...");
-    },
-  });
-
-  const declineMatchMutation = api.matchRequest.declineMatch.useMutation({
-    onSuccess: () => {
-      console.log("Declined match");
-    },
-  });
-
-  const addRequest = () => {
-    if (pageState.category == "") {
-      if (!pageState.hasSubmitted)
-        setPageState((prev) => ({ ...prev, hasSubmitted: true }));
-      return;
-    }
-
-    addRequestMutation.mutate({
-      id: session!.user.id,
-      name: session!.user.name!,
-      difficulty: pageState.difficulty,
-      category: pageState.category,
-      matchType: pageState.automaticMatching ? "AUTO" : "MANUAL",
+  const handleCreateMatchRequest = (data: CreateMatchRequestData) => {
+    const { difficulty, category, automaticMatching } = data;
+    createMatchRequest({
+      difficulty,
+      category,
+      matchType: automaticMatching ? "AUTO" : "MANUAL",
     });
   };
 
-  const cancelRequest = () => {
-    cancelRequestMutation.mutate({
-      id: submittedData.requestId,
-    });
-    clearInterval(timer.current!);
-    setPageState((prev) => ({
-      ...prev,
-      isTimerActive: false,
-      waitingTime: 0,
-      isWaiting: false,
-    }));
-    timer.current = null;
+  const handleDeleteMatchRequest = () => {
+    deleteMatchRequest();
   };
 
-  const onRequestDifficultySelect = () => {
-    const requestDifficultyDropdownMenu = document.querySelector(
-      ".request .request-dropdown-menu",
-    );
-
-    if (!requestDifficultyDropdownMenu?.classList.contains("active")) {
-      requestDifficultyDropdownMenu?.classList.add("active");
-    } else {
-      requestDifficultyDropdownMenu.classList.remove("active");
-    }
-  };
-
-  const selectRequestDifficulty = (
-    event: React.MouseEvent<HTMLLIElement, MouseEvent>,
-  ) => {
-    event.preventDefault();
-
-    const value = event.currentTarget.getAttribute("value") as Difficulty;
-
-    setPageState((prev) => ({
-      ...prev,
-      difficulty: value,
-    }));
-  };
-
-  const updateRequest = () => {
-    editRequestMutation.mutate({
-      id: submittedData.requestId,
-      difficulty: pageState.difficulty,
-      category: pageState.category,
-    });
-    const displayedDifficulty = document.querySelector(
-      ".difficulty-menu .select",
-    );
-    if (displayedDifficulty)
-      displayedDifficulty.innerHTML =
-        pageState.difficulty ?? displayedDifficulty.innerHTML;
-    console.log("Request updated");
-    setPageState((prev) => {
-      return {
-        ...prev,
-        isEditing: !prev.isEditing,
-      };
+  const handleUpdateRequest = () => {
+    updateMatchRequest({
+      difficulty: "EASY",
+      category: "xxx",
     });
   };
 
-  const addJoinRequest = (partnerId: string) => {
-    addJoinRequestMutation.mutate({
-      joiningUser: session?.user?.name ?? "",
-      joiningUserId: session?.user?.id ?? "",
-      originalRequestId: partnerId || "",
+  const handleAcceptRequest = (userId1: string, userId2: string) => {
+    confirmMatch({ userId1, userId2 });
+    toast.success("Successfully matched with user, redirecting to room...", {
+      duration: 2000,
     });
-
-    toast.success("Waiting for partner to accept...");
-  };
-
-  const confirmMatch = (acceptId: string, requestId: string) => {
-    clearInterval(timer.current!);
-    setPageState((prev) => ({
-      ...prev,
-      isTimerActive: false,
-      waitingTime: 0,
-      isWaiting: false,
-      incomingRequestUserId: "",
-    }));
-    timer.current = null;
-    confirmRequestMutation.mutate({ acceptId, requestId });
-
     // TODO: join session
     console.log("Joining session...");
-  };
-
-  const declineMatch = (acceptId: string, requestId: string) => {
-    declineMatchMutation.mutate({ acceptId, requestId });
   };
 
   // Remove current request immediately so that the user doesn't need to wait for timeout to send another request
   window.onunload = () => {
     // Only remove request for current page, not other pages with the same user
-    if (pageState.isTimerActive) void Promise.resolve(cancelRequest());
+    void handleDeleteMatchRequest();
   };
 
   return (
-    <div className="min-h-screen bg-[#2f2f2f] text-center">
-      {pageState.isWaiting && (
-        <div className="queue-status-bar absolute left-1/2 w-80 -translate-x-1/2 justify-self-center rounded-md bg-black text-white">
-          {pageState.isTimerActive && <LoadingIcon />}
-          <div>{pageState.statusMessage}</div>
-          {pageState.isTimerActive && (
-            <button onClick={cancelRequest} className="h-6 w-6 rounded-full">
-              <FontAwesomeIcon
-                icon={faXmark}
-                size="lg"
-                style={{ color: "#ff0000" }}
-              />
-            </button>
-          )}
-          {!pageState.isTimerActive && pageState.requestFailed && (
-            <button
-              onClick={addRequest}
-              className="h-6 w-12 rounded-full bg-gray-500 text-white"
-            >
-              Retry
-            </button>
-          )}
-          {!pageState.isTimerActive && !pageState.requestFailed && (
-            <button
-              onClick={() => console.log("Joining session...")}
-              className="h-6 w-24 rounded-md bg-green-500 text-white"
-            >
-              Join Room
-            </button>
-          )}
-        </div>
-      )}
-      {pageState.isTimerActive && (
-        <div className="absolute left-1/2 top-9 w-1/6 -translate-x-1/2 justify-self-center rounded-md bg-black py-1 text-white">
-          Time elapsed: {pageState.waitingTime} seconds
-        </div>
-      )}
-      <div className="absolute left-1/4 top-1/2 flex h-80 w-64 -translate-x-2/3 -translate-y-1/2 flex-col justify-evenly rounded-xl border p-5">
-        <div className="difficulty-menu">
-          <span className="choose">Choose Difficulty</span>
-
-          <div className="dropdown" onClick={onDifficultySelect}>
-            <div className="select text-center">
-              <span>Select Difficulty</span>
+    <>
+      <Head>
+        <title>Find practice partner</title>
+      </Head>
+      <PageLayout>
+        <div className="flex flex-col h-full items-center justify-center bg-slate-800 text-center">
+          <div className="space-y-4">
+            <div className="flex flex-row justify-between">
+              <div className="text-left">Find a practice partner</div>
+              <div className="text-right">{`(${
+                numOfMatchRequests ?? 0
+              } online users)`}</div>
             </div>
-            <ul className="dropdown-menu">
-              {difficulties.map((difficulty, index) => (
-                <li
-                  key={index}
-                  value={difficulty}
-                  onClick={(event) => selectDifficulty(event)}
-                >
-                  {difficulty}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        <div className="category-selection">
-          <span className="choose">Enter Category</span>
-          <input
-            className="w-full rounded-md p-2 text-center focus:outline-none"
-            type="text"
-            value={pageState.category}
-            onChange={(e) => onCategoryChange(e.target.value)}
-          />
-          {pageState.hasSubmitted && pageState.category == "" && (
-            <span className="text-xs text-red-500">
-              {categoryMissingMessage}
-            </span>
-          )}
-        </div>
-        <div className="flex flex-row dark:text-white">
-          <input
-            type={"checkbox"}
-            checked={pageState.automaticMatching}
-            onChange={() =>
-              simplifiedSetPage({
-                automaticMatching: !pageState.automaticMatching,
-              })
-            }
-            disabled={pageState.isWaiting}
-          />
-          <label>Automatic matching</label>
-        </div>
-        <button
-          className={`mt-5 rounded-md ${
-            pageState.isTimerActive ? "bg-purple-800" : "bg-purple-500"
-          } p-2 text-lg text-white`}
-          type="button"
-          onClick={addRequest}
-          disabled={pageState.isTimerActive}
-        >
-          Find practice partner
-        </button>
-      </div>
-      <div className="absolute left-1/2 top-1/2 flex h-80 w-1/3 -translate-x-1/2 -translate-y-1/2 flex-col justify-evenly rounded-xl border p-5">
-        <span className="absolute left-1/2 -translate-x-1/2 top-0 text-white ">
-          {`All requests (${queueSize} online users)`}
-        </span>
-        <div className="w-full" style={{ top: "15%", right: "0.5%" }}>
-          <div className="flex justify-evenly">
-            <input
-              className="h-8 focus:outline-none rounded-md text-center"
-              style={{ width: "40%" }}
-              placeholder={"Filter by difficulty"}
-              onChange={(e) =>
-                setPageState((prev) => ({
-                  ...prev,
-                  difficultyFilter: e.target.value,
-                }))
-              }
-            ></input>
-            <input
-              className="h-8 focus:outline-none rounded-md text-center"
-              style={{ width: "40%" }}
-              placeholder={"Filter by category"}
-              onChange={(e) =>
-                setPageState((prev) => ({
-                  ...prev,
-                  categoryFilter: e.target.value,
-                }))
-              }
-            ></input>
-          </div>
-        </div>
-        <div className="overflow-y-auto flex flex-col">
-          {pageState.isTimerActive &&
-            ownRequest?.data?.ownRequest?.matchType === "MANUAL" && (
-              <div className="flex flex-col rounded-md bg-purple-500 m-2">
-                <span className="text-left text-white pl-4">
-                  {session!.user.name}
-                </span>
-                <div className="request">
-                  {!pageState.isEditing && (
-                    <div
-                      className={`w-1/3 flex justify-center items-center ${
-                        difficultyColors[pageState.difficulty]
-                      } rounded-md`}
-                    >
-                      <span className="text-white">{pageState.difficulty}</span>
-                    </div>
-                  )}
-                  {pageState.isEditing && (
-                    <div
-                      className="request-dropdown"
-                      onClick={onRequestDifficultySelect}
-                    >
-                      <div
-                        className={`request-select ${
-                          difficultyColors[pageState.difficulty]
-                        }`}
-                      >
-                        <span className="text-white">
-                          {pageState.difficulty}
-                        </span>
-                      </div>
-                      <ul className="request-dropdown-menu">
-                        {difficulties.map((difficulty, index) => (
-                          <li
-                            key={index}
-                            value={index}
-                            onClick={(event) => selectRequestDifficulty(event)}
-                          >
-                            {difficulty}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {!pageState.isEditing && (
-                    <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
-                      <span className="text-white">{pageState.category}</span>
-                    </div>
-                  )}
-                  {pageState.isEditing && (
-                    <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
-                      <input
-                        className="w-full rounded-md p-2 text-center focus:outline-none bg-stone-700 text-white "
-                        type="text"
-                        value={pageState.category}
-                        onChange={(e) => onCategoryChange(e.target.value)}
-                      />
-                    </div>
-                  )}
-                  {!pageState.isEditing && (
-                    <button
-                      className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
-                      type="button"
-                      onClick={() =>
-                        setPageState((prev) => ({
-                          ...prev,
-                          isEditing: !prev.isEditing,
-                        }))
-                      }
-                    >
-                      Edit
-                    </button>
-                  )}
-                  {pageState.isEditing && (
-                    <button
-                      className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
-                      type="button"
-                      onClick={updateRequest}
-                    >
-                      Save
-                    </button>
-                  )}
-                </div>
+            {curUserMatchRequest ? (
+              <CurrentUserMatchRequest
+                userRequest={curUserMatchRequest}
+                handleDelete={deleteMatchRequest}
+              />
+            ) : isCreatingMatchRequest ? (
+              <CreateMatchRequestForm
+                onCreate={handleCreateMatchRequest}
+                handleCancel={() => setIsCreatingMatchRequest(false)}
+              />
+            ) : (
+              <div
+                className="bg-slate-200 py-2 rounded-md text-slate-800 hover:bg-slate-300"
+                onClick={() => setIsCreatingMatchRequest(true)}
+              >
+                + Add your own request
               </div>
             )}
-          {allOtherRequests.data?.requests
-            .filter(
-              (request) =>
-                request.difficulty
-                  ?.toLowerCase()
-                  .includes(pageState.difficultyFilter.toLowerCase()),
-            )
-            .filter((request) =>
-              request.category
-                .toLowerCase()
-                .includes(pageState.categoryFilter.toLowerCase()),
-            )
-            .map((request, index) => (
-              <div key={index}>
-                {request.id !== session!.user.id && (
-                  <div
-                    className="flex flex-col rounded-md bg-sky-500 m-2"
-                    key={index}
-                  >
-                    <span className="text-left text-white pl-4">
-                      {request.name}
-                    </span>
-                    <div className="flex justify-evenly rounded-md p-2">
-                      <div
-                        className={`w-1/3 flex justify-center items-center ${
-                          difficultyColors[request.difficulty]
-                        } rounded-md`}
-                      >
-                        <span className="text-white">{request.difficulty}</span>
-                      </div>
-                      <div className="w-1/3 flex justify-center items-center bg-stone-700 rounded-md">
-                        <span className="text-white">{request.category}</span>
-                      </div>
-                      <button
-                        className="rounded-md p-2 text-white bg-emerald-500 w-1/4"
-                        type="button"
-                        onClick={() => addJoinRequest(request.id)}
-                      >
-                        Request to join
-                      </button>
+            <div className="border border-slate-100 p-6 rounded-md">
+              <div className="text-start space-y-4">
+                <div>Public Requests</div>
+                <div className="flex flex-row justify-evenly items-center space-x-4 text-black">
+                  <input
+                    className="rounded-md text-center"
+                    placeholder={"Filter by difficulty"}
+                    onChange={(e) => setDifficultyFilter(e.target.value)}
+                  ></input>
+                  <input
+                    className="rounded-md text-center"
+                    placeholder={"Filter by category"}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                  ></input>
+                </div>
+              </div>
+              <div className="py-4" />
+              <div className="">
+                <table className="w-full text-sm text-left text-gray-500 dark:text-slate-300">
+                  <thead className="dark:text-slate-200">
+                    <tr>
+                      <th scope="col" className="w-auto pr-3">
+                        Difficulty
+                      </th>
+                      <th scope="col" className="w-auto pr-3">
+                        Category
+                      </th>
+                      <th scope="col" className="w-auto pr-3">
+                        Name
+                      </th>
+                      <th scope="col" className="w-auto"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="space-y-6 bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                    {manualRequests
+                      .filter((r) => r.user.id !== session.user.id)
+                      .filter(
+                        (r) =>
+                          !difficultyFilter ||
+                          r.difficulty
+                            .toLowerCase()
+                            .startsWith(difficultyFilter.toLowerCase()),
+                      )
+                      .filter(
+                        (r) =>
+                          !categoryFilter ||
+                          r.category
+                            .toLowerCase()
+                            .startsWith(categoryFilter.toLowerCase()),
+                      )
+                      .map((request) => (
+                        <tr key={request.user.name}>
+                          <td className="w-auto pr-3">{request.difficulty}</td>
+                          <td className="w-auto pr-3">{request.category}</td>
+                          <td className="w-auto pr-3">{request.user.name}</td>
+                          <td className="w-auto text-right">
+                            <button
+                              className="light:bg-blue-600 dark:bg-blue-400 px-2 rounded-md text-slate-800 hover:bg-slate-300"
+                              onClick={() =>
+                                handleAcceptRequest(
+                                  session.user.id,
+                                  request.user.id,
+                                )
+                              }
+                            >
+                              ACCEPT
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {!requestsLoading && manualRequests.length === 0 && (
+                  <>
+                    <div className="py-2" />
+                    <div className="bg-slate-700 rounded-lg block text-center text-sm py-4">
+                      🥲 <br />
+                      Bummer! No requests.
+                      <br />
+                      Maybe ask a friend to come on to code with you?
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
-            ))}
-        </div>
-      </div>
-
-      <div className="absolute left-3/4 top-1/2 flex h-80 w-1/4 -translate-x-1/4 -translate-y-1/2 flex-col rounded-xl border p-2 items-center justify-evenly">
-        <span className="absolute left-1/2 -translate-x-1/2 top-0 text-white py-2">
-          Requests from others
-        </span>
-        <div
-          className="overflow-y-auto w-full flex flex-col items-center"
-          style={{ height: "80%" }}
-        >
-          {allJoinRequests.data?.pages.flat(2).map((request, index) => (
-            <div
-              key={index}
-              className="flex flex-col border w-3/4  justify-items-center rounded-md bg-black text-white p-2 m-2"
-              style={{ top: "12.5%" }}
-            >
-              <span>
-                {(request as { fromName: string }).fromName} wants to join!
-              </span>
-              <div className="flex justify-evenly items-center p-2">
-                <button
-                  className="rounded-md p-2 text-white bg-emerald-500 w-1/3"
-                  type="button"
-                  onClick={() =>
-                    confirmMatch(
-                      (request as { fromId: string }).fromId,
-                      (request as { toId: string }).toId,
-                    )
-                  }
-                >
-                  Accept
-                </button>
-                <button
-                  className="rounded-md p-2 text-white bg-red-500 w-1/3"
-                  type="button"
-                  onClick={() =>
-                    declineMatch(
-                      (request as { fromId: string }).fromId,
-                      (request as { toId: string }).toId,
-                    )
-                  }
-                >
-                  Decline
-                </button>
-              </div>
             </div>
-          ))}
+          </div>
         </div>
+      </PageLayout>
+    </>
+  );
+};
+
+// Define the schema for the match request fields
+const createMatchRequestSchema = z.object({
+  difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
+  category: z.string().min(1),
+  automaticMatching: z.boolean(),
+});
+
+type CreateMatchRequestData = z.infer<typeof createMatchRequestSchema>;
+type CreateMatchRequestFormProps = {
+  onCreate: (data: CreateMatchRequestData) => void;
+  handleCancel: () => void;
+};
+const CreateMatchRequestForm = ({
+  onCreate,
+  handleCancel,
+}: CreateMatchRequestFormProps) => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CreateMatchRequestData>({
+    resolver: zodResolver(createMatchRequestSchema),
+  });
+
+  const onSubmit: SubmitHandler<CreateMatchRequestData> = async (data) => {
+    void onCreate(data);
+  };
+
+  return (
+    <form
+      className="relative flex flex-col text-start items-stretch space-y-4 md:space-y-6 border p-4 rounded-md"
+      onSubmit={handleSubmit(onSubmit)}
+    >
+      <button
+        className="absolute top-2 right-2 text-gray-500 hover:text-red-500 transition transform hover:scale-110"
+        onClick={handleCancel}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+      <div>
+        <label className="self-start block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+          Difficulty
+        </label>
+        <select
+          className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm font-medium rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          {...register("difficulty")}
+        >
+          {difficulties.map((difficulty) => (
+            <option key={difficulty} value={difficulty}>
+              {difficulty.charAt(0) + difficulty.slice(1).toLowerCase()}
+            </option>
+          ))}
+        </select>
       </div>
+      <div>
+        <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+          Category
+        </label>
+        <input
+          className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          type="text"
+          {...register("category")}
+        />
+        {errors.category && (
+          <span className="text-red-500">{errors.category.message}</span>
+        )}
+      </div>
+      <div>
+        <label className="mr-2 mb-2 text-sm font-medium text-gray-900 dark:text-white">
+          Automatic Matching
+        </label>
+        <input type="checkbox" {...register("automaticMatching")} />
+      </div>
+      <button
+        className="w-full text-white bg-slate-500 hover:bg-slate-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-slate-400 dark:hover:bg-slate-500 dark:focus:ring-primary-800"
+        type="submit"
+      >
+        Create Match Request
+      </button>
+    </form>
+  );
+};
+
+type MatchRequest = RouterOutputs["matchRequest"]["getCurrentUserRequest"];
+type CurrentUserMatchRequestProps = {
+  userRequest: MatchRequest;
+  handleDelete: () => void;
+};
+const CurrentUserMatchRequest = ({
+  userRequest,
+  handleDelete,
+}: CurrentUserMatchRequestProps) => {
+  if (!userRequest) return <LoadingSpinner />;
+  return (
+    <div className="border border-slate-100 p-6 rounded-md text-start space-y-4">
+      <div>Your Request</div>
+      <table className="w-full text-sm text-left text-gray-500 dark:text-slate-300">
+        <thead className="dark:text-slate-200">
+          <tr>
+            <th scope="col" className="w-auto pr-3">
+              Difficulty
+            </th>
+            <th scope="col" className="w-auto pr-3">
+              Category
+            </th>
+            <th scope="col" className="w-auto pr-3">
+              Name
+            </th>
+            <th scope="col" className="w-auto"></th>
+          </tr>
+        </thead>
+        <tbody className="space-y-6 bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+          <tr key={userRequest.user.name}>
+            <td className="w-auto pr-3">{userRequest.difficulty}</td>
+            <td className="w-auto pr-3">{userRequest.category}</td>
+            <td className="w-auto pr-3">{userRequest.user.name}</td>
+            <td className="w-auto text-right">
+              <button
+                className="light:bg-blue-600 dark:bg-blue-400 px-2 rounded-md text-slate-800 hover:bg-slate-300"
+                onClick={() => toast.success("PLS ADD EDIT REQUEST")}
+              >
+                EDIT
+              </button>
+            </td>
+            <td className="w-auto text-right">
+              <button
+                className="light:bg-blue-600 dark:bg-blue-400 px-2 rounded-md text-slate-800 hover:bg-slate-300"
+                onClick={handleDelete}
+              >
+                DELETE
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 };
