@@ -37,6 +37,8 @@ const MatchRequestPage = () => {
   }
   const matchUsers = useMatchUsers();
   const [isCreatingMatchRequest, setIsCreatingMatchRequest] = useState(false);
+  const [isEditingMatchRequest, setIsEditingMatchRequest] = useState(false);
+
   const [difficultyFilter, setDifficultyFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
 
@@ -77,6 +79,7 @@ const MatchRequestPage = () => {
     api.matchRequest.updateCurrentUserMatchRequest.useMutation({
       onSuccess() {
         toast.success("Successfully updated match request");
+        setIsEditingMatchRequest(false);
       },
     });
 
@@ -131,9 +134,9 @@ const MatchRequestPage = () => {
     deleteMatchRequest();
   };
 
-  type UpdateObj =
+  type UpdateToMatchRequest =
     RouterInputs["matchRequest"]["updateCurrentUserMatchRequest"];
-  const handleUpdateRequest = (request: UpdateObj) => {
+  const handleUpdateRequest = (request: UpdateToMatchRequest) => {
     updateMatchRequest(request);
   };
 
@@ -166,24 +169,40 @@ const MatchRequestPage = () => {
                 numOfMatchRequests ?? 0
               } online users)`}</div>
             </div>
-            {curUserMatchRequest ? (
-              <CurrentUserMatchRequest
-                userRequest={curUserMatchRequest}
-                handleUpdateRequest={handleUpdateRequest}
-                handleDelete={handleDeleteMatchRequest}
-              />
-            ) : isCreatingMatchRequest ? (
-              <CreateMatchRequestForm
-                onCreate={handleCreateMatchRequest}
-                handleCancel={() => setIsCreatingMatchRequest(false)}
-              />
-            ) : (
-              <div
-                className="bg-slate-200 py-2 rounded-md text-slate-800 hover:bg-slate-300"
-                onClick={() => setIsCreatingMatchRequest(true)}
-              >
-                + Add your own request
-              </div>
+            {curUserMatchRequest && (
+              <>
+                {!isEditingMatchRequest && (
+                  <UserOwnMatchRequestView
+                    userRequest={curUserMatchRequest}
+                    setIsEditingTrue={() => setIsEditingMatchRequest(true)}
+                    handleDelete={handleDeleteMatchRequest}
+                  />
+                )}
+                {isEditingMatchRequest && (
+                  <UpdateMatchRequestForm
+                    onUpdate={(data) => handleUpdateRequest(data)}
+                    handleCancel={() => setIsEditingMatchRequest(false)}
+                  />
+                )}
+              </>
+            )}
+            {!curUserMatchRequest && (
+              <>
+                {!isCreatingMatchRequest && (
+                  <div
+                    className="bg-slate-200 py-2 rounded-md text-slate-800 hover:bg-slate-300"
+                    onClick={() => setIsCreatingMatchRequest(true)}
+                  >
+                    + Add your own request
+                  </div>
+                )}
+                {isCreatingMatchRequest && (
+                  <CreateMatchRequestForm
+                    onCreate={handleCreateMatchRequest}
+                    handleCancel={() => setIsCreatingMatchRequest(false)}
+                  />
+                )}
+              </>
             )}
             <div className="border border-slate-100 p-6 rounded-md">
               <div className="text-start space-y-4">
@@ -372,31 +391,17 @@ const CreateMatchRequestForm = ({
   );
 };
 
-type UpdateToMatchRequest =
-  RouterInputs["matchRequest"]["updateCurrentUserMatchRequest"];
 type MatchRequest = RouterOutputs["matchRequest"]["getCurrentUserRequest"];
 type CurrentUserMatchRequestProps = {
   userRequest: MatchRequest;
-  handleUpdateRequest: (request: UpdateToMatchRequest) => void;
+  setIsEditingTrue: () => void;
   handleDelete: () => void;
 };
-const CurrentUserMatchRequest = ({
+const UserOwnMatchRequestView = ({
   userRequest,
-  handleUpdateRequest,
+  setIsEditingTrue,
   handleDelete,
 }: CurrentUserMatchRequestProps) => {
-  const [isEditing, setIsEditing] = useState(false);
-  if (isEditing) {
-    return (
-      <UpdateMatchRequestForm
-        onUpdate={(data) => {
-          handleUpdateRequest(data);
-        }}
-        handleCancel={() => setIsEditing(false)}
-      />
-    );
-  }
-
   if (!userRequest) return <LoadingSpinner />;
   return (
     <div className="border border-slate-100 p-6 rounded-md text-start space-y-4">
@@ -424,7 +429,7 @@ const CurrentUserMatchRequest = ({
             <td className="w-auto text-right">
               <button
                 className="light:bg-blue-600 dark:bg-blue-400 px-2 rounded-md text-slate-800 hover:bg-slate-300"
-                onClick={() => setIsEditing(true)}
+                onClick={setIsEditingTrue}
               >
                 EDIT
               </button>
