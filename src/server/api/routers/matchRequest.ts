@@ -150,20 +150,6 @@ export const matchRequestRouter = createTRPCRouter({
     return num;
   }),
 
-  getCurrentUserRequest: protectedProcedure.query(async ({ ctx }) => {
-    const ownRequest = await ctx.prismaPostgres.matchRequest.findUnique({
-      where: { userId: ctx.session.user.id },
-      select: {
-        user: true,
-        difficulty: true,
-        category: true,
-        matchType: true,
-        createdAt: true,
-      },
-    });
-    return ownRequest;
-  }),
-
   createCurrentUserMatchRequest: protectedProcedure
     .input(createReqInput_z)
     .mutation(async ({ ctx, input }) => {
@@ -189,16 +175,19 @@ export const matchRequestRouter = createTRPCRouter({
       ee.emit("add", request);
     }),
 
-  deleteCurrentUserMatchRequest: protectedProcedure.mutation(
-    async ({ ctx, input }) => {
-      const userId = ctx.session.user.id;
-      const request = await ctx.prismaPostgres.matchRequest.delete({
-        where: { userId },
-      });
-
-      ee.emit("remove", request);
-    },
-  ),
+  getCurrentUserRequest: protectedProcedure.query(async ({ ctx }) => {
+    const ownRequest = await ctx.prismaPostgres.matchRequest.findUnique({
+      where: { userId: ctx.session.user.id },
+      select: {
+        user: true,
+        difficulty: true,
+        category: true,
+        matchType: true,
+        createdAt: true,
+      },
+    });
+    return ownRequest;
+  }),
 
   updateCurrentUserMatchRequest: protectedProcedure
     .input(
@@ -227,6 +216,17 @@ export const matchRequestRouter = createTRPCRouter({
       });
       ee.emit("update", updatedRequest);
     }),
+
+  deleteCurrentUserMatchRequest: protectedProcedure.mutation(
+    async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const request = await ctx.prismaPostgres.matchRequest.delete({
+        where: { userId },
+      });
+
+      ee.emit("remove", request);
+    },
+  ),
 
   subscribeToAllRequests: protectedProcedure.subscription(() => {
     return observable<

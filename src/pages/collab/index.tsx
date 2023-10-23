@@ -7,9 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useState } from "react";
-import { z } from "zod";
+import { set, z } from "zod";
 import { toast } from "react-hot-toast";
-import { RouterOutputs, api } from "~/utils/api";
+import { RouterOutputs, RouterInputs, api } from "~/utils/api";
 
 import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
 import useMatchUsers from "~/hooks/useMatchUsers";
@@ -67,10 +67,18 @@ const MatchRequestPage = () => {
     });
 
   const { mutate: deleteMatchRequest } =
-    api.matchRequest.deleteCurrentUserMatchRequest.useMutation({});
+    api.matchRequest.deleteCurrentUserMatchRequest.useMutation({
+      onSuccess() {
+        toast.success("Successfully deleted match request");
+      },
+    });
 
   const { mutate: updateMatchRequest } =
-    api.matchRequest.updateCurrentUserMatchRequest.useMutation({});
+    api.matchRequest.updateCurrentUserMatchRequest.useMutation({
+      onSuccess() {
+        toast.success("Successfully updated match request");
+      },
+    });
 
   // subscprtions api -- START
   api.matchRequest.subscribeToAllRequests.useSubscription(undefined, {
@@ -123,11 +131,10 @@ const MatchRequestPage = () => {
     deleteMatchRequest();
   };
 
-  const handleUpdateRequest = () => {
-    updateMatchRequest({
-      difficulty: "EASY",
-      category: "xxx",
-    });
+  type UpdateObj =
+    RouterInputs["matchRequest"]["updateCurrentUserMatchRequest"];
+  const handleUpdateRequest = (request: UpdateObj) => {
+    updateMatchRequest(request);
   };
 
   const handleAcceptRequest = (userId1: string, userId2: string) => {
@@ -162,7 +169,8 @@ const MatchRequestPage = () => {
             {curUserMatchRequest ? (
               <CurrentUserMatchRequest
                 userRequest={curUserMatchRequest}
-                handleDelete={deleteMatchRequest}
+                handleUpdateRequest={handleUpdateRequest}
+                handleDelete={handleDeleteMatchRequest}
               />
             ) : isCreatingMatchRequest ? (
               <CreateMatchRequestForm
@@ -275,7 +283,6 @@ const createMatchRequestSchema = z.object({
   category: z.string().min(1),
   automaticMatching: z.boolean(),
 });
-
 type CreateMatchRequestData = z.infer<typeof createMatchRequestSchema>;
 type CreateMatchRequestFormProps = {
   onCreate: (data: CreateMatchRequestData) => void;
@@ -365,15 +372,31 @@ const CreateMatchRequestForm = ({
   );
 };
 
+type UpdateToMatchRequest =
+  RouterInputs["matchRequest"]["updateCurrentUserMatchRequest"];
 type MatchRequest = RouterOutputs["matchRequest"]["getCurrentUserRequest"];
 type CurrentUserMatchRequestProps = {
   userRequest: MatchRequest;
+  handleUpdateRequest: (request: UpdateToMatchRequest) => void;
   handleDelete: () => void;
 };
 const CurrentUserMatchRequest = ({
   userRequest,
+  handleUpdateRequest,
   handleDelete,
 }: CurrentUserMatchRequestProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  if (isEditing) {
+    return (
+      <UpdateMatchRequestForm
+        onUpdate={(data) => {
+          handleUpdateRequest(data);
+        }}
+        handleCancel={() => setIsEditing(false)}
+      />
+    );
+  }
+
   if (!userRequest) return <LoadingSpinner />;
   return (
     <div className="border border-slate-100 p-6 rounded-md text-start space-y-4">
@@ -401,7 +424,7 @@ const CurrentUserMatchRequest = ({
             <td className="w-auto text-right">
               <button
                 className="light:bg-blue-600 dark:bg-blue-400 px-2 rounded-md text-slate-800 hover:bg-slate-300"
-                onClick={() => toast.success("PLS ADD EDIT REQUEST")}
+                onClick={() => setIsEditing(true)}
               >
                 EDIT
               </button>
@@ -418,6 +441,94 @@ const CurrentUserMatchRequest = ({
         </tbody>
       </table>
     </div>
+  );
+};
+
+// Define the schema for the match request fields
+const updateMatchRequestSchema = z.object({
+  difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
+  category: z.string().min(1),
+});
+type UpdateMatchRequestData = z.infer<typeof createMatchRequestSchema>;
+type UpdateMatchRequestFormProps = {
+  onUpdate: (data: UpdateMatchRequestData) => void;
+  handleCancel: () => void;
+};
+const UpdateMatchRequestForm = ({
+  onUpdate,
+  handleCancel,
+}: UpdateMatchRequestFormProps) => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<UpdateMatchRequestData>({
+    resolver: zodResolver(updateMatchRequestSchema),
+  });
+
+  const onSubmit: SubmitHandler<CreateMatchRequestData> = async (data) => {
+    void onUpdate(data);
+  };
+
+  return (
+    <form
+      className="relative flex flex-col text-start items-stretch space-y-4 md:space-y-6 border p-4 rounded-md"
+      onSubmit={handleSubmit(onSubmit)}
+    >
+      <button
+        className="absolute top-2 right-2 text-gray-500 hover:text-red-500 transition transform hover:scale-110"
+        onClick={handleCancel}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+      <div>
+        <label className="self-start block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+          Difficulty
+        </label>
+        <select
+          className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm font-medium rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          {...register("difficulty")}
+        >
+          {difficulties.map((difficulty) => (
+            <option key={difficulty} value={difficulty}>
+              {difficulty.charAt(0) + difficulty.slice(1).toLowerCase()}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+          Category
+        </label>
+        <input
+          className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          type="text"
+          {...register("category")}
+        />
+        {errors.category && (
+          <span className="text-red-500">{errors.category.message}</span>
+        )}
+      </div>
+      <button
+        className="w-full text-white bg-slate-500 hover:bg-slate-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-slate-400 dark:hover:bg-slate-500 dark:focus:ring-primary-800"
+        type="submit"
+      >
+        Update Match Request
+      </button>
+    </form>
   );
 };
 
