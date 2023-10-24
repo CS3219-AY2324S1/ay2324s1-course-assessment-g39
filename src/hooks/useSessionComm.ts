@@ -25,14 +25,14 @@ export default function useSessionComm(
 
   const allSessionMessages = api.messages.getAllSessionMessages.useQuery({
     sessionId,
-  });
+  }).data;
 
   const addMessageMutation = api.messages.addMessage.useMutation();
 
   api.messages.subscribeToSessionMessages.useSubscription(
     { sessionId, userId },
     {
-      onData: (data) => {
+      onData: (data: Message) => {
         if (data.message) {
           if (data.userId !== userId)
             setChatState((state) => ({
@@ -40,19 +40,26 @@ export default function useSessionComm(
               partnerName: data.userName,
               partnerIsTyping: data.isTyping,
             }));
+
+          if (allSessionMessages)
+            allSessionMessages?.push({
+              ...data,
+              id: data.id!,
+              message: data.message,
+              createdAt: data.createdAt!,
+            });
+          // TODO: Fix autoscroll to bottom
+          const messagesContainer =
+            document.getElementById("messages-container");
+          if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }
         } else {
           setChatState((state) => ({
             ...state,
             partnerName: data.userName,
             partnerIsTyping: data.isTyping,
           }));
-        }
-
-        void allSessionMessages.refetch();
-        // TODO: Fix autoscroll to bottom
-        const messagesContainer = document.getElementById("messages-container");
-        if (messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
       },
       onError(err) {
@@ -100,7 +107,7 @@ export default function useSessionComm(
     : "";
 
   return [
-    allSessionMessages.data as Message[],
+    allSessionMessages as Message[],
     sendMessage,
     onTyping,
     chatState.currentMessage,
