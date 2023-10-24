@@ -319,14 +319,14 @@ const CreateMatchRequestForm = ({
     resolver: zodResolver(createMatchRequestSchema),
   });
 
-  const onSubmit: SubmitHandler<CreateMatchRequestData> = async (data) => {
-    void onCreate(data);
+  const onSubmit: SubmitHandler<CreateMatchRequestData> = (data) => {
+    onCreate(data);
   };
 
   return (
     <form
       className="relative flex flex-col text-start items-stretch space-y-4 md:space-y-6 border p-4 rounded-md"
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={(e) => void handleSubmit(onSubmit)(e)}
     >
       <button
         className="absolute top-2 right-2 text-gray-500 hover:text-red-500 transition transform hover:scale-110"
@@ -471,15 +471,16 @@ const UpdateMatchRequestForm = ({
     resolver: zodResolver(updateMatchRequestSchema),
   });
 
-  const onSubmit: SubmitHandler<CreateMatchRequestData> = async (data) => {
-    void onUpdate(data);
+  const onSubmit: SubmitHandler<CreateMatchRequestData> = (data) => {
+    onUpdate(data);
   };
 
   return (
     <form
       className="relative flex flex-col text-start items-stretch space-y-4 md:space-y-6 border p-4 rounded-md"
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={(e) => void handleSubmit(onSubmit)(e)}
     >
+      e
       <button
         className="absolute top-2 right-2 text-gray-500 hover:text-red-500 transition transform hover:scale-110"
         onClick={handleCancel}
