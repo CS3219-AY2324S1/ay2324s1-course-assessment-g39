@@ -480,7 +480,6 @@ const UpdateMatchRequestForm = ({
       className="relative flex flex-col text-start items-stretch space-y-4 md:space-y-6 border p-4 rounded-md"
       onSubmit={(e) => void handleSubmit(onSubmit)(e)}
     >
-      e
       <button
         className="absolute top-2 right-2 text-gray-500 hover:text-red-500 transition transform hover:scale-110"
         onClick={handleCancel}
