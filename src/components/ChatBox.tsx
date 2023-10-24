@@ -20,7 +20,7 @@ const Chatbox = ({
   ] = useSessionComm(sessionId, userId, userName);
 
   return (
-    <div className={className} style={{ height: "22rem" }}>
+    <div className={className}>
       <div className="messages-container overflow-y-auto flex flex-col h-5/6">
         {allSessionMessages?.map((message) => {
           return (
