@@ -139,13 +139,13 @@ enum MatchType {
 }
 
 model MatchRequest {
-    id          String        @id
-    userId      String        @unique
+    id          String        @id @default(cuid())
     cursor      Int           @unique @default(autoincrement())
-    name        String?
     difficulty  Difficulty
     category    String
     user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    // username    String
+    userId      String        @unique
     matchType   MatchType     @default(MANUAL)
     createdAt   DateTime      @default(now())
     joinRequest JoinRequest[]
@@ -153,11 +153,11 @@ model MatchRequest {
 
 model JoinRequest {
     id        Int          @id @default(autoincrement())
-    fromName  String
-    fromId    String // a user id todo(gab): rename this to something btr
-    toId      String
     fromUser  User         @relation(fields: [fromId], references: [id], onDelete: Cascade)
+    fromId    String       // a user id todo(gab): rename this to something btr
+    // fromName  String
     toRequest MatchRequest @relation(fields: [toId], references: [id], onDelete: Cascade)
+    toId      String
 
     @@unique([fromId, toId])
     @@index([fromId])

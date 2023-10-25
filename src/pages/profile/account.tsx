@@ -11,7 +11,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signOut, useSession } from "next-auth/react";
 import { LoadingPage } from "~/components/Loading";
-import QuestionSubmissions from "~/components/QuestionSubmissions";
 
 // TODO:
 // - add email verification
