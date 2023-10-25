@@ -48,12 +48,6 @@ export default function useSessionComm(
               message: data.message,
               createdAt: data.createdAt!,
             });
-          // TODO: Fix autoscroll to bottom
-          const messagesContainer =
-            document.getElementById("messages-container");
-          if (messagesContainer) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          }
         } else {
           setChatState((state) => ({
             ...state,
