@@ -1,53 +1,62 @@
-import { appRouter } from './api/root';
-import { applyWSSHandler } from '@trpc/server/adapters/ws';
-import http from 'http';
-import next from 'next';
-import { parse } from 'url';
-import ws from 'ws';
-import { createWSTRPCContext } from './api/trpc';
-import { env } from '~/env.mjs';
+import { appRouter } from "./api/root";
+import { applyWSSHandler } from "@trpc/server/adapters/ws";
+import http from "http";
+import next from "next";
+import { parse } from "url";
+import ws from "ws";
+import { createWSTRPCContext } from "./api/trpc";
+import { env } from "~/env.mjs";
 
-const port = parseInt(process.env.PORT ?? '3000', 10);
+const port = parseInt(process.env.PORT ?? "3000", 10);
 console.log(port);
-const dev = process.env.NODE_ENV !== 'production';
+const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-void app.prepare().then(() => {
-  console.log("Preparing server");
-  const server = http.createServer((req, res) => {
-    const proto = req.headers['x-forwarded-proto'];
-    if (proto && proto === 'http') {
-      // redirect to ssl
-      res.writeHead(303, {
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-        location: `https://` + req.headers.host + (req.headers.url ?? ''),
-      });
-      res.end();
-      return;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const parsedUrl = parse(req.url!, true);
-    void handle(req, res, parsedUrl);
-  });
-  console.log("Created http server");
-  // todo: Can't quite get a http server to pass through to the ws server
-  /// const wss = new ws.Server({ server });
-  const wss = new ws.Server({ port: Number(env.NEXT_PUBLIC_WS_PORT) ?? 3001 });
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const handler = applyWSSHandler({ wss, router: appRouter, createContext: createWSTRPCContext });
+void app
+  .prepare()
+  .then(() => {
+    console.log("Preparing server");
+    const server = http.createServer((req, res) => {
+      const proto = req.headers["x-forwarded-proto"];
+      if (proto && proto === "http") {
+        // redirect to ssl
+        res.writeHead(303, {
+          // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+          location: `https://` + req.headers.host + (req.headers.url ?? ""),
+        });
+        res.end();
+        return;
+      }
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const parsedUrl = parse(req.url!, true);
+      void handle(req, res, parsedUrl);
+    });
+    console.log("Created http server");
+    // todo: Can't quite get a http server to pass through to the ws server
+    /// const wss = new ws.Server({ server });
+    const wss = new ws.Server({
+      port: Number(env.NEXT_PUBLIC_WS_PORT) ?? 3002,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const handler = applyWSSHandler({
+      wss,
+      router: appRouter,
+      createContext: createWSTRPCContext,
+    });
 
-  process.on('SIGTERM', () => {
-    console.log('SIGTERM');
-    handler.broadcastReconnectNotification();
-  });
-  server.listen(port);
+    process.on("SIGTERM", () => {
+      console.log("SIGTERM");
+      handler.broadcastReconnectNotification();
+    });
+    server.listen(port);
 
-  console.log(
-    `> Server listening at http://localhost:${port} as ${
-      dev ? 'development' : process.env.NODE_ENV
-    }`,
-  );
-}).catch(e => {
-  console.log(e);
-});
+    console.log(
+      `> Server listening at http://localhost:${port} as ${
+        dev ? "development" : process.env.NODE_ENV
+      }`,
+    );
+  })
+  .catch((e) => {
+    console.log(e);
+  });
