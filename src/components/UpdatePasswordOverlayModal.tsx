@@ -39,12 +39,13 @@ const UpdatePasswordModal = ({
             <div className="relative lg:w-1/3">
               <div className="p-6 border-0 rounded-lg shadow-lg relative flex flex-col w-full bg-slate-900 text-slate-100  outline-none focus:outline-none space-y-6">
                 <button
-                  className="text-slate-300 absolute top-0 right-0 rounded-full background-transparent font-bold uppercase p-2 text-sm outline-none focus:outline-none"
+                  className="text-slate-300 absolute top-1 right-1 rounded-full font-bold p-2 text-sm outline-none focus:outline-none"
                   type="button"
                   onClick={() => closeModal()}
                 >
                   x
                 </button>
+                <h3>Change Password</h3>
                 <div className="relative flex-auto">
                   <form
                     className="flex flex-col items-stretch space-y-4 md:space-y-6"
@@ -68,7 +69,7 @@ const UpdatePasswordModal = ({
                     </div>
                     <div className="items-center py-1">
                       <input
-                        className="w-full uppercase text-slate-200 bg-slate-700 hover:bg-slate-900 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-slate-500 dark:hover:bg-slate-600 dark:focus:ring-primary-800"
+                        className="w-full text-slate-200 bg-slate-700 hover:bg-slate-900 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-slate-500 dark:hover:bg-slate-600 dark:focus:ring-primary-800"
                         type="submit"
                         value="Update Password"
                       />
