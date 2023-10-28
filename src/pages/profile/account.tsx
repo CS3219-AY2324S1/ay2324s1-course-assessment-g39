@@ -28,7 +28,7 @@ const password_z = z.string().min(6);
 const ProfilePage: NextPage = () => {
   const router = useRouter();
   const [isEditingUser, setIsEditingUser] = useState(false);
-  const [isEditingPassword, setIsEditingPassword] = useState(true);
+  const [isEditingPassword, setIsEditingPassword] = useState(false);
 
   // session is `null` until nextauth fetches user's session data
   const { data: session, update: updateSession } = useSession({
