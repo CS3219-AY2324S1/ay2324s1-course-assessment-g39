@@ -25,6 +25,7 @@ import { getLanguage } from "~/utils/utils";
 import { Tabs, TabList, Tab, TabPanel } from "react-tabs";
 import { useSession } from "next-auth/react";
 import Chatbox from "~/components/ChatBox";
+import Submission from "~/components/Submission";
 
 const SharedEditor = ({
   onSave,
@@ -225,7 +226,7 @@ const Room = () => {
   const { data: session, status } = useSession();
 
   function submit() {
-    // todo: submit code and store the results using the answer router
+    useQuestionObject.submitCode(codeSession[0].toString());
   }
 
   function runTest() {
@@ -267,6 +268,7 @@ const Room = () => {
             <TabList>
               <Tab>Output</Tab>
               <Tab>Chat</Tab>
+              {useQuestionObject.submissionStatus && <Tab>Submission</Tab>}
             </TabList>
             <TabPanel>
               <Output
@@ -282,6 +284,11 @@ const Room = () => {
                 className="row-span-2 w-full h-full p-3 flex flex-col text-black"
               />
             </TabPanel>
+            {useQuestionObject.submissionStatus && <TabPanel>
+              <Submission
+                {...useQuestionObject.submissionStatus}
+              />
+            </TabPanel>}
           </Tabs>
         </div>
         <div className="room-editor-wrapper bg-slate-600">

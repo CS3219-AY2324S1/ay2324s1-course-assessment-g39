@@ -14,100 +14,22 @@ import { Session } from "next-auth";
 import { api } from "~/utils/api";
 import axios from "axios";
 
-const createAnswerInput = z.object({
-  body: z.string(),
-  userId: z.string(),
-  environmentId: z.string(),
-});
-async function runAnswer(
-  answer: Answer,
-  ctx: {
-    session: Session | null;
-    prismaPostgres: PrismaPostgresT;
-    prismaMongo: PrismaMongoT;
-  },
-): Promise<{
-  ans: AnswerResult;
-}> {
-  const testCases = await prismaMongo.testCase.findMany({
-    where: {
-      environmentId: answer.envId,
-    },
-  });
-  let allCorrect = true;
-
-  const caller = appRouter.createCaller(ctx);
-  // todo: create  sumission batch
-  for (const testCase of testCases) {
-    const result = await caller.judge.runTestCase({
-      testCaseId: testCase.id,
-      source_code: answer.body,
-    });
-    if (result.status.id !== 3) {
-      allCorrect = false;
-    }
-  }
-  // todo: support other fields
-  return {
-    ans: allCorrect ? "ACCEPTED" : "WRONG_ANSWER",
-  };
-}
 
 const answerRouter = createTRPCRouter({
-  /**
-   * Route used to submit answers
-   */
-  submitAnswer: protectedProcedure
-    .input(createAnswerInput)
-    .mutation(async ({ ctx, input }) => {
-      const { body, environmentId } = input;
-      const user = ctx.session.user;
-      const env = await prismaMongo.environment.findUnique({
-        where: {
-          id: input.environmentId,
-        },
-      });
-      if (!env)
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid environment",
-        });
-      const answer = await prismaMongo.answer.create({
-        data: {
-          body,
-          envId: environmentId,
-        },
-      });
-
-      const languages = await axios
-        .get("http://localhost:2358/languages")
-        .then((res) => {
-          return res.data as { id: number; name: string }[];
-        });
-      const language = languages?.find((l) => l.id === env.languageId)?.name;
-      if (!language) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Invalid language",
-        });
-      }
-
-      // todo: generate the result from using some kind of code execution
-      const result = await runAnswer(answer, ctx);
-      const userAnswer = await prismaPostgres.questionAttempt.create({
-        data: {
-          answerId: answer.id,
-          questionId: env?.questionId,
-          language: language,
-          userId: user.id,
-          result: result.ans,
-        },
-      });
-      return userAnswer;
-    }),
-
   getUserSubmissions: protectedProcedure.query(async ({ ctx }) => {
     const user = ctx.session.user;
+    // update all the remaining submissions
+    const temporarySubmissions = await prismaPostgres.submission.findMany({
+      where: {
+        userId: ctx.session.user.id
+      }
+    });
+    const caller = appRouter.createCaller(ctx);
+    for (const tmpSubmssion of temporarySubmissions) {
+      await caller.judge.checkAnswer({
+        submissionId: tmpSubmssion.id
+      })
+    }
     const submissions = await prismaPostgres.questionAttempt.findMany({
       where: {
         userId: user.id,

@@ -117,6 +117,7 @@ model User {
     matchRequest        MatchRequest?
     joinRequest         JoinRequest[]
     sessionMessage      SessionMessage[]
+    Submission          Submission[]
 }
 
 enum Difficulty {
@@ -154,7 +155,7 @@ model MatchRequest {
 model JoinRequest {
     id        Int          @id @default(autoincrement())
     fromUser  User         @relation(fields: [fromId], references: [id], onDelete: Cascade)
-    fromId    String       // a user id todo(gab): rename this to something btr
+    fromId    String // a user id todo(gab): rename this to something btr
     // fromName  String
     toRequest MatchRequest @relation(fields: [toId], references: [id], onDelete: Cascade)
     toId      String
@@ -175,17 +176,27 @@ model QuestionAttempt {
     user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([userId, questionId, answerId])
-
 }
 
 model SessionMessage {
-    id          String  @id @default(cuid())
-    sessionId   String
+    id        String   @id @default(cuid())
+    sessionId String
     userId    String
     userName  String
-    message     String
-    createdAt   DateTime    @default(now())
-    user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    message   String
+    createdAt DateTime @default(now())
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([sessionId])
+}
+
+// temporary submission relation for judge0
+model Submission {
+    id       String @default(cuid())
+    token    String[]
+    userId   String
+    user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    answerId String
+
+    @@unique([userId, id])
 }
