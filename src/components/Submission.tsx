@@ -25,6 +25,7 @@ const Submission = (props: SubmissionProps) => {
         Number of tests: {props.numOfTests}
         <RatioBar ratio={props.passed / props.numOfTests} />
         {!props.complete && <div className="p-3"><LoadingIcon /></div>}
+        {props.complete && <div className="p-3">Status: {props.status}</div>}
     </div>
 };
 
