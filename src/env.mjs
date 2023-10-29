@@ -7,12 +7,12 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    POSTGRES_USER: z.string().min(1),
-    POSTGRES_PASSWORD: z.string().min(1),
-    POSTGRES_URL: z.string().url(),
-    MONGO_USER: z.string().min(1),
-    MONGO_PASSWORD: z.string().min(1),
-    MONGO_URL: z.string().url(),
+    // POSTGRES_USER: z.string().min(1),
+    // POSTGRES_PASSWORD: z.string().min(1),
+    // POSTGRES_URL: z.string().url(),
+    // MONGO_USER: z.string().min(1),
+    // MONGO_PASSWORD: z.string().min(1),
+    // MONGO_URL: z.string().url(),
     NODE_ENV: z.enum(["development", "test", "production"]),
     NEXTAUTH_SECRET:
       process.env.NODE_ENV === "production"
@@ -46,14 +46,14 @@ export const env = createEnv({
    * middlewares) or client-side so we need to destruct manually.
    */
   runtimeEnv: {
-    POSTGRES_USER: process.env.POSTGRES_USER,
-    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD,
-    POSTGRES_URL: process.env.POSTGRES_URL,
-    MONGO_USER: process.env.MONGO_USER,
-    MONGO_PASSWORD: process.env.MONGO_PASSWORD,
-    MONGO_URL: process.env.MONGO_URL,
+    // POSTGRES_USER: process.env.POSTGRES_USER,
+    // POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD,
+    // POSTGRES_URL: process.env.POSTGRES_URL,
+    // MONGO_USER: process.env.MONGO_USER,
+    // MONGO_PASSWORD: process.env.MONGO_PASSWORD,
+    // MONGO_URL: process.env.MONGO_URL,
     NODE_ENV: process.env.NODE_ENV,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    NEXTAUTH_SECRET: process.env.NEXT_AUTH_SECRET,
     NEXT_PUBLIC_WS_PORT: process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_WS_PORT : "3002",
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
