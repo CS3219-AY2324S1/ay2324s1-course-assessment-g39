@@ -96,7 +96,7 @@ export default function Questions() {
     [...changedQns].filter(hasChanges).map((id) => {
       updateQuestion({ id, ...viewQns.get(id) }, {});
     });
-    getAllQuery.invalidate().then(() => {
+    void getAllQuery.invalidate().then(() => {
       clearUpdated();
     });
   };
