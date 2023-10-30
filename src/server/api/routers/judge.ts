@@ -163,6 +163,23 @@ export const judgeRouter = createTRPCRouter({
     checkAnswer: protectedProcedure
       .input(z.object({ submissionId: z.string() }))
       .query(async ({ ctx, input }) => {
+        // check if question attempt already exists
+        const questionAttempt = await ctx.prismaPostgres.questionAttempt.findUnique({
+          where: {
+            userId_submissionId: {
+              userId: ctx.session.user.id,
+              submissionId: input.submissionId
+            }
+          }
+        })
+        if (questionAttempt) {
+          return {
+            status: questionAttempt.result,
+            complete: true,
+            numOfTests: questionAttempt.numOfTests,
+            passed: questionAttempt.passed
+          };
+        }
         const submission = await ctx.prismaPostgres.submission.findUnique({
           where: {
             userId_id: {
@@ -211,8 +228,12 @@ export const judgeRouter = createTRPCRouter({
             language: await getLanguageFromCode(answer.environment.languageId),
             result: currentStatus,
             questionId: answer.environment.questionId,
+            passed,
+            numOfTests: result.submissions.length,
+            submissionId: input.submissionId,
           }
         });
+
         await prismaPostgres.submission.delete({
           where: {
             userId_id: {

@@ -166,15 +166,20 @@ model JoinRequest {
 }
 
 model QuestionAttempt {
-    userId      String
-    questionId  String
-    language    String
-    answerId    String
-    attemptedOn DateTime     @default(now())
+    userId       String
+    questionId   String
+    language     String
+    answerId     String
+    attemptedOn  DateTime     @default(now())
     // storing result in postgres because its easier to access if we want to list the results
-    result      AnswerResult
-    user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    result       AnswerResult
+    user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    // numebr of passed test cases
+    passed       Int
+    numOfTests   Int
+    submissionId String
 
+    @@unique([userId, submissionId])
     @@unique([userId, questionId, answerId])
 }
 
@@ -192,10 +197,10 @@ model SessionMessage {
 
 // temporary submission relation for judge0
 model Submission {
-    id       String @default(cuid())
+    id       String   @default(cuid())
     token    String[]
     userId   String
-    user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     answerId String
 
     @@unique([userId, id])
