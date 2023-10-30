@@ -75,12 +75,9 @@ const ProfilePage: NextPage = () => {
       void updateSession(newUserDataForSession);
     },
     onError: (e) => {
-      const errMsg = e.data?.zodError?.fieldErrors.content;
       toast.error(`Failed to update user`);
-      if (errMsg?.[0]) {
-        console.log(errMsg[0]);
-      }
-      console.log(e.message);
+      // const zodErrMsg = e.data?.zodError?.fieldErrors.content;
+      // reference zodErrMsg?.[0] for zod errors and e.message for generic errors
     },
   });
 
@@ -92,12 +89,8 @@ const ProfilePage: NextPage = () => {
         toast.success(`Password updated`);
       },
       onError: (e) => {
-        const errMsg = e.data?.zodError?.fieldErrors.content;
         toast.error(`Failed to update password`);
-        if (errMsg?.[0]) {
-          console.log(errMsg[0]);
-        }
-        console.log(e.message);
+        // const zodErrMsg = e.data?.zodError?.fieldErrors.content;
       },
     });
 
