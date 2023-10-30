@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure, maintainerProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  publicProcedure,
+  maintainerProcedure,
+} from "~/server/api/trpc";
 import { difficulties } from "../../../types/global";
 
 const questionObject = z.object({
@@ -26,22 +30,18 @@ export const questionRouter = createTRPCRouter({
     return ctx.prismaMongo.question.findMany({
       select: {
         title: true,
-        id: true
-      }
-    })
+        id: true,
+      },
+    });
   }),
   addOne: maintainerProcedure
     .input(questionObject)
     .mutation(async ({ ctx, input }) => {
-      const q = await ctx.prismaMongo.question.create({
-        data: {
-          ...input,
-        },
+      await ctx.prismaMongo.question.create({
+        data: { ...input },
       });
-      return {
-        message: `Question created: ${input.title}`,
-        id: q.id,
-      };
+
+      return { title: input.title };
     }),
 
   updateOne: maintainerProcedure
@@ -49,13 +49,12 @@ export const questionRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { id, ...remainder } = input;
       await ctx.prismaMongo.question.update({
-        where: {
-          id: id,
-        },
+        where: { id: id },
         data: remainder,
       });
       return {
-        message: `Question updated: ${input.title}`,
+        title: input.title,
+        id: input.id,
       };
     }),
 
@@ -90,7 +89,7 @@ export const questionRouter = createTRPCRouter({
       });
     }),
 
-    getOneEnvironments: publicProcedure
+  getOneEnvironments: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -104,7 +103,7 @@ export const questionRouter = createTRPCRouter({
       });
     }),
 
-    getOneEnvironmentTestCases: publicProcedure
+  getOneEnvironmentTestCases: publicProcedure
     .input(
       z.object({
         id: z.string(),
@@ -117,17 +116,18 @@ export const questionRouter = createTRPCRouter({
         },
       });
     }),
-    deleteTestCase: maintainerProcedure
-      .input(z.object({ id: z.string() }))
-      .mutation(async ({ ctx, input }) => {
-        await ctx.prismaMongo.testCase.delete({
-          where: {
-            id: input.id
-          }
-        })
-      }),
-    createTestCase: maintainerProcedure
-      .input(z.object({ 
+  deleteTestCase: maintainerProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prismaMongo.testCase.delete({
+        where: {
+          id: input.id,
+        },
+      });
+    }),
+  createTestCase: maintainerProcedure
+    .input(
+      z.object({
         description: z.string(),
         hint: z.string(),
         test: z.string(),
@@ -135,13 +135,14 @@ export const questionRouter = createTRPCRouter({
         output: z.string().optional(),
         timeLimit: z.number(),
         memoryLimit: z.number(),
-        environmentId: z.string()
-       }))
-       .mutation(async ({ ctx, input }) => {
-        await ctx.prismaMongo.testCase.create({
-          data: {
-            ...input
-          }
-        })
-      })
+        environmentId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prismaMongo.testCase.create({
+        data: {
+          ...input,
+        },
+      });
+    }),
 });

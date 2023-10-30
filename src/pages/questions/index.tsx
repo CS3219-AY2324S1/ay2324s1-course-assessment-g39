@@ -10,6 +10,7 @@ import { StyledCheckbox } from "../../components/StyledCheckbox";
 import { makeMap } from "../../utils/utils";
 import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
+import assert from "assert";
 
 export default function Questions() {
   const { data: sessionData } = useSession();
@@ -42,31 +43,39 @@ export default function Questions() {
     return q1 && q2 && !equals(q1, q2);
   };
 
-  const addMutation = api.question.addOne.useMutation({
-    onError: (e, { title }) => {
-      console.log(title, e.message);
-      toast.error(`Failed to add question '${title}'`);
+  const { mutate: addQuestion } = api.question.addOne.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Successfully added: ${data.title}`);
+    },
+    onError: (e) => {
+      toast.error(`Failed to add`);
     },
   });
 
-  const updateMutation = api.question.updateOne.useMutation({
-    onError: (e, { title }) => {
-      console.log(title, e.message);
-      toast.error(`Failed to update question '${title}'`);
+  const { mutate: updateQuestion } = api.question.updateOne.useMutation({
+    onSuccess: ({ id, title }) => {
+      changedQns.delete(id) && setChangedQns(new Set(changedQns));
+      toast.success(`Successfully updated: ${title}`);
+    },
+    onError: (e) => {
+      console.error(e);
+      toast.error(`Failed to update`);
     },
   });
 
   const deleteMutation = api.question.deleteOne.useMutation({
+    onSuccess: () => {
+      toast.success(`Successfully deleted`);
+    },
     onError: (e, { id }) => {
       console.log(id, e.message);
-      toast.error(`Failed to delete question '${id}'`);
+      toast.error(`Failed to delete`);
     },
   });
 
   const pushNew = () => {
-    void addMutation.mutateAsync(new Question()).then(() => {
-      void getAllQuery.invalidate();
-    });
+    void addQuestion(new Question());
+    void getAllQuery.invalidate();
   };
 
   const saveUpdated = (id: string, q: Question) => {
@@ -85,25 +94,12 @@ export default function Questions() {
   };
 
   const pushUpdated = () => {
-    void Promise.all(
-      [...changedQns].map((id) => {
-        if (!hasChanges(id)) return;
-        return updateMutation.mutateAsync(
-          { id, ...viewQns.get(id) },
-          {
-            onSuccess: () => {
-              changedQns.delete(id) && setChangedQns(new Set(changedQns));
-            },
-          },
-        );
-      }),
-    )
-      .then(() => {
-        void getAllQuery.invalidate();
-      })
-      .then(() => {
-        clearUpdated();
-      });
+    [...changedQns].filter(hasChanges).map((id) => {
+      updateQuestion({ id, ...viewQns.get(id) }, {});
+    });
+    getAllQuery.invalidate().then(() => {
+      clearUpdated();
+    });
   };
 
   const saveDeleted = (id: string) => {
