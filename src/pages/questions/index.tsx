@@ -10,9 +10,12 @@ import { StyledCheckbox } from "../../components/StyledCheckbox";
 import { makeMap } from "../../utils/utils";
 import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
+import WarningModal from "~/components/WarningModal";
 
 export default function Questions() {
   const { data: sessionData } = useSession();
+  const { data: isConnectedToDB, isLoading: isConnectingToDB } =
+    api.question.dbHealthCheck.useQuery();
   const allowedToModify = sessionData?.user.role === "MAINTAINER";
   const getAllQuery = api.useContext().question.getAll;
 
@@ -148,12 +151,15 @@ export default function Questions() {
         <meta name="description" content="Supercharge your interview prep" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+      <WarningModal
+        msg="Not connected to db, please try again later"
+        showModal={!isConnectedToDB && !isConnectingToDB}
+      />
       <main className=" flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[var(--bg-1)] to-[var(--bg-2)]">
         <div className="container flex flex-col items-center justify-center px-12 py-28 max-w-screen-xl">
           <h1 className="text-5xl font-extrabold tracking-tight mb-12 text-[var(--txt-3)] sm:text-[5rem]">
             Peer<span className="text-[var(--txt-1)]">Prep</span>
           </h1>
-          {/* x - 2 - 4 - 1 - 2 */}
           <div className="text-[var(--txt-3)] w-full flex-1 flex flex-col rounded overflow-hidden">
             <div className="flex font-bold bg-black">
               <StyledCheckbox
