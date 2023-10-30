@@ -10,7 +10,6 @@ import { StyledCheckbox } from "../../components/StyledCheckbox";
 import { makeMap } from "../../utils/utils";
 import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
-import assert from "assert";
 
 export default function Questions() {
   const { data: sessionData } = useSession();
@@ -30,7 +29,6 @@ export default function Questions() {
         setViewQns(makeMap(mappedData, "id"));
       },
       onError: (e) => {
-        console.log(e.message);
         toast.error("Failed to fetch questions");
       },
     }).data ?? [],
@@ -58,7 +56,6 @@ export default function Questions() {
       toast.success(`Successfully updated: ${title}`);
     },
     onError: (e) => {
-      console.error(e);
       toast.error(`Failed to update`);
     },
   });
@@ -68,7 +65,6 @@ export default function Questions() {
       toast.success(`Successfully deleted`);
     },
     onError: (e, { id }) => {
-      console.log(id, e.message);
       toast.error(`Failed to delete`);
     },
   });
