@@ -224,21 +224,7 @@ const ProfilePage: NextPage = () => {
               </form>
               <div>
                 <button
-                  onClick={
-                    () => setIsEditingPassword(true)
-                    // const pw = prompt("enter new password");
-                    // if (pw == null) return;
-
-                    // const pwVerified = password_z.safeParse(pw);
-                    // if (pwVerified.success) {
-                    //   void updatePassword({
-                    //     id: userData.id,
-                    //     password: pwVerified.data,
-                    //   });
-                    // } else {
-                    //   toast.error("invalid password");
-                    // }
-                  }
+                  onClick={() => setIsEditingPassword(true)}
                   className="text-neutral-400 rounded-md underline pr-2"
                 >
                   change password
