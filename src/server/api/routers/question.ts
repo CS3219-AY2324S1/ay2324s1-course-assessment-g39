@@ -23,14 +23,6 @@ const questionUpdateObject = z.object({
 });
 
 export const questionRouter = createTRPCRouter({
-  dbHealthCheck: publicProcedure.query(async ({ ctx }) => {
-    try {
-      await ctx.prismaMongo.$connect();
-      return true;
-    } catch {
-      return false;
-    }
-  }),
   getAll: publicProcedure.query(({ ctx }) => {
     return ctx.prismaMongo.question.findMany();
   }),

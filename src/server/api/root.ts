@@ -8,6 +8,7 @@ import { codeSessionRouter } from "./routers/codeSession";
 import { judgeRouter } from "~/server/api/routers/judge";
 import { messagesRouter } from "./routers/communication";
 import { sharedCodeSessionRouter } from "./routers/sharedCodeSession";
+import { generalRouter } from "~/server/api/routers/general";
 
 /**
  * This is the primary router for your server.
@@ -15,6 +16,7 @@ import { sharedCodeSessionRouter } from "./routers/sharedCodeSession";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
+  general: generalRouter,
   matchRequest: matchRequestRouter,
   question: questionRouter,
   form: formRouter,
