@@ -183,7 +183,7 @@ model QuestionAttempt {
     @@unique([userId, questionId, answerId])
 }
 
-model SessionMessage {
+model SessionUserAndUserMessage {
     id        String   @id @default(cuid())
     sessionId String
     userId    String
