@@ -9,7 +9,7 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 const ee = new EventEmitter();
 
-export type Message = {
+export type UserAndUserMessage = {
   id?: string;
   sessionId: string;
   userId: string;
@@ -20,8 +20,8 @@ export type Message = {
 };
 
 // Methods include userId as well because users do not have unique names, so who is typing is decided by the userId
-export const messagesRouter = createTRPCRouter({
-  getAllSessionMessages: protectedProcedure
+export const userAndUserMessagesRouter = createTRPCRouter({
+  getAllSessionUserAndUserMessages: protectedProcedure
     .input(
       z.object({
         sessionId: z.string(),
@@ -30,7 +30,7 @@ export const messagesRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { sessionId } = input;
 
-      const messages = await ctx.prismaPostgres.sessionMessage.findMany({
+      const messages = await ctx.prismaPostgres.sessionUserAndUserMessage.findMany({
         where: {
           sessionId,
         },
@@ -42,7 +42,7 @@ export const messagesRouter = createTRPCRouter({
       return messages;
     }),
 
-  addMessage: protectedProcedure
+  addUserAndUserMessage: protectedProcedure
     .input(
       z.object({
         sessionId: z.string(),
@@ -54,7 +54,7 @@ export const messagesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { sessionId, userId, userName, message } = input;
 
-      const messageObject = await ctx.prismaPostgres.sessionMessage
+      const messageObject = await ctx.prismaPostgres.sessionUserAndUserMessage
         .create({
           data: {
             sessionId,
@@ -63,9 +63,6 @@ export const messagesRouter = createTRPCRouter({
             message,
           },
         })
-        .then((req) => {
-          return req;
-        });
 
       ee.emit("message", messageObject);
       ee.emit("typing", {
@@ -78,14 +75,14 @@ export const messagesRouter = createTRPCRouter({
       return messageObject;
     }),
 
-  subscribeToSessionMessages: protectedProcedure
+  subscribeToSessionUserAndUserMessages: protectedProcedure
     .input(z.object({ sessionId: z.string(), userId: z.string() }))
     .subscription(({ input }) => {
-      return observable<Message>((emit) => {
-        const onMessage = (data: Message) => {
+      return observable<UserAndUserMessage>((emit) => {
+        const onMessage = (data: UserAndUserMessage) => {
           if (data.sessionId === input.sessionId) emit.next(data);
         };
-        const onTyping = (data: Message) => {
+        const onTyping = (data: UserAndUserMessage) => {
           if (
             data.sessionId === input.sessionId &&
             data.userId !== input.userId

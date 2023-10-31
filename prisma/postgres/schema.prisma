@@ -102,21 +102,22 @@ model CodeSessionUserAuth {
 }
 
 model User {
-    id                  String                @id @default(cuid())
-    name                String?
-    email               String?               @unique
-    emailVerified       DateTime?
-    image               String?
-    password            String?
-    accounts            Account[]
-    sessions            Session[]
-    codeSpace           CodeSpace[]
-    attempts            QuestionAttempt[]
-    role                Role                  @default(USER)
-    codeSessionAuthRecv CodeSessionUserAuth[] @relation(name: "auth_receiver")
-    matchRequest        MatchRequest?
-    joinRequest         JoinRequest[]
-    sessionMessage      SessionMessage[]
+    id                              String                @id @default(cuid())
+    name                            String?
+    email                           String?               @unique
+    emailVerified                   DateTime?
+    image                           String?
+    password                        String?
+    accounts                        Account[]
+    sessions                        Session[]
+    codeSpace                       CodeSpace[]
+    attempts                        QuestionAttempt[]
+    role                            Role                  @default(USER)
+    codeSessionAuthRecv             CodeSessionUserAuth[] @relation(name: "auth_receiver")
+    matchRequest                    MatchRequest?
+    joinRequest                     JoinRequest[]
+    sessionUserAndUserMessages      SessionUserAndUserMessage[]
+    sessionUserAndAIMessages        SessionUserAndAIMessage[]  
 }
 
 enum Difficulty {
@@ -177,12 +178,24 @@ model QuestionAttempt {
 
 }
 
-model SessionMessage {
+model SessionUserAndUserMessage {
     id          String  @id @default(cuid())
     sessionId   String
     userId    String
     userName  String
     message     String
+    createdAt   DateTime    @default(now())
+    user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([sessionId])
+}
+
+model SessionUserAndAIMessage {
+    id          String  @id @default(cuid())
+    sessionId   String
+    userId      String
+    message     String
+    role        String
     createdAt   DateTime    @default(now())
     user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -6,8 +6,9 @@ import { formRouter } from "~/server/api/routers/form";
 import answerRouter from "./routers/answer";
 import { codeSessionRouter } from "./routers/codeSession";
 import { judgeRouter } from "~/server/api/routers/judge";
-import { messagesRouter } from "./routers/communication";
+import { userAndUserMessagesRouter } from "./routers/userAndUserComm";
 import { sharedCodeSessionRouter } from "./routers/sharedCodeSession";
+import { userAndAIMessagesRouter } from "./routers/userAndAIComm";
 
 /**
  * This is the primary router for your server.
@@ -22,7 +23,8 @@ export const appRouter = createTRPCRouter({
   answer: answerRouter,
   codeSession: codeSessionRouter,
   judge: judgeRouter,
-  messages: messagesRouter,
+  userAndUserMessages: userAndUserMessagesRouter,
+  userAndAIMessages: userAndAIMessagesRouter,
   sharedSession: sharedCodeSessionRouter,
 });
 
