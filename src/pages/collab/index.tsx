@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useState } from "react";
-import { set, z } from "zod";
+import { z } from "zod";
 import { toast } from "react-hot-toast";
 import { RouterOutputs, RouterInputs, api } from "~/utils/api";
 
