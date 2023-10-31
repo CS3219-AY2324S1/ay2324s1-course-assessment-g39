@@ -47,7 +47,6 @@ const sharedCodeSessions: Map<string, string> = new Map<string, string>();
 
 const ee = new EventEmitter();
 export const sharedCodeSessionRouter = createTRPCRouter({
-
     sharedCodeSessionSubscription: protectedProcedure
         .subscription(({ ctx }) => {
             return observable<{ user1: string, user2: string, sessionId: string }>((emit) => {
