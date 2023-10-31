@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { useState } from "react";
+import toast from "react-hot-toast";
 import type { UserAndAIMessage } from "~/server/api/routers/userAndAIComm";
 import { api } from "~/utils/api";
 
@@ -31,7 +32,17 @@ export default function useAIComm(
     }).data;
 
   const addMessageMutation =
-    api.userAndAIMessages.addUserAndAIMessage.useMutation();
+    api.userAndAIMessages.addUserAndAIMessage.useMutation({
+      onError: (e) => {
+        toast.error("Failed to send message: " + e.message);
+        setChatState((state) => {
+          return {
+            ...state,
+            isAIResponding: false,
+          };
+        });
+      },
+    });
 
   api.userAndAIMessages.subscribeToSessionUserAndAIMessages.useSubscription(
     { sessionId, userId },

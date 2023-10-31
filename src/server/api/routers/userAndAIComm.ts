@@ -8,6 +8,7 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import OpenAI from "openai";
 import type { ChatCompletionRole } from "openai/resources";
+import { TRPCError } from "@trpc/server";
 
 const ee = new EventEmitter();
 const openai = new OpenAI({
@@ -80,30 +81,39 @@ export const userAndAIMessagesRouter = createTRPCRouter({
           },
         });
 
-      const response = await openai.chat.completions.create({
-        messages: currentSessionMessages.map((message) => {
-          return {
-            role: message.role as ChatCompletionRole,
-            content: message.message,
-          };
-        }),
-        model: "gpt-3.5-turbo",
-      });
-
-      const aiMessage = response.choices[0]?.message;
-
-      if (aiMessage) {
-        const aiMessageObject =
-          await ctx.prismaPostgres.sessionUserAndAIMessage.create({
-            data: {
-              sessionId,
-              userId,
-              message: aiMessage.content!,
-              role: aiMessage.role,
-            },
+      const response = await openai.chat.completions
+        .create({
+          messages: currentSessionMessages.map((message) => {
+            return {
+              role: message.role as ChatCompletionRole,
+              content: message.message,
+            };
+          }),
+          model: "gpt-3.5-turbo",
+        })
+        .catch((errorJsonObj) => {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: errorJsonObj.error.message,
           });
+        });
 
-        ee.emit("aiMessage", aiMessageObject);
+      if (response) {
+        const aiMessage = response.choices[0]?.message;
+
+        if (aiMessage) {
+          const aiMessageObject =
+            await ctx.prismaPostgres.sessionUserAndAIMessage.create({
+              data: {
+                sessionId,
+                userId,
+                message: aiMessage.content!,
+                role: aiMessage.role,
+              },
+            });
+
+          ee.emit("aiMessage", aiMessageObject);
+        }
       }
 
       return messageObject;
