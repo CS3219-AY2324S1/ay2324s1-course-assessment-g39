@@ -13,7 +13,7 @@ export class Question {
 
 // todo: dup code
 export type ModifyQuestionProps = {
-  questionTitleList: { id: string; title: string }[];
+  questionTitleList: { id: string; title: string; category: string; difficulty: Difficulty }[];
   setQuestionId: (id: string) => void;
   currentQuestion: Question | null | undefined;
 };

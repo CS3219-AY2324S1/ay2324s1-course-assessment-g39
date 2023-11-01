@@ -31,6 +31,8 @@ export const questionRouter = createTRPCRouter({
       select: {
         title: true,
         id: true,
+        category: true,
+        difficulty: true,
       },
     });
   }),
