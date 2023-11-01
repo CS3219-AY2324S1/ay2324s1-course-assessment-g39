@@ -9,7 +9,7 @@ const AIBox = ({
   sessionId: string;
   userId: string;
   userName: string;
-  className?: string | undefined;
+  className?: string;
 }) => {
   const [
     allSessionMessages,
