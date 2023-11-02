@@ -26,8 +26,12 @@ export const questionRouter = createTRPCRouter({
   getAll: publicProcedure.query(({ ctx }) => {
     return ctx.prismaMongo.question.findMany();
   }),
+  /**
+   * Used to get only the first 100 questions
+   */
   getAllReduced: publicProcedure.query(({ ctx }) => {
     return ctx.prismaMongo.question.findMany({
+      take: 100,
       select: {
         title: true,
         id: true,
@@ -36,6 +40,51 @@ export const questionRouter = createTRPCRouter({
       },
     });
   }),
+  getAllReducedInfinite: publicProcedure
+    .input(z.object({ cursor: z.string().optional(), limit: z.number().min(1).max(100).nullable(), titleFilter: z.string().optional() }))
+    .query(
+      async ({input, ctx}) => {
+        const limit = input.limit ?? 50;
+        const totalCount = await ctx.prismaMongo.question.count({
+          where: input.titleFilter ? {
+            OR: [
+              {
+                title: {
+                  contains: input.titleFilter
+                },
+              },
+              {
+                body: {
+                  contains: input.titleFilter
+                }
+              }
+            ]
+          } : undefined,
+        });
+        const items = await ctx.prismaMongo.question.findMany({
+          take: limit + 1,
+          where: input.titleFilter ? {
+            title: {
+              contains: input.titleFilter
+            }
+          } : undefined,
+          cursor: input.cursor ? {
+            title: input.cursor
+          } : undefined,
+          orderBy: {
+            title: 'asc'
+          }
+        });
+        let nextCursor: string | undefined = undefined;
+        if (items.length === limit + 1) {
+          const top = items.pop();
+          nextCursor = top!.title;
+        }
+        return {
+          items, nextCursor, totalCount
+        };
+      }
+    ),
   addOne: maintainerProcedure
     .input(questionObject)
     .mutation(async ({ ctx, input }) => {
