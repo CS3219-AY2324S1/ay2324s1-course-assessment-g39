@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { CodeOutput, Language, Question, TestCase } from "~/types/global";
+import { CodeOutput, Difficulty, Language, Question, TestCase } from "~/types/global";
 import { api } from "~/utils/api";
 
 type UseQuestionsReturn = {
@@ -9,7 +9,7 @@ type UseQuestionsReturn = {
   /**
    * List of questions
    */
-  questionTitleList: { title: string; id: string }[];
+  questionTitleList: { title: string; id: string; category: string; difficulty: Difficulty }[];
   testCaseIdList: { description: string; id: string }[];
   /**
    * The current selected question in formated markdown
