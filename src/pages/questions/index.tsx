@@ -22,19 +22,18 @@ function Questions() {
   const [changedQns, setChangedQns] = useState(new Set<string>());
   const [deletedQns, setDeletedQns] = useState(new Set<string>());
 
-  const questionsQuery = api.question.getAll.useQuery(undefined, {
-    onSuccess: (data) => {
-      const mappedData = data.map((q) => ({
-        ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
-      }));
-      setViewQns(makeMap(mappedData, "id"));
-    },
-    onError: (e) => {
-      toast.error("Failed to fetch questions");
-    },
-  });
   const questions = makeMap(
-    questionsQuery.data ?? [],
+    api.question.getAll.useQuery(undefined, {
+      onSuccess: (data) => {
+        const mappedData = data.map((q) => ({
+          ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
+        }));
+        setViewQns(makeMap(mappedData, "id"));
+      },
+      onError: (e) => {
+        toast.error("Failed to fetch questions");
+      },
+    }).data ?? [],
     "id",
   );
 
@@ -53,13 +52,13 @@ function Questions() {
     },
   });
 
-  const { mutate: updateQuestion } = api.question.updateOne.useMutation({
+  const { mutateAsync: updateQuestionAsync } = api.question.updateOne.useMutation({
     onSuccess: ({ id, title }) => {
       changedQns.delete(id) && setChangedQns(new Set(changedQns));
       toast.success(`Successfully updated: ${title}`);
     },
     onError: (e) => {
-      toast.error(`Failed to update`);
+      toast.error(`Failed to update, possible unique violation`);
     },
   });
 
@@ -93,12 +92,25 @@ function Questions() {
   };
 
   const pushUpdated = () => {
-    [...changedQns].filter(hasChanges).map((id) => {
-      updateQuestion({ id, ...viewQns.get(id) }, {});
-    });
-    void getAllQuery.invalidate().then(() => {
-      clearUpdated();
-    });
+    void Promise.all(
+      [...changedQns].map((id) => {
+        if (!hasChanges(id)) return;
+        return updateQuestionAsync(
+          { id, ...viewQns.get(id) },
+          {
+            onSuccess: () => {
+              changedQns.delete(id) && setChangedQns(new Set(changedQns));
+            },
+          },
+        ).catch((e) => {});
+      }),
+    )
+      .then(() => {
+        void getAllQuery.invalidate();
+      })
+      .then(() => {
+        clearUpdated();
+      });
   };
 
   const saveDeleted = (id: string) => {
