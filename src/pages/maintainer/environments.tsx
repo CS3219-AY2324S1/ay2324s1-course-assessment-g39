@@ -169,7 +169,7 @@ const CreateEnvironment = () => {
     if (useQuestionObject.environment?.languageId === formData.languageId) return;
     if (!inEnvironments(formData.languageId)) {
       const { languageId, ...empty } = emptyFormState;
-      setFormData(empty);
+      setFormDataWrapper(empty);
       return;
     }
     useQuestionObject.setCurrentLanguage(useQuestionObject.languages.find((val) => val.id === formData.languageId)!);
