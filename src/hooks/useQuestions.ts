@@ -39,7 +39,7 @@ type UseQuestionsReturn = {
   currentLanguage: Language | undefined;
   setCurrentLanguage: (lang: Language) => void;
   environmentId: string;
-  environment: Environment | undefined;
+  environment: Environment | undefined | null;
   /**
    * The submission status
    */
@@ -225,6 +225,10 @@ export default function useQuestions(): UseQuestionsReturn {
       });
     },
     submissionStatus: tempSubmissionStatus,
-    environment: currentEnvironment
+    environment: currentEnvironment ?  {
+      ...currentEnvironment,
+      prepend: currentEnvironment?.prepend ?? "",
+      append: currentEnvironment?.append ?? "",
+    } : undefined
   };
 }

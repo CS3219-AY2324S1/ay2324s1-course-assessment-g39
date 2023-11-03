@@ -58,7 +58,7 @@ export type Environment = {
   template: string;
   append: string;
   prepend: string;
-  languageId: string;
+  languageId: number;
   questionId: string;
 }
 
