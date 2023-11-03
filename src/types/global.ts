@@ -54,4 +54,12 @@ export type CodeOutput = {
   status: { id: number; description: string };
 };
 
+export type Environment = {
+  template: string;
+  append: string;
+  prepend: string;
+  languageId: string;
+  questionId: string;
+}
+
 export type QuestionMap = Map<string, Question>;

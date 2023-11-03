@@ -50,9 +50,11 @@ const judgeStatusCodeMap = new Map<number, AnswerResult>([
 
 
 
-function fromStatusCode(code: number): AnswerResult | "WAITING" {
+function fromStatusCode(code: number): AnswerResult | "WAITING" | "PROCESSING" {
   
-  
+  if (code === 2) {
+    return "PROCESSING";
+  }
   if (code == 1 || code == 0) {
     return "WAITING";
   }
@@ -206,7 +208,7 @@ export const judgeRouter = createTRPCRouter({
         let passed = 0;
         for (const submission of result.submissions) {
           const status = fromStatusCode(submission.status.id);
-          if (status === "WAITING") {
+          if (status === "WAITING" || status === "PROCESSING") {
             return {
               complete: false,
               passed,
@@ -247,7 +249,8 @@ export const judgeRouter = createTRPCRouter({
           status: currentStatus,
           passed,
           complete: true,
-          numOfTests: result.submissions.length
+          numOfTests: result.submissions.length,
+          values: result,
         }
 
       }),
@@ -286,13 +289,14 @@ export const judgeRouter = createTRPCRouter({
           }));
 
           
-          const result = (await axios
+          const request = (await axios
           .post(
             "http://localhost:2358/submissions/batch?base64_encoded=false",
             {
               submissions: judgeInput
             },
-          )).data as BatchSubmissionOutput;
+          ))
+          const result = request.data as BatchSubmissionOutput;
           const answer = await prismaMongo.answer.create({
             data: {
               body: source_code,

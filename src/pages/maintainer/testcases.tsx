@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import QuestionView from "~/components/QuestionView";
 import { StyledButton } from "~/components/StyledButton";
 import { StyledTextarea } from "~/components/StyledInput";
+import QuestionToggleModal from "~/components/code/QuestionToggleModal";
 import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
 import useQuestions from "~/hooks/useQuestions";
 import {
@@ -30,6 +31,7 @@ const Toolbar = ({
   modifyTestCaseProps,
   submit,
   deleteTestCase,
+  onUpdate,
 }: {
   judgeLanguages: Language[];
   currentLanguage: Language | undefined;
@@ -38,9 +40,10 @@ const Toolbar = ({
   modifyTestCaseProps: ModifyTestCaseProps;
   submit: () => void;
   deleteTestCase: () => void;
+  onUpdate: () => void;
 }) => {
   return (
-    <div className="bg-slate-900 text-white items-center p-3 grid grid-cols-8 gap-x-5">
+    <div className="bg-slate-900 overflow-x-auto overflow-y-clip text-white items-center p-3 grid grid-cols-9 gap-x-5">
       <label className="flex flex-row col-span-2">
         Language&nbsp;
         <select
@@ -62,23 +65,9 @@ const Toolbar = ({
         </select>
       </label>
       <label className="flex flex-row col-span-2">
-        Question&nbsp;
-        <select
-          name="question"
-          className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          value={modifyQuestionProps.currentQuestion?.id}
-          onChange={(e) => {
-            modifyQuestionProps.setQuestionId(e.target.value);
-          }}
-        >
-          {modifyQuestionProps.questionTitleList.map((question) => {
-            return (
-              <option key={question.id} value={question.id}>
-                {question.title}
-              </option>
-            );
-          })}
-        </select>
+      <label className="flex flex-row col-span-2">
+        <QuestionToggleModal questionTitleList={modifyQuestionProps.questionTitleList} setQuestionId={modifyQuestionProps.setQuestionId} />
+      </label>
       </label>
       <div className="flex flex-row col-span-2">
         <label>
@@ -101,7 +90,8 @@ const Toolbar = ({
           </select>
         </label>
       </div>
-      <div className="flex flex-row col-span-2 gap-2">
+      <div className="flex flex-row col-span-3 gap-2">
+        <StyledButton onClick={onUpdate}>Update current testcase</StyledButton>
         <StyledButton onClick={submit}>Create new testcase</StyledButton>
         <StyledButton onClick={deleteTestCase}>
           Delete selected test case
@@ -123,9 +113,22 @@ type FormState = {
   withOutput: boolean;
 };
 
+const emptyFormState: FormState = {
+  description: "",
+  hint: "",
+  test: "",
+  input: "",
+  output: "",
+  timeLimit: 1,
+  memoryLimit: 4096,
+  withInput: false,
+  withOutput: false,
+};
+
 // maintainer route to add and delete test cases
 const CreateTestCase = () => {
   const useQuestionObject = useQuestions();
+  const testCaseCtx = api.useContext().question.getOneEnvironmentTestCases;
   const { data: session } = useSession();
   
   const router = useRouter();
@@ -135,21 +138,11 @@ const CreateTestCase = () => {
       void router.push("/");
     }
   }, [router]);
-  const [formData, setFormData] = useState<FormState>({
-    description: "",
-    hint: "",
-    test: "",
-    input: "",
-    output: "",
-    timeLimit: 1,
-    memoryLimit: 4096,
-    withInput: false,
-    withOutput: false,
-  });
+  const [formData, setFormData] = useState<FormState>(emptyFormState);
   const deleteTestCaseMutation = api.question.deleteTestCase.useMutation({
     onSuccess(data) {
       // refresh test case data
-      router.reload();
+       void testCaseCtx.invalidate();
     },
     onError(data) {
       toast.error("Failed to delete");
@@ -163,12 +156,37 @@ const CreateTestCase = () => {
   };
   const createTestCaseMutation = api.question.createTestCase.useMutation({
     onSuccess(data) {
-      router.reload()
+      void testCaseCtx.invalidate();
     },
     onError(data) {
-      toast.error(data.message)
+      toast.error("Failed to create test case")
     }
   });
+
+  const currentTestCase = api.question.getTestCase.useQuery({
+    testCaseId: useQuestionObject.currentTestCase?.id ?? ""
+  }, {
+    enabled: useQuestionObject.currentTestCase !== undefined
+  });
+
+  useEffect(() => {
+    if (!currentTestCase.data) {
+      setFormData(emptyFormState);
+      return;
+    }
+    setFormData({
+      description: currentTestCase.data.description,
+      hint: currentTestCase.data.hint ?? "",
+      test: currentTestCase.data.test ?? "",
+      input: currentTestCase.data.input ?? "",
+      output: currentTestCase.data.output ?? "",
+      timeLimit: currentTestCase.data.timeLimit ?? 1,
+      memoryLimit: currentTestCase.data.memoryLimit ?? 4096,
+      withInput: currentTestCase.data.input !==  null,
+      withOutput: currentTestCase.data.output !== null,
+    });
+  }, [useQuestionObject.currentTestCase, currentTestCase.data])
+
 
   /**
    * Run the mutation
@@ -191,6 +209,26 @@ const CreateTestCase = () => {
       id: useQuestionObject.currentTestCase.id,
     });
   }
+  const updateTestCaseMutation = api.question.updateTestCase.useMutation({
+    onSuccess() {
+      void testCaseCtx.invalidate();
+    },
+    onError() {
+      toast.error("Failed to update")
+    }
+  });
+  function onUpdate() {
+    if (!currentTestCase.data?.id) {
+      toast.error("No test case selected");
+      return;
+    }
+    updateTestCaseMutation.mutate({
+      ...formData,
+      input: formData.withInput ? formData.input : null,
+      output: formData.withOutput ? formData.output : null, 
+      id: currentTestCase.data.id,
+    })
+  }
   return (
     <div className="flex flex-col bg-slate-600 h-screen text-white">
       <Toolbar
@@ -202,6 +240,7 @@ const CreateTestCase = () => {
           setQuestionId: useQuestionObject.setQuestionId,
           currentQuestion: useQuestionObject.currentQuestion,
         }}
+        onUpdate={onUpdate}
         modifyTestCaseProps={{
           testCaseIdList: useQuestionObject.testCaseIdList,
           setTestCaseId: useQuestionObject.setTestCaseId,
@@ -337,4 +376,4 @@ const CreateTestCase = () => {
   );
 };
 
-export default WithAuthWrapper(CreateTestCase);
+export default WithAuthWrapper(CreateTestCase, true);

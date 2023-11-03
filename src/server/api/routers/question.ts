@@ -6,6 +6,8 @@ import {
   maintainerProcedure,
 } from "~/server/api/trpc";
 import { difficulties } from "../../../types/global";
+import { prismaMongo } from "~/server/db";
+import { TRPCError } from "@trpc/server";
 
 const questionObject = z.object({
   title: z.string(),
@@ -190,10 +192,54 @@ export const questionRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+
+      // check if environment exists
+      const env = await prismaMongo.environment.findUnique({
+        where: {
+          id: input.environmentId
+        }
+      });
+      if (!env) {
+        throw new TRPCError({
+          message: "Failed to update",
+          code: "BAD_REQUEST"
+        });
+      }
+      
       await ctx.prismaMongo.testCase.create({
         data: {
           ...input,
         },
       });
+    }),
+    getTestCase: maintainerProcedure.input(z.object({
+      testCaseId: z.string(),
+    }))
+    .query(async ({ ctx, input: { testCaseId } }) => {
+      return await ctx.prismaMongo.testCase.findUnique({
+        where: {
+          id: testCaseId
+        }
+      });
+    }),
+    updateTestCase: maintainerProcedure.input(z.object({
+      description: z.string().optional(),
+      hint: z.string().optional(),
+      test: z.string().optional(),
+      input: z.string().optional().nullable(),
+      output: z.string().optional().nullable(),
+      timeLimit: z.number().optional(),
+      memoryLimit: z.number().optional(),
+      environmentId: z.string().optional(),
+      id: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...updateFields } = input;
+      return await ctx.prismaMongo.testCase.update({
+        where: {
+          id
+        },
+        data: updateFields
+      })
     }),
 });

@@ -1,3 +1,4 @@
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -9,6 +10,8 @@ const NavBar = () => {
   };
 
   const closeDropdown = () => setIsDropdownOpen(false);
+
+  const { data: session } = useSession(); 
 
   return (
     <div className="relative bg-slate-800 py-3">
@@ -71,6 +74,16 @@ const NavBar = () => {
           >
             SignIn
           </Link>
+          {
+            session?.user.role === "MAINTAINER" && 
+            <Link
+            href="/maintainer/testcases"
+            onClick={closeDropdown}
+            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-4"
+          >
+            Test cases
+          </Link>
+          }
         </div>
       )}
     </div>
