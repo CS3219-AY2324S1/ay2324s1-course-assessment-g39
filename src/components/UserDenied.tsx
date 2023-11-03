@@ -5,7 +5,7 @@ import { LoadingPage } from "./Loading";
 export default function UserDenied() {
   return (
     <PageLayout>
-      <LoadingPage />
+      User Denied
     </PageLayout>
   )
 }

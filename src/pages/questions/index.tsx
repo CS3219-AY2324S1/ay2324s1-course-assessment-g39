@@ -11,8 +11,9 @@ import { makeMap } from "../../utils/utils";
 import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import WarningModal from "~/components/WarningModal";
+import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
 
-export default function Questions() {
+function Questions() {
   const { data: sessionData } = useSession();
   const allowedToModify = sessionData?.user.role === "MAINTAINER";
   const getAllQuery = api.useContext().question.getAll;
@@ -21,18 +22,19 @@ export default function Questions() {
   const [changedQns, setChangedQns] = useState(new Set<string>());
   const [deletedQns, setDeletedQns] = useState(new Set<string>());
 
+  const questionsQuery = api.question.getAll.useQuery(undefined, {
+    onSuccess: (data) => {
+      const mappedData = data.map((q) => ({
+        ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
+      }));
+      setViewQns(makeMap(mappedData, "id"));
+    },
+    onError: (e) => {
+      toast.error("Failed to fetch questions");
+    },
+  });
   const questions = makeMap(
-    api.question.getAll.useQuery(undefined, {
-      onSuccess: (data) => {
-        const mappedData = data.map((q) => ({
-          ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
-        }));
-        setViewQns(makeMap(mappedData, "id"));
-      },
-      onError: (e) => {
-        toast.error("Failed to fetch questions");
-      },
-    }).data ?? [],
+    questionsQuery.data ?? [],
     "id",
   );
 
@@ -225,3 +227,5 @@ export default function Questions() {
     </>
   );
 }
+
+export default WithAuthWrapper(Questions);
