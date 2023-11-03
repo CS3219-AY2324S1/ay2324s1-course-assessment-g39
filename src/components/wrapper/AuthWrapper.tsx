@@ -5,8 +5,7 @@ import { useRouter } from "next/router";
 import UserDenied from "~/components/UserDenied";
 import { LoadingPage } from "../Loading";
 import { PageLayout } from "../Layout";
-import { useEffect } from "react";
-import toast from "react-hot-toast";
+import { useEffect, useState } from "react";
 
 type Props = {
   children: React.ReactElement;
@@ -23,21 +22,20 @@ type Props = {
  */
 
 export const AuthWrapper = ({ children, maintainerOnly }: Props): JSX.Element => {
-  const { status: sessionStatus, data: session } = useSession({ required: true });
+  const { status: sessionStatus, data: session, update } = useSession({ required: true });
   const authorized = sessionStatus === "authenticated";
   const isMaintainer = session?.user.role === "MAINTAINER";
   const loading = sessionStatus === "loading";
-  const router = useRouter();
-
+  const [updateLoading, setUpdateLoading] = useState(true);
   useEffect(() => {
-    if (session && maintainerOnly && !isMaintainer) {
-      toast.error("Maintainer only route");
-      void router.back();
-    }
-  }, [session]);
+    // force update of session token
+    void update().then(() => {
+      setUpdateLoading(false);
+    });
+  }, []);
 
   // if the user refreshed the page or somehow navigated to the protected page
-  if (loading || maintainerOnly && !isMaintainer) {
+  if (loading || updateLoading) {
     return (
       <>
         <PageLayout>
@@ -45,6 +43,9 @@ export const AuthWrapper = ({ children, maintainerOnly }: Props): JSX.Element =>
         </PageLayout>
       </>
     );
+  }
+  if (maintainerOnly && !isMaintainer) {
+    return <UserDenied />
   }
 
   // if the user is authorized, render the page
