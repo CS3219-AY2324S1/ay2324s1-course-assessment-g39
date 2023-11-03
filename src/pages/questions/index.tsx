@@ -246,4 +246,4 @@ function Questions() {
   );
 }
 
-export default Questions;
+export default WithAuthWrapper(Questions);
