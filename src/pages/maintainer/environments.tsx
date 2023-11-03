@@ -112,9 +112,6 @@ const CreateEnvironment = () => {
   };
 
 
-  useEffect(() => {
-    useQuestionObject.currentLanguage && setFormDataWrapper({ languageId: useQuestionObject.currentLanguage.id });
-  }, [useQuestionObject.currentLanguage]);
   const updateEnvMutation = api.environment.upsertEnvironment.useMutation(
     {
         onError() {
@@ -159,27 +156,25 @@ const CreateEnvironment = () => {
   }
 
 
+
   useEffect(() => {
     if (useQuestionObject.environment) {
         setFormData({
             ...useQuestionObject.environment,
         });
     }
-  }, [useQuestionObject.environment])
+  }, [useQuestionObject.environmentId]);
 
-  
-  // update the language in useQuestions if it is valid
   useEffect(() => {
-    if (inEnvironments(formData.languageId)) {
-        useQuestionObject.setCurrentLanguage(useQuestionObject.languages
-            .find((val) => val.id === formData.languageId)!)
-        return;
+    if (useQuestionObject.environment?.languageId === formData.languageId) return;
+    if (!inEnvironments(formData.languageId)) {
+      const { languageId, ...empty } = emptyFormState;
+      setFormData(empty);
+      return;
     }
-    if (useQuestionObject.languages.length === 0) return;
-    const { languageId, ...withoutLang } = emptyFormState;
-    setFormDataWrapper(withoutLang);
+    useQuestionObject.setCurrentLanguage(useQuestionObject.languages.find((val) => val.id === formData.languageId)!);
 
-  }, [formData.languageId, useQuestionObject.languages, useQuestionObject.environment])
+  }, [formData.languageId])
 
   return (
     <div className="flex flex-col bg-slate-600 h-screen text-white">
