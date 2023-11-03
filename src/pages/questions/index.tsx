@@ -102,7 +102,9 @@ function Questions() {
               changedQns.delete(id) && setChangedQns(new Set(changedQns));
             },
           },
-        ).catch((e) => {});
+        ).catch((e) => {
+          return;
+        });
       }),
     )
       .then(() => {
