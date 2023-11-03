@@ -37,7 +37,7 @@ const SelectPageDiv = ({
   useEffect(() => {
     // update the pages range
     const newPages = [];
-    const startPage = currentPage - offset < 0 ? 0 : currentPage - offset;
+    const startPage = Math.max(currentPage - offset, 0);
     for (
       let i = startPage;
       i < totalPages && i < startPage + actualRange;
