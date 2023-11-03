@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signOut, useSession } from "next-auth/react";
 import { LoadingPage } from "~/components/Loading";
+import UpdatePasswordModal from "~/components/UpdatePasswordOverlayModal";
 
 // TODO:
 // - add email verification
@@ -23,16 +24,18 @@ const email_z = z.string().email().min(1);
 const emailVerified_z = z.date().nullable();
 const image_z = z.string().nullable();
 const password_z = z.string().min(6);
+
 const ProfilePage: NextPage = () => {
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingUser, setIsEditingUser] = useState(false);
+  const [isEditingPassword, setIsEditingPassword] = useState(false);
+
   // session is `null` until nextauth fetches user's session data
   const { data: session, update: updateSession } = useSession({
     required: true,
     onUnauthenticated() {
       void router.push("/sign-in");
     },
-    // defaults redirects user to sign in page if not signed in
   });
 
   const updateInfoSchema = z.object({
@@ -62,36 +65,32 @@ const ProfilePage: NextPage = () => {
   } = api.user.update.useMutation({
     onSuccess: () => {
       toast.success(`User updated`);
-      setIsEditing(false);
+      setIsEditingUser(false);
 
       if (!newUserData) throw new Error("newUserData is undefined");
       const { name, email, image } = newUserData;
       const newUserDataForSession = { name, email, image };
 
-      setIsEditing(false);
+      setIsEditingUser(false);
       void updateSession(newUserDataForSession);
     },
     onError: (e) => {
-      const errMsg = e.data?.zodError?.fieldErrors.content;
-      if (errMsg?.[0]) {
-        toast.error(`Failed to update: ${errMsg[0]}`);
-      }
-      toast.error(`Failed to update user: ${e.message}`);
+      toast.error(`Failed to update user`);
+      // const zodErrMsg = e.data?.zodError?.fieldErrors.content;
+      // reference zodErrMsg?.[0] for zod errors and e.message for generic errors
     },
   });
 
   const { mutate: updatePassword, isLoading: isUpdatingPassword } =
     api.user.updatePassword.useMutation({
       onSuccess: () => {
-        setIsEditing(false);
+        setIsEditingUser(false);
+        setIsEditingPassword(false);
         toast.success(`Password updated`);
       },
       onError: (e) => {
-        const errMsg = e.data?.zodError?.fieldErrors.content;
-        if (errMsg?.[0]) {
-          toast.error(`Failed to update password: ${errMsg[0]}`);
-        }
-        toast.error(`Failed to update password: ${e.message}`);
+        toast.error(`Failed to update password`);
+        // const zodErrMsg = e.data?.zodError?.fieldErrors.content;
       },
     });
 
@@ -131,6 +130,13 @@ const ProfilePage: NextPage = () => {
         <title>Profile</title>
       </Head>
       <PageLayout>
+        <UpdatePasswordModal
+          showModal={isEditingPassword}
+          closeModal={() => setIsEditingPassword(false)}
+          onUpdate={(data) =>
+            updatePassword({ id: userData.id, password: data.password })
+          }
+        />
         <div className="relative h-48 bg-slate-600 border-b overscroll-y-scroll w-full border-x md:max-w-2xl">
           <Image
             src={imageURL ?? "https://picsum.photos/300/300"}
@@ -163,16 +169,16 @@ const ProfilePage: NextPage = () => {
         <div className="p-4 w-1/2">
           <div className="font-bold pb-2">
             <span className="pr-3">Account information</span>
-            {isEditing ? (
+            {isEditingUser ? (
               <button
                 className="font-medium text-primary-600 hover:underline dark:text-primary-500"
-                onClick={() => setIsEditing(false)}
+                onClick={() => setIsEditingUser(false)}
               >
                 cancel
               </button>
             ) : (
               <button
-                onClick={() => setIsEditing(true)}
+                onClick={() => setIsEditingUser(true)}
                 className="font-medium text-primary-600 hover:underline dark:text-primary-500"
               >
                 edit
@@ -180,7 +186,7 @@ const ProfilePage: NextPage = () => {
             )}
           </div>
           <div className="py-2" />
-          {isEditing && (
+          {isEditingUser && (
             <>
               <form
                 className="flex flex-col items-stretch space-y-4 md:space-y-6"
@@ -209,7 +215,7 @@ const ProfilePage: NextPage = () => {
                   />
                 </div>
                 <input
-                  className="w-full bg-opacity-60 dark:bg-opacity-60 text-white bg-primary-600 hover:bg-opacity-70 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                  className="w-full uppercase text-slate-200 bg-slate-700 hover:bg-slate-900 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-slate-500 dark:hover:bg-slate-600 dark:focus:ring-primary-800"
                   type="submit"
                   value="Save Changes"
                   disabled={isSavingUserData}
@@ -218,18 +224,7 @@ const ProfilePage: NextPage = () => {
               </form>
               <div>
                 <button
-                  onClick={() => {
-                    const pw = prompt("enter new password");
-                    const pwVerified = password_z.safeParse(pw);
-                    if (pwVerified.success) {
-                      void updatePassword({
-                        id: userData.id,
-                        password: pwVerified.data,
-                      });
-                    } else {
-                      toast.error("invalid password");
-                    }
-                  }}
+                  onClick={() => setIsEditingPassword(true)}
                   className="text-neutral-400 rounded-md underline pr-2"
                 >
                   change password
@@ -254,9 +249,24 @@ const ProfilePage: NextPage = () => {
             </>
           )}
         </div>
+        <div className="border-b border-slate-100"></div>
+        <div className="p-4">
+          <div className="font-bold pb-2">
+            <button
+              className="font-medium text-slate-300 hover:underline dark:text-slate-400"
+              onClick={() => void router.push("/submissions")}
+            >
+              View all submissions
+            </button>
+          </div>
+        </div>
       </PageLayout>
     </>
   );
 };
+
+// const PasswordChangeModal = ({ isOpen }: { isOpen: boolean }) => {
+//   return <OverlayModal isOpen={isOpen}>hi</OverlayModal>;
+// };
 
 export default ProfilePage;

@@ -18,10 +18,6 @@ export default function useCodeSession(
   const [code, setCode] = useState<CMText>(CMText.of([""]));
   const [loadedCode, setLoadedCode] = useState(false);
   const [clientId, setClientId] = useState("");
-  const deleteClientIdQuery = api.codeSession.deleteClientId.useQuery(
-    { clientId },
-    { enabled: false },
-  );
   const clientIdQuery = api.codeSession.getClientId.useQuery(undefined, {
     enabled: false,
   });
@@ -66,10 +62,7 @@ export default function useCodeSession(
           // toast.error("Refetching, code out of sync. Try refreshing if problem persists");
           void codeSessionQuery.refetch();
         }
-      },
-      async onError() {
-        await deleteClientIdQuery.refetch();
-      },
+      }
     },
   );
   useEffect(() => {

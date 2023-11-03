@@ -37,6 +37,7 @@ const userUpdateInfoInput_z = z.object({
   // emailVerified: z.date().nullable(),
   image: image_z,
 });
+
 const userUpdatePasswordInput_z = z.object({
   id: id_z,
   password: password_z,

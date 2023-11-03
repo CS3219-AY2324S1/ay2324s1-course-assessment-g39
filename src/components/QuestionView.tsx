@@ -3,7 +3,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { useEffect, useState } from "react";
 import { LoadingPage } from "~/components/Loading";
 import { Question } from "~/types/global";
-import { parseMD } from "~/utils/utils";
+import { parseMD } from "../utils/utils";
 
 const QuestionView = ({
   question,

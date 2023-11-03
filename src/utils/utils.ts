@@ -69,3 +69,4 @@ export const bracket = (
   inputRef?.focus();
   inputRef?.setSelectionRange(start + left.length, end + left.length);
 };
+

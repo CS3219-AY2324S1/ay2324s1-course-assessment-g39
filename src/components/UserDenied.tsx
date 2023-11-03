@@ -5,7 +5,11 @@ import { LoadingPage } from "./Loading";
 export default function UserDenied() {
   return (
     <PageLayout>
-      <LoadingPage />
+      <div className="flex flex-col items-center justify-center">
+        <h1>
+      User Unauthorised
+      </h1>
+      </div>
     </PageLayout>
   )
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { CodeOutput, Language, Question, TestCase } from "~/types/global";
+import { CodeOutput, Difficulty, Language, Question, TestCase } from "~/types/global";
 import { api } from "~/utils/api";
 
 type UseQuestionsReturn = {
@@ -9,7 +9,7 @@ type UseQuestionsReturn = {
   /**
    * List of questions
    */
-  questionTitleList: { title: string; id: string }[];
+  questionTitleList: { title: string; id: string; category: string; difficulty: Difficulty }[];
   testCaseIdList: { description: string; id: string }[];
   /**
    * The current selected question in formated markdown
@@ -19,7 +19,12 @@ type UseQuestionsReturn = {
   /**
    * Submits code with the given language and number
    */
-  runSelecteTestCase: (code: string) => void;
+  runSelectedTestCase: (code: string) => void;
+  /**
+   * Suibmit the code for the current session.
+   * @param code 
+   */
+  submitCode: (code: string) => void;
   /**
    * Indicates if the submitted code is still running
    */
@@ -34,6 +39,15 @@ type UseQuestionsReturn = {
   currentLanguage: Language | undefined;
   setCurrentLanguage: (lang: Language) => void;
   environmentId: string;
+  /**
+   * The submission status
+   */
+  submissionStatus: {
+    complete: boolean,
+    status: string,
+    passed: number,
+    numOfTests: number,
+  } | undefined;
 };
 
 // just grabbing questions from repo
@@ -50,6 +64,15 @@ export default function useQuestions(): UseQuestionsReturn {
     }[]
   >([]);
   const [environmentId, setEnvironmentId] = useState<string | null>(null);
+  const [submissionCode, setSubmissionCode] = useState<string | undefined>(undefined);
+  const [submissionInterval, setSubmissionInterval] = useState<NodeJS.Timer | undefined>(undefined);
+  const [tempSubmissionStatus, setSubmissionStatus] = useState<{ 
+      complete: boolean,
+      status: string,
+      passed: number,
+      numOfTests: number
+   } | undefined>(undefined);
+  
   const questions =
     api.question.getAllReduced.useQuery(undefined, {
       onError: (e) => {
@@ -82,7 +105,7 @@ export default function useQuestions(): UseQuestionsReturn {
     );
 
    
-
+  // judge api calls
   const runTestCase = api.judge.runTestCase.useMutation({
     onSuccess: (data) => {
       setOutput(data);
@@ -92,6 +115,24 @@ export default function useQuestions(): UseQuestionsReturn {
       setOutput(undefined);
     },
   });
+
+  const submissionStatus = api.judge.checkAnswer.useQuery({
+    submissionId: submissionCode ?? ""
+  }, { enabled: submissionCode !== undefined });
+
+  const submitCodeMutation = api.judge.submitCode.useMutation({
+    onSuccess: (data) => {
+      setSubmissionCode(data.submissionId);
+      const interval = setInterval(() => {
+        void submissionStatus.refetch();
+      }, 1000);
+      setSubmissionInterval(interval);
+    },
+    onError: (e) => {
+      toast.error("Failed to submit code");
+    }
+  });
+
 
   const testCases = api.question.getOneEnvironmentTestCases.useQuery(
     {
@@ -128,7 +169,16 @@ export default function useQuestions(): UseQuestionsReturn {
     val.id === testCaseId
   });
 
-
+  useEffect(() => {
+    if (submissionStatus?.data?.complete &&  submissionInterval) {
+      clearInterval(submissionInterval);
+      setSubmissionInterval(undefined);
+      setSubmissionCode(undefined);
+    }
+    if (submissionStatus?.data) {
+      setSubmissionStatus(submissionStatus.data);
+    }
+  }, [submissionStatus])
 
   useEffect(() => {
     setTestCaseIdList(
@@ -141,7 +191,7 @@ export default function useQuestions(): UseQuestionsReturn {
     output,
     questionTitleList: questions,
     currentQuestion: question.data,
-    runSelecteTestCase(code) {
+    runSelectedTestCase(code) {
       if (questionId && environmentId && testCaseId) {
         runTestCase.mutate({ testCaseId, source_code: code });
       } else {
@@ -163,5 +213,16 @@ export default function useQuestions(): UseQuestionsReturn {
     },
     template: currentEnvironment?.template ?? "",
     environmentId: currentEnvironment?.id ?? "",
+    submitCode(code: string) {
+      if (environmentId === null) {
+        toast.error("Failed to submit, language not set");
+        return;
+      }
+      submitCodeMutation.mutate({
+        source_code: code,
+        environmentId: environmentId
+      });
+    },
+    submissionStatus: tempSubmissionStatus,
   };
 }

@@ -1,3 +1,4 @@
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { api } from "~/utils/api";
@@ -5,35 +6,31 @@ import { api } from "~/utils/api";
 
 type UseMatchUsersResult = {
     setMatchedUsers: (user1: string, user2: string) => void;
-    matchedString: string;
-    matched: boolean;
 };
 /**
  * Hook for matching users
  * @returns 
  */
 export default function useMatchUsers(): UseMatchUsersResult {
-    const [matchedString, setMatchedString] = useState("");
-    const matchedUsers = api.sharedSession.createSharedCodeSession.useMutation({
-        onSuccess(data) {
-            if (!data.sessionId) return;
-            setMatchedString(data.sessionId);
+    const { data: session } = useSession(); 
+    const matchedUsers = api.sharedSession.createSharedCodeSession.useMutation();
+    
+    const router = useRouter();
+    const matchUsersSubscription = api.sharedSession.sharedCodeSessionSubscription.useSubscription(undefined, {
+        onData(data) {
+            if (data.user1 === session?.user.id|| data.user2 === session?.user.id) {
+                console.log("Routing");
+                void router.push(`/collab/rooms/${data.sessionId}`);
+            }
         }
     });
-    function setMatchedUsers(user1: string, user2: string) {
-        matchedUsers.mutate({ user1, user2 });
-    }
-    const router = useRouter();
-    useEffect(() => {
-        if (matchedString !== "") {
-            void router.push(`/collab/rooms/${matchedString}`);
-        }
-    }, [matchedString])
 
     return {
-        matched: matchedString !== "",
-        matchedString,
-        setMatchedUsers
+        setMatchedUsers(user1, user2) {
+            const smallerUser = user1 < user2 ? user1 : user2;
+            if (smallerUser === session?.user.id) return; // the larger user does the matching
+            matchedUsers.mutate({ user1, user2 });
+        }
     }
 
 }

@@ -7,17 +7,26 @@ import { useRouter } from "next/router";
 
 const email_z = z.string().email().min(1);
 const password_z = z.string().min(6);
+const createUserSchema_z = z.object({
+  email: email_z,
+  password: password_z,
+});
+type CreateUserSchemaData = z.infer<typeof createUserSchema_z>;
 
-type Props = { className?: string; onError: (e: Error) => void };
-const LoginWithCredentials = (props: Props) => {
+type LoginWithCredentialsProps = {
+  className?: string;
+  onError: (e: Error) => void;
+  setIsLoading: (isLoading: boolean) => void;
+};
+const LoginWithCredentials = (props: LoginWithCredentialsProps) => {
   const router = useRouter();
-  const createUserInput_z = z.object({
-    email: email_z,
-    password: password_z,
-  });
 
-  const { register, handleSubmit } = useForm({
-    resolver: zodResolver(createUserInput_z),
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CreateUserSchemaData>({
+    resolver: zodResolver(createUserSchema_z),
   });
 
   const handleSignIn = handleSubmit(async (formData) => {
@@ -27,13 +36,23 @@ const LoginWithCredentials = (props: Props) => {
       redirect: false,
     });
     if (res?.ok) {
-      toast.success("Successfully signed in");
-      // reload is necessary to have ctx.session be updated
-      return void router.push("/").then(() => window.location.reload());
+      props.setIsLoading(true);
+      const DURATION_TO_LOAD = 1200;
+      toast.success("Successfully logged in, redirecting...", {
+        duration: DURATION_TO_LOAD,
+      });
+      return setTimeout(() => {
+        // Don't reload the page straightaway so that the toast can be seen.
+        // Reload is necessary to have ctx.session be updated
+        void router.push("/").then(() => window.location.reload());
+      }, DURATION_TO_LOAD);
+    } else {
+      console.log("Login with Credentials error", res?.error);
+      const error = new Error("Unable to login with credentials");
+      props.onError(error);
     }
-    const error = new Error(res?.error ?? "");
-    props.onError(error);
   });
+
   return (
     <div className={props.className}>
       <form
@@ -50,6 +69,11 @@ const LoginWithCredentials = (props: Props) => {
             placeholder="name@company.com"
             {...register("email")}
           />
+          {errors.email && (
+            <span className="text-sm lowercase text-red-300">
+              {errors.email.message}
+            </span>
+          )}
         </div>
         <div>
           <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -61,6 +85,11 @@ const LoginWithCredentials = (props: Props) => {
             placeholder="••••••••"
             {...register("password")}
           />
+          {errors.password && (
+            <span className="text-sm lowercase text-red-300">
+              {errors.password.message}
+            </span>
+          )}
         </div>
         <div className="py-1">
           <input

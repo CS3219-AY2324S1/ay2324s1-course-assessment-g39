@@ -14,6 +14,15 @@ export const StyledInput = ({ span, highlight, style, ...others }: IProps & Deta
   }}
   {...others} />;
 
+export const StyledSelect = ({ span, highlight, style, ...others }: IProps & DetailedHTMLProps<InputHTMLAttributes<HTMLSelectElement>, HTMLSelectElement>) => <select
+  className="outline-none tb-border min-w-0 p-2"
+  style={{
+    flex: span ? `${span} ${span} 0%` : '1 1 0%',
+    backgroundColor: highlight ? 'var(--bg-3)' : 'var(--bg-1)',
+    ...style
+  }}
+  {...others} />;
+
 export const StyledTextarea = forwardRef<HTMLTextAreaElement, IProps & DetailedHTMLProps<InputHTMLAttributes<HTMLTextAreaElement>, HTMLTextAreaElement>>((props, ref) => {
   const { span, highlight, style, ...others } = props;
   return <textarea
