@@ -43,7 +43,7 @@ function Questions() {
     return q1 && q2 && !equals(q1, q2);
   };
 
-  const { mutate: addQuestion } = api.question.addOne.useMutation({
+  const { mutateAsync: addQuestion } = api.question.addOne.useMutation({
     onSuccess: (data) => {
       toast.success(`Successfully added: ${data.title}`);
     },
@@ -72,8 +72,12 @@ function Questions() {
   });
 
   const pushNew = () => {
-    void addQuestion(new Question());
+    void addQuestion(new Question()).then(() => {
+
     void getAllQuery.invalidate();
+    }).catch((e) => {
+      return;
+    });
   };
 
   const saveUpdated = (id: string, q: Question) => {
