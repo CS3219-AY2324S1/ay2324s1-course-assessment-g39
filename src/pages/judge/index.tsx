@@ -13,10 +13,9 @@ import { PeerPrepRectLogo } from "~/assets/logo";
 import { api } from "~/utils/api";
 import { PageLayout } from "~/components/Layout";
 import Head from "next/head";
-import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
 // import { useSession } from "next-auth/react";
 
-function Questions() {
+export default function Questions() {
   const [output, setOutput] = useState<string | null>(null);
   const [questionId, setQuestionId] = useState<string | null>(null);
   const [environmentId, setEnvironmentId] = useState<string | null>(null);
@@ -270,5 +269,3 @@ function Questions() {
     </>
   );
 }
-
-export default WithAuthWrapper(Questions, true);

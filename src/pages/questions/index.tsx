@@ -11,9 +11,8 @@ import { makeMap } from "../../utils/utils";
 import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import WarningModal from "~/components/WarningModal";
-import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
 
-function Questions() {
+export default function Questions() {
   const { data: sessionData } = useSession();
   const allowedToModify = sessionData?.user.role === "MAINTAINER";
   const getAllQuery = api.useContext().question.getAll;
@@ -43,7 +42,7 @@ function Questions() {
     return q1 && q2 && !equals(q1, q2);
   };
 
-  const { mutateAsync: addQuestion } = api.question.addOne.useMutation({
+  const { mutate: addQuestion } = api.question.addOne.useMutation({
     onSuccess: (data) => {
       toast.success(`Successfully added: ${data.title}`);
     },
@@ -52,13 +51,13 @@ function Questions() {
     },
   });
 
-  const { mutateAsync: updateQuestionAsync } = api.question.updateOne.useMutation({
+  const { mutate: updateQuestion } = api.question.updateOne.useMutation({
     onSuccess: ({ id, title }) => {
       changedQns.delete(id) && setChangedQns(new Set(changedQns));
       toast.success(`Successfully updated: ${title}`);
     },
     onError: (e) => {
-      toast.error(`Failed to update, possible unique violation`);
+      toast.error(`Failed to update`);
     },
   });
 
@@ -72,12 +71,8 @@ function Questions() {
   });
 
   const pushNew = () => {
-    void addQuestion(new Question()).then(() => {
-
+    void addQuestion(new Question());
     void getAllQuery.invalidate();
-    }).catch((e) => {
-      return;
-    });
   };
 
   const saveUpdated = (id: string, q: Question) => {
@@ -96,27 +91,12 @@ function Questions() {
   };
 
   const pushUpdated = () => {
-    void Promise.all(
-      [...changedQns].map((id) => {
-        if (!hasChanges(id)) return;
-        return updateQuestionAsync(
-          { id, ...viewQns.get(id) },
-          {
-            onSuccess: () => {
-              changedQns.delete(id) && setChangedQns(new Set(changedQns));
-            },
-          },
-        ).catch((e) => {
-          return;
-        });
-      }),
-    )
-      .then(() => {
-        void getAllQuery.invalidate();
-      })
-      .then(() => {
-        clearUpdated();
-      });
+    [...changedQns].filter(hasChanges).map((id) => {
+      updateQuestion({ id, ...viewQns.get(id) }, {});
+    });
+    void getAllQuery.invalidate().then(() => {
+      clearUpdated();
+    });
   };
 
   const saveDeleted = (id: string) => {
@@ -245,5 +225,3 @@ function Questions() {
     </>
   );
 }
-
-export default WithAuthWrapper(Questions);
