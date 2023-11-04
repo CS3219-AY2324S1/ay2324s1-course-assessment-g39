@@ -8,7 +8,7 @@ import { EventEmitter } from "events";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { prismaPostgres } from "~/server/db";
-import { MatchType } from "@prisma-db-psql/client";
+import { MatchType, type MatchRequest } from "@prisma-db-psql/client";
 
 /**
  * A lock for synchronizing async operations.
@@ -127,8 +127,13 @@ type UserRequest = {
 };
 
 const mutex = new Mutex();
-
 const ee = new EventEmitter();
+
+type Request = Omit<MatchRequest, "id" | "cursor" | "createdAt">;
+const filterMatchRequestForUser = (request: MatchRequest) => {
+  const { id, cursor, createdAt, ...matchRequest } = request;
+  return matchRequest;
+};
 
 export const matchRequestRouter = createTRPCRouter({
   getAllManualMatchRequests: protectedProcedure.query(async ({ ctx }) => {
@@ -229,173 +234,168 @@ export const matchRequestRouter = createTRPCRouter({
   ),
 
   subscribeToAllRequests: protectedProcedure.subscription(() => {
-    return observable<
-      UserRequest & {
-        mode: "add" | "remove" | "update";
-      }
-    >((emit) => {
-      // todo(gab): Consider using only one since currently the subscription only tells to refetch
-      const onAdd = (data: UserRequest) => {
-        emit.next({
-          ...data,
-          mode: "add",
-        });
-      };
-      const onRemove = (data: UserRequest) => {
-        emit.next({
-          ...data,
-          mode: "remove",
-        });
-      };
-      const onUpdate = (data: UserRequest) => {
-        emit.next({
-          ...data,
-          mode: "update",
-        });
-      };
-      ee.on("update", onUpdate);
-      ee.on("add", onAdd);
-      ee.on("remove", onRemove);
-      return () => {
-        ee.off("add", onAdd);
-        ee.off("remove", onRemove);
-        ee.off("update", onUpdate);
-      };
-    });
+    return observable<UserRequest & { mode: "add" | "remove" | "update" }>(
+      (emit) => {
+        // todo(gab): Consider using only one since currently the subscription only tells to refetch
+        const onAdd = (data: UserRequest) => {
+          emit.next({ ...data, mode: "add" });
+        };
+        const onRemove = (data: UserRequest) => {
+          emit.next({ ...data, mode: "remove" });
+        };
+        const onUpdate = (data: UserRequest) => {
+          emit.next({ ...data, mode: "update" });
+        };
+        ee.on("update", onUpdate);
+        ee.on("add", onAdd);
+        ee.on("remove", onRemove);
+        return () => {
+          ee.off("add", onAdd);
+          ee.off("remove", onRemove);
+          ee.off("update", onUpdate);
+        };
+      },
+    );
   }),
 
-  // Users want to match with other user
-  // addJoinRequest: protectedProcedure
-  //   .input(addJoinRequestObject)
-  //   .mutation(async ({ ctx, input }) => {
-  //     const { joiningUser, joiningUserId, originalRequestId } = input;
-
-  //     const existingRequest = await ctx.prismaPostgres.joinRequest
-  //       .findFirst({
-  //         where: {
-  //           fromName: joiningUser,
-  //           fromId: joiningUserId,
-  //           toId: originalRequestId,
-  //         },
-  //       })
-  //       .then((req) => {
-  //         return req;
-  //       });
-
-  //     if (!existingRequest) {
-  //       await ctx.prismaPostgres.joinRequest.create({
-  //         data: {
-  //           fromName: joiningUser,
-  //           fromId: joiningUserId,
-  //           toId: originalRequestId,
-  //         },
-  //       });
-
-  //       ee.emit("join", { joiningUser, joiningUserId, originalRequestId });
-  //     }
-  //   }),
-
-  notifyOnAutomaticMatchedRequests: protectedProcedure.mutation(
-    async ({ ctx, input }) => {
+  checkAndProcessAutoMatchIfPossible: protectedProcedure.mutation(
+    async ({ ctx }) => {
       const curUserId = ctx.session.user.id;
 
-      // try find a matching request
-      // if found, emit the two users
-      async function findMatchFor({ userId }: { userId: string }) {
-        const curUserMatchRequest =
-          await prismaPostgres.matchRequest.findUnique({
-            where: { userId },
-          });
-        if (!curUserMatchRequest) return;
+      const curUserMatchRequest = await prismaPostgres.matchRequest.findUnique({
+        where: {
+          userId: curUserId,
+          matchType: "AUTO",
+        },
+      });
+      if (!curUserMatchRequest) return;
 
-        const toRunSync = async () => {
-          const matchedRequest = await prismaPostgres.matchRequest.findFirst({
-            where: {
-              AND: {
-                category: curUserMatchRequest.category,
-                difficulty: curUserMatchRequest.difficulty,
-                matchType: "AUTO",
-                userId: { not: userId },
-              },
-            },
-          });
-          if (matchedRequest) {
-            await prismaPostgres.matchRequest.deleteMany({
-              where: {
-                userId: { in: [userId, matchedRequest.userId] },
-              },
-            });
-          }
-          return matchedRequest;
-        };
-
-        const matchedRequest = await mutex.runExclusive(toRunSync);
-        if (!matchedRequest) return;
-
-        ee.emit("findAutomatic", {
-          user1Id: userId,
-          user2Id: matchedRequest.userId,
+      const findMatchingRequest = async () => {
+        const request = await prismaPostgres.matchRequest.findFirst({
+          where: {
+            category: curUserMatchRequest.category,
+            difficulty: curUserMatchRequest.difficulty,
+            matchType: "AUTO",
+            userId: { not: curUserId },
+          },
         });
-      }
+        if (!request) return null;
+        return filterMatchRequestForUser(request);
+      };
+      // minimise the need to enter the mutex by checking if there is a match first
+      const potentialMatchedRequest = await findMatchingRequest();
+      if (!potentialMatchedRequest) return;
 
-      await findMatchFor({ userId: curUserId });
+      const isRequestInDB = async (request: Request) => {
+        const reqExists = await prismaPostgres.matchRequest.findFirst({
+          where: { ...request },
+        });
+        return reqExists ? true : false;
+      };
+
+      const deleteMatchedRequests = async (
+        userId1: string,
+        userId2: string,
+      ) => {
+        return await prismaPostgres.matchRequest.deleteMany({
+          where: { userId: { in: [userId1, userId2] } },
+        });
+      };
+
+      /**
+       * WARNING: must be run syncronously to avoid race conditions
+       * if request found in DB
+       * (1) delete both users
+       * (2) notify Client by triggering event
+       */
+      const tryMatch = async (potentialRequest: Request) => {
+        const confirmMatch = await isRequestInDB(potentialRequest);
+        if (confirmMatch) {
+          await deleteMatchedRequests(curUserId, potentialRequest.userId);
+          ee.emit("matchedAutomaticRequests", {
+            user1Id: curUserId,
+            user2Id: potentialRequest.userId,
+          });
+        }
+      };
+
+      await mutex.runExclusive(async () => tryMatch(potentialMatchedRequest));
     },
   ),
-  /**
-   * Endpoint needed to ensure that no too users are matched repeatedly
-   */
+
   subscribeToAutomaticRequests: protectedProcedure.subscription(({ ctx }) => {
     return observable<{ user1Id: string; user2Id: string }>((emit) => {
       const findSync = (arg1: { user1Id: string; user2Id: string }) => {
         emit.next(arg1);
       };
 
-      ee.on("findAutomatic", findSync);
+      ee.on("matchedAutomaticRequests", findSync);
       return () => {
-        ee.off("findAutomatic", findSync);
-      };
-    });
-  }),
-  // Users listens to other users who want to join their session
-  subscribeToJoinRequests: protectedProcedure.subscription(() => {
-    return observable<{
-      joiningUser: string;
-      joiningUserId: string;
-      originalRequestId: string;
-    }>((emit) => {
-      const onJoinRequest = (data: {
-        joiningUser: string;
-        joiningUserId: string;
-        originalRequestId: string;
-      }) => {
-        emit.next(data);
-      };
-      ee.on("join", onJoinRequest);
-      return () => {
-        ee.off("join", onJoinRequest);
+        ee.off("matchedAutomaticRequests", findSync);
       };
     });
   }),
 
-  // confirm a match between 2 different users
-  confirmMatch: protectedProcedure
-    .input(z.object({ userId1: userId_z, userId2: userId_z }))
+  // accept a match of another user
+  acceptMatch: protectedProcedure
+    .input(z.object({ acceptedUserId: userId_z }))
     .mutation(async ({ ctx, input }) => {
-      const { userId1, userId2 } = input;
-      const matchedRequests = await ctx.prismaPostgres.matchRequest.findMany({
-        where: { userId: { in: [userId1, userId2] } },
+      const curUserId = ctx.session.user.id;
+      const { acceptedUserId } = input;
+      const matchedRequest = await ctx.prismaPostgres.matchRequest.findFirst({
+        where: { userId: acceptedUserId },
       });
-      if (matchedRequests.length !== 2) {
+      if (!matchedRequest) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Match request for both users not found",
+          message: "Accepted match request does not exist",
         });
       }
 
-      await ctx.prismaPostgres.matchRequest.deleteMany({
-        where: { userId: { in: [userId1, userId2] } },
-      });
+      const isRequestInDB = async (userId: string) => {
+        const reqExists = await prismaPostgres.matchRequest.findFirst({
+          where: { userId },
+        });
+        return reqExists ? true : false;
+      };
 
-      ee.emit("confirm", { user1Id: userId1, user2Id: userId2 });
+      const deleteMatchedRequest = async (userId: string) => {
+        return await prismaPostgres.matchRequest.delete({
+          where: { userId },
+        });
+      };
+
+      /**
+       * WARNING: must be run syncronously to avoid race conditions
+       * if request found in DB
+       * (1) delete request
+       * (2) notify Client by triggering event
+       */
+      const tryMatch = async (curUserId: string, acceptedUserId: string) => {
+        const confirmMatch = await isRequestInDB(acceptedUserId);
+        if (confirmMatch) {
+          await deleteMatchedRequest(acceptedUserId);
+          ee.emit("matchedManualRequest", {
+            user1Id: curUserId,
+            user2Id: acceptedUserId,
+          });
+        }
+      };
+
+      await mutex.runExclusive(async () => tryMatch(curUserId, acceptedUserId));
     }),
+
+  // Users listens for confirmation from other user to join the session
+  subscribeToConfirmation: protectedProcedure.subscription(() => {
+    return observable<{ user1Id: string; user2Id: string }>((emit) => {
+      const onConfirm = (data: { user1Id: string; user2Id: string }) => {
+        emit.next(data);
+      };
+
+      ee.on("matchedManualRequest", onConfirm);
+      return () => {
+        ee.off("matchedManualRequest", onConfirm);
+      };
+    });
+  }),
 });
