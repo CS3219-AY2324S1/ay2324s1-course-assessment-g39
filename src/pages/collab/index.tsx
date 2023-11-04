@@ -35,6 +35,8 @@ const MatchRequestPage = () => {
   if (!session || !session.user) {
     throw new Error("Session cannot be undefined since AuthWrapper wrapped");
   }
+  const curUserId = session.user.id;
+
   const matchUsers = useMatchUsers();
   const [isCreatingMatchRequest, setIsCreatingMatchRequest] = useState(false);
   const [isEditingMatchRequest, setIsEditingMatchRequest] = useState(false);
@@ -45,13 +47,15 @@ const MatchRequestPage = () => {
   const { data: numOfMatchRequests } =
     api.matchRequest.getNumOfMatchRequests.useQuery();
 
-  const { mutate: notifyOnAutomaticMatchedRequests } =
-    api.matchRequest.notifyOnAutomaticMatchedRequests.useMutation();
+  const { mutate: automaticallyMatchCurrentUserRequest } =
+    api.matchRequest.checkAndProcessAutoMatchIfPossible.useMutation();
   const { data: curUserMatchRequest, refetch: refetchCurrentUserRequest } =
     api.matchRequest.getCurrentUserRequest.useQuery(undefined, {
       onSuccess(data) {
         if (data?.matchType === "AUTO") {
-          notifyOnAutomaticMatchedRequests();
+          // TODO: shift to createMatchRequest onSuccess
+          // does it still match an outdated request after being updated?
+          automaticallyMatchCurrentUserRequest();
         }
       },
     });
@@ -95,11 +99,26 @@ const MatchRequestPage = () => {
     },
   });
 
+  api.matchRequest.subscribeToMatchedRequests.useSubscription(undefined, {
+    onData(data) {
+      if (curUserId === data.user1Id || curUserId === data.user2Id) {
+        matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
+      }
+    },
+  });
+
   api.matchRequest.subscribeToAutomaticRequests.useSubscription(undefined, {
     onData(data) {
-      const userId = session.user.id;
-      if (userId === data.user1Id || userId === data.user2Id) {
-        console.log("Success");
+      if (curUserId === data.user1Id || curUserId === data.user2Id) {
+        matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
+      }
+    },
+  });
+
+  // TODO: add timer logic
+  api.matchRequest.subscribeToConfirmation.useSubscription(undefined, {
+    onData(data) {
+      if (curUserId === data.user1Id || curUserId === data.user2Id) {
         matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
       }
     },
@@ -239,7 +258,7 @@ const MatchRequestPage = () => {
                   </thead>
                   <tbody className="space-y-6 bg-white border-b dark:bg-gray-800 dark:border-gray-700">
                     {manualRequests
-                      .filter((r) => r.user.id !== session.user.id)
+                      .filter((r) => r.user.id !== curUserId)
                       .filter(
                         (r) =>
                           !difficultyFilter ||
@@ -263,10 +282,7 @@ const MatchRequestPage = () => {
                             <button
                               className="light:bg-blue-600 dark:bg-blue-400 px-2 rounded-md text-slate-800 hover:bg-slate-300"
                               onClick={() =>
-                                handleAcceptRequest(
-                                  session.user.id,
-                                  request.user.id,
-                                )
+                                handleAcceptRequest(curUserId, request.user.id)
                               }
                             >
                               ACCEPT
