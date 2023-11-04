@@ -3,12 +3,15 @@ import { useEffect, useState } from "react";
 
 import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
+import PageSelector from "~/components/PageSelector";
 import { api } from "~/utils/api";
 import { QuestionRow } from "../../components/QuestionRow";
 import { StyledButton } from "../../components/StyledButton";
 import { StyledCheckbox } from "../../components/StyledCheckbox";
-import { Question, QuestionPagination, type QuestionMap } from "../../types/global";
+import { Question, type QuestionMap } from "../../types/global";
 import { equals, makeMap } from "../../utils/utils";
+
+const pagingLimit = 2;
 
 function Questions() {
   const { data: sessionData } = useSession();
@@ -18,24 +21,37 @@ function Questions() {
   const [changedQns, setChangedQns] = useState(new Set<string>());
   const [deletedQns, setDeletedQns] = useState(new Set<string>());
 
-  const [paginationState, setPaginationState] = useState(new QuestionPagination());
+  const [page, setPage] = useState(0);
 
   const getAllQuery = api.useContext().question.getAllReducedInfinite;
-  const {
-    items, hasNext, hasPrev, totalCount
-  } = api.question.getAllReducedInfinite.useQuery(paginationState, {
-    onSuccess: (data) => {
-      const mappedData = data.items.map((q) => ({
-        ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
-      }));
-      setViewQns(makeMap(mappedData, "id"));
-    },
-    onError: (e) => {
-      toast.error("Failed to fetch questions");
-    },
-  }).data ?? {};
 
-  const questions = makeMap(items ?? [], "id");
+  const {
+    data,
+    fetchNextPage,
+  } = api.question.getAllReducedInfinite.useInfiniteQuery(
+    {
+      limit: pagingLimit,
+      // titleFilter: sentFilter === "" ? undefined : sentFilter,
+    },
+    {
+      getNextPageParam: (prevPage) => prevPage.nextCursor,
+      onSuccess: (data) => {
+        const mappedData = data?.pages[page]?.items.map((q) => ({
+          ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
+        }));
+        mappedData && setViewQns(makeMap(mappedData, "id"));
+      },
+      onError: () => {
+        toast.error("Failed to fetch questions");
+      },
+    },
+  );
+
+  const questions = makeMap(data?.pages[page]?.items ?? [], "id");
+
+  useEffect(() => {
+    void getAllQuery.invalidate();
+  }, [page]);
 
   const hasChanges = (id: string) => {
     const q1 = questions.get(id);
@@ -46,8 +62,9 @@ function Questions() {
   const { mutateAsync: addQuestion } = api.question.addOne.useMutation({
     onSuccess: (data) => {
       toast.success(`Successfully added: ${data.title}`);
+      setPage(0);
     },
-    onError: (e) => {
+    onError: () => {
       toast.error(`Failed to add`);
     },
   });
@@ -57,7 +74,7 @@ function Questions() {
       changedQns.delete(id) && setChangedQns(new Set(changedQns));
       toast.success(`Successfully updated: ${title}`);
     },
-    onError: (e) => {
+    onError: () => {
       toast.error(`Failed to update, possible unique violation`);
     },
   });
@@ -66,14 +83,13 @@ function Questions() {
     onSuccess: () => {
       toast.success(`Successfully deleted`);
     },
-    onError: (e, { id }) => {
+    onError: () => {
       toast.error(`Failed to delete`);
     },
   });
 
   const pushNew = () => {
     void addQuestion(new Question()).then(() => {
-
       void getAllQuery.invalidate();
     }).catch((e) => {
       return;
@@ -162,22 +178,6 @@ function Questions() {
       });
   };
 
-  const nextPage = () => {
-    setPaginationState(prev => ({
-      ...prev,
-      cursor: items?.[items.length-1]?.title,
-      backwards: false
-    }));
-  };
-
-  const prevPage = () => {
-    setPaginationState(prev => ({
-      ...prev,
-      cursor: items?.[0]?.title,
-      backwards: true
-    }));
-  };
-
   return (
     <>
       <Head>
@@ -192,14 +192,25 @@ function Questions() {
           </h1>
           <div className="text-[var(--txt-3)] w-full flex-1 flex flex-col rounded overflow-hidden">
             <div className="flex-1 flex gap-2 mb-4">
-              <StyledButton
-                disabled={changedQns.size != 0 || deletedQns.size != 0 || !hasPrev}
-                onClick={prevPage}
-              > {'<'} </StyledButton>
-              <StyledButton
-                disabled={changedQns.size != 0 || deletedQns.size != 0 || !hasNext}
-                onClick={nextPage}
-              > {'>'} </StyledButton>
+              <PageSelector
+                displayedRange={5}
+                setPage={(val: (prev: number) => number) => {
+                  // need to fetch first
+                  const fetchPages = async () => {
+                    const newPage = val(page);
+                    for (let i = page; i < newPage; ++i) {
+                      await fetchNextPage();
+                    }
+                    setPage(val);
+                  };
+                  void fetchPages();
+                  return;
+                }}
+                currentPage={page}
+                totalPages={
+                  (data?.pages.at(0)?.totalCount ?? 0) / pagingLimit
+                }
+              />
               <div className="flex-[50_50_0%]" />
             </div>
             <div className="flex font-bold bg-black">

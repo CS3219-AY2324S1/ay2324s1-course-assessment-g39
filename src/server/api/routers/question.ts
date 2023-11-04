@@ -41,63 +41,50 @@ export const questionRouter = createTRPCRouter({
     });
   }),
   getAllReducedInfinite: publicProcedure
-    .input(
-      z.object({
-        cursor: z.string().optional(),
-        limit: z.number().min(1).max(100).optional(),
-        titleFilter: z.string().optional(),
-        backwards: z.boolean().optional(),
-      }),
-    )
-    .query(async ({ input, ctx }) => {
-      const { limit = 50, titleFilter, backwards, cursor } = input;
-      const totalCount = await ctx.prismaMongo.question.count({
-        where: titleFilter
-          ? {
-              OR: [
-                { title: { contains: titleFilter } },
-                { body: { contains: titleFilter } },
-              ],
+    .input(z.object({ cursor: z.string().optional(), limit: z.number().min(1).max(100).nullable(), titleFilter: z.string().optional() }))
+    .query(
+      async ({input, ctx}) => {
+        const limit = input.limit ?? 50;
+        const totalCount = await ctx.prismaMongo.question.count({
+          where: input.titleFilter ? {
+            OR: [
+              {
+                title: {
+                  contains: input.titleFilter
+                },
+              },
+              {
+                body: {
+                  contains: input.titleFilter
+                }
+              }
+            ]
+          } : undefined,
+        });
+        const items = await ctx.prismaMongo.question.findMany({
+          take: limit + 1,
+          where: input.titleFilter ? {
+            title: {
+              contains: input.titleFilter
             }
-          : undefined,
-      });
-      const items = await ctx.prismaMongo.question.findMany({
-        take: backwards ? -limit : limit,
-        skip: cursor ? 1 : 0,
-        where: titleFilter
-          ? {
-              OR: [
-                { title: { contains: titleFilter } },
-                { body: { contains: titleFilter } },
-              ],
-            }
-          : undefined,
-        cursor: cursor ? { title: cursor } : undefined,
-        orderBy: {
-          title: "asc",
-        },
-      });
-      const hasNext = await ctx.prismaMongo.question.count({
-        where: {
-          title: {
-            gt: items[items.length - 1]?.title,
-          },
-        },
-      });
-      const hasPrev = await ctx.prismaMongo.question.count({
-        where: {
-          title: {
-            lt: items[0]?.title,
-          },
-        },
-      });
-      let nextCursor: string | undefined = undefined;
-      if (items.length === limit + 1) {
-        const top = items.pop();
-        nextCursor = top!.title;
+          } : undefined,
+          cursor: input.cursor ? {
+            title: input.cursor
+          } : undefined,
+          orderBy: {
+            title: 'asc'
+          }
+        });
+        let nextCursor: string | undefined = undefined;
+        if (items.length === limit + 1) {
+          const top = items.pop();
+          nextCursor = top!.title;
+        }
+        return {
+          items, nextCursor, totalCount
+        };
       }
-      return { items, hasNext, hasPrev, nextCursor, totalCount };
-    }),
+    ),
   addOne: maintainerProcedure
     .input(questionObject)
     .mutation(async ({ ctx, input }) => {
