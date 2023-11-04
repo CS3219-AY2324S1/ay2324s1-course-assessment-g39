@@ -9,7 +9,7 @@ type UseMatchUsersResult = {
 };
 /**
  * Hook for matching users
- * @returns a function to set a pair of matched users
+ * @returns 
  */
 export default function useMatchUsers(): UseMatchUsersResult {
     const { data: session } = useSession(); 
