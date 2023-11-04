@@ -312,7 +312,7 @@ export const matchRequestRouter = createTRPCRouter({
         const confirmMatch = await isRequestInDB(potentialRequest);
         if (confirmMatch) {
           await deleteMatchedRequests(curUserId, potentialRequest.userId);
-          ee.emit("matchedAutomaticRequests", {
+          ee.emit("matchedAutomatciRequests", {
             user1Id: curUserId,
             user2Id: potentialRequest.userId,
           });
@@ -329,9 +329,9 @@ export const matchRequestRouter = createTRPCRouter({
         emit.next(arg1);
       };
 
-      ee.on("matchedAutomaticRequests", findSync);
+      ee.on("matchedAutomatciRequests", findSync);
       return () => {
-        ee.off("matchedAutomaticRequests", findSync);
+        ee.off("matchedAutomatciRequests", findSync);
       };
     });
   }),
@@ -375,10 +375,7 @@ export const matchRequestRouter = createTRPCRouter({
         const confirmMatch = await isRequestInDB(acceptedUserId);
         if (confirmMatch) {
           await deleteMatchedRequest(acceptedUserId);
-          ee.emit("matchedManualRequest", {
-            user1Id: curUserId,
-            user2Id: acceptedUserId,
-          });
+          ee.emit("confirm", { user1Id: curUserId, user2Id: acceptedUserId });
         }
       };
 
@@ -392,9 +389,23 @@ export const matchRequestRouter = createTRPCRouter({
         emit.next(data);
       };
 
-      ee.on("matchedManualRequest", onConfirm);
+      ee.on("confirm", onConfirm);
       return () => {
-        ee.off("matchedManualRequest", onConfirm);
+        ee.off("confirm", onConfirm);
+      };
+    });
+  }),
+
+  // Users listens for confirmation from other user to join the session
+  subscribeToMatchedRequests: protectedProcedure.subscription(() => {
+    return observable<{ user1Id: string; user2Id: string }>((emit) => {
+      const onMatch = (data: { user1Id: string; user2Id: string }) => {
+        emit.next(data);
+      };
+
+      ee.on("matchedRequest", onMatch);
+      return () => {
+        ee.off("matchedRequest", onMatch);
       };
     });
   }),

@@ -99,13 +99,13 @@ const MatchRequestPage = () => {
     },
   });
 
-  // api.matchRequest.subscribeToMatchedRequests.useSubscription(undefined, {
-  //   onData(data) {
-  //     if (curUserId === data.user1Id || curUserId === data.user2Id) {
-  //       matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
-  //     }
-  //   },
-  // });
+  api.matchRequest.subscribeToMatchedRequests.useSubscription(undefined, {
+    onData(data) {
+      if (curUserId === data.user1Id || curUserId === data.user2Id) {
+        matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
+      }
+    },
+  });
 
   api.matchRequest.subscribeToAutomaticRequests.useSubscription(undefined, {
     onData(data) {
