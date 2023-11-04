@@ -13,7 +13,6 @@ import { equals, makeMap } from "../../utils/utils";
 function Questions() {
   const { data: sessionData } = useSession();
   const allowedToModify = sessionData?.user.role === "MAINTAINER";
-  const getAllQuery = api.useContext().question.getAllReducedInfinite;
 
   const [viewQns, setViewQns] = useState<QuestionMap>(new Map());
   const [changedQns, setChangedQns] = useState(new Set<string>());
@@ -21,6 +20,7 @@ function Questions() {
 
   const [paginationState, setPaginationState] = useState(new QuestionPagination());
 
+  const getAllQuery = api.useContext().question.getAllReducedInfinite;
   const {
     items, hasNext, hasPrev, totalCount
   } = api.question.getAllReducedInfinite.useQuery(paginationState, {
@@ -177,10 +177,6 @@ function Questions() {
       backwards: true
     }));
   };
-
-  useEffect(() => {
-    void getAllQuery.invalidate();
-  }, [paginationState]);
 
   return (
     <>
