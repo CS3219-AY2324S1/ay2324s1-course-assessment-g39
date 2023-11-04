@@ -8,8 +8,16 @@ export class Question {
   difficulty = "EASY" as Difficulty;
   category = "";
   id = "";
-}
+};
 
+export type QuestionMap = Map<string, Question>;
+
+export class QuestionPagination {
+  cursor: string | undefined = undefined;
+  limit = 3;
+  titleFilter: string | undefined = undefined;
+  backwards = false;
+};
 
 // todo: dup code
 export type ModifyQuestionProps = {
@@ -53,5 +61,3 @@ export type CodeOutput = {
   message: string | null;
   status: { id: number; description: string };
 };
-
-export type QuestionMap = Map<string, Question>;

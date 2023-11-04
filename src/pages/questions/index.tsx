@@ -1,41 +1,41 @@
 import Head from "next/head";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { useSession } from "next-auth/react";
+import { toast } from "react-hot-toast";
 import { api } from "~/utils/api";
-import { Question, type QuestionMap } from "../../types/global";
-import { equals } from "../../utils/utils";
 import { QuestionRow } from "../../components/QuestionRow";
 import { StyledButton } from "../../components/StyledButton";
 import { StyledCheckbox } from "../../components/StyledCheckbox";
-import { makeMap } from "../../utils/utils";
-import { toast } from "react-hot-toast";
-import { useSession } from "next-auth/react";
-import WarningModal from "~/components/WarningModal";
-import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
+import { Question, QuestionPagination, type QuestionMap } from "../../types/global";
+import { equals, makeMap } from "../../utils/utils";
 
 function Questions() {
   const { data: sessionData } = useSession();
   const allowedToModify = sessionData?.user.role === "MAINTAINER";
-  const getAllQuery = api.useContext().question.getAll;
+  const getAllQuery = api.useContext().question.getAllReducedInfinite;
 
   const [viewQns, setViewQns] = useState<QuestionMap>(new Map());
   const [changedQns, setChangedQns] = useState(new Set<string>());
   const [deletedQns, setDeletedQns] = useState(new Set<string>());
 
-  const questions = makeMap(
-    api.question.getAll.useQuery(undefined, {
-      onSuccess: (data) => {
-        const mappedData = data.map((q) => ({
-          ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
-        }));
-        setViewQns(makeMap(mappedData, "id"));
-      },
-      onError: (e) => {
-        toast.error("Failed to fetch questions");
-      },
-    }).data ?? [],
-    "id",
-  );
+  const [paginationState, setPaginationState] = useState(new QuestionPagination());
+
+  const {
+    items, hasNext, hasPrev, totalCount
+  } = api.question.getAllReducedInfinite.useQuery(paginationState, {
+    onSuccess: (data) => {
+      const mappedData = data.items.map((q) => ({
+        ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
+      }));
+      setViewQns(makeMap(mappedData, "id"));
+    },
+    onError: (e) => {
+      toast.error("Failed to fetch questions");
+    },
+  }).data ?? {};
+
+  const questions = makeMap(items ?? [], "id");
 
   const hasChanges = (id: string) => {
     const q1 = questions.get(id);
@@ -74,7 +74,7 @@ function Questions() {
   const pushNew = () => {
     void addQuestion(new Question()).then(() => {
 
-    void getAllQuery.invalidate();
+      void getAllQuery.invalidate();
     }).catch((e) => {
       return;
     });
@@ -162,6 +162,26 @@ function Questions() {
       });
   };
 
+  const nextPage = () => {
+    setPaginationState(prev => ({
+      ...prev,
+      cursor: items?.[items.length-1]?.title,
+      backwards: false
+    }));
+  };
+
+  const prevPage = () => {
+    setPaginationState(prev => ({
+      ...prev,
+      cursor: items?.[0]?.title,
+      backwards: true
+    }));
+  };
+
+  useEffect(() => {
+    void getAllQuery.invalidate();
+  }, [paginationState]);
+
   return (
     <>
       <Head>
@@ -175,6 +195,17 @@ function Questions() {
             Peer<span className="text-[var(--txt-1)]">Prep</span>
           </h1>
           <div className="text-[var(--txt-3)] w-full flex-1 flex flex-col rounded overflow-hidden">
+            <div className="flex-1 flex gap-2 mb-4">
+              <StyledButton
+                disabled={changedQns.size != 0 || deletedQns.size != 0 || !hasPrev}
+                onClick={prevPage}
+              > {'<'} </StyledButton>
+              <StyledButton
+                disabled={changedQns.size != 0 || deletedQns.size != 0 || !hasNext}
+                onClick={nextPage}
+              > {'>'} </StyledButton>
+              <div className="flex-[50_50_0%]" />
+            </div>
             <div className="flex font-bold bg-black">
               <StyledCheckbox
                 checked={
