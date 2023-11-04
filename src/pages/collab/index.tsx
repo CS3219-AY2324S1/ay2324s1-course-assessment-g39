@@ -131,12 +131,11 @@ const MatchRequestPage = () => {
     isLoading: requestsLoading,
   } = api.matchRequest.getAllManualMatchRequests.useQuery();
 
-  const { mutate: confirmMatch, variables: matchedIds } =
-    api.matchRequest.confirmMatch.useMutation({
+  const { mutate: acceptMatch, variables: data } =
+    api.matchRequest.acceptMatch.useMutation({
       onSuccess: () => {
-        if (!matchedIds) throw new Error("matchedIds is undefined");
-        const { userId1, userId2 } = matchedIds;
-        matchUsers.setMatchedUsers(userId1, userId2);
+        if (!data) throw new Error("matchedIds is undefined");
+        matchUsers.setMatchedUsers(curUserId, data.acceptedUserId);
       },
     });
 
@@ -159,8 +158,8 @@ const MatchRequestPage = () => {
     updateMatchRequest(request);
   };
 
-  const handleAcceptRequest = (userId1: string, userId2: string) => {
-    confirmMatch({ userId1, userId2 });
+  const handleAcceptRequest = (acceptedUserId: string) => {
+    acceptMatch({ acceptedUserId });
     toast.success("Successfully matched with user, redirecting to room...", {
       duration: 2000,
     });
@@ -282,7 +281,7 @@ const MatchRequestPage = () => {
                             <button
                               className="light:bg-blue-600 dark:bg-blue-400 px-2 rounded-md text-slate-800 hover:bg-slate-300"
                               onClick={() =>
-                                handleAcceptRequest(curUserId, request.user.id)
+                                handleAcceptRequest(request.user.id)
                               }
                             >
                               ACCEPT
