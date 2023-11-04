@@ -135,6 +135,12 @@ const filterMatchRequestForUser = (request: MatchRequest) => {
   return matchRequest;
 };
 
+const deleteMatchedRequests = async (userId1: string, userId2: string) => {
+  return await prismaPostgres.matchRequest.deleteMany({
+    where: { userId: { in: [userId1, userId2] } },
+  });
+};
+
 export const matchRequestRouter = createTRPCRouter({
   getAllManualMatchRequests: protectedProcedure.query(async ({ ctx }) => {
     const requests = await ctx.prismaPostgres.matchRequest.findMany({
@@ -293,18 +299,9 @@ export const matchRequestRouter = createTRPCRouter({
         return reqExists ? true : false;
       };
 
-      const deleteMatchedRequests = async (
-        userId1: string,
-        userId2: string,
-      ) => {
-        return await prismaPostgres.matchRequest.deleteMany({
-          where: { userId: { in: [userId1, userId2] } },
-        });
-      };
-
       /**
        * WARNING: must be run syncronously to avoid race conditions
-       * if request found in DB
+       * if match found in DB
        * (1) delete both users
        * (2) notify Client by triggering event
        */
@@ -336,50 +333,26 @@ export const matchRequestRouter = createTRPCRouter({
     });
   }),
 
-  // accept a match of another user
-  acceptMatch: protectedProcedure
-    .input(z.object({ acceptedUserId: userId_z }))
+  // confirm a match between 2 different users
+  confirmMatch: protectedProcedure
+    .input(z.object({ userId1: userId_z, userId2: userId_z }))
     .mutation(async ({ ctx, input }) => {
-      const curUserId = ctx.session.user.id;
-      const { acceptedUserId } = input;
-      const matchedRequest = await ctx.prismaPostgres.matchRequest.findFirst({
-        where: { userId: acceptedUserId },
+      const { userId1, userId2 } = input;
+      const matchedRequests = await ctx.prismaPostgres.matchRequest.findMany({
+        where: { userId: { in: [userId1, userId2] } },
       });
-      if (!matchedRequest) {
+      if (matchedRequests.length !== 2) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Accepted match request does not exist",
+          message: "Match request for both users not found",
         });
       }
 
-      const isRequestInDB = async (userId: string) => {
-        const reqExists = await prismaPostgres.matchRequest.findFirst({
-          where: { userId },
-        });
-        return reqExists ? true : false;
-      };
+      await ctx.prismaPostgres.matchRequest.deleteMany({
+        where: { userId: { in: [userId1, userId2] } },
+      });
 
-      const deleteMatchedRequest = async (userId: string) => {
-        return await prismaPostgres.matchRequest.delete({
-          where: { userId },
-        });
-      };
-
-      /**
-       * WARNING: must be run syncronously to avoid race conditions
-       * if request found in DB
-       * (1) delete request
-       * (2) notify Client by triggering event
-       */
-      const tryMatch = async (curUserId: string, acceptedUserId: string) => {
-        const confirmMatch = await isRequestInDB(acceptedUserId);
-        if (confirmMatch) {
-          await deleteMatchedRequest(acceptedUserId);
-          ee.emit("confirm", { user1Id: curUserId, user2Id: acceptedUserId });
-        }
-      };
-
-      await mutex.runExclusive(async () => tryMatch(curUserId, acceptedUserId));
+      ee.emit("confirm", { user1Id: userId1, user2Id: userId2 });
     }),
 
   // Users listens for confirmation from other user to join the session
