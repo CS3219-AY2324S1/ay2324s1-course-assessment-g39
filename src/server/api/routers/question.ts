@@ -91,7 +91,12 @@ export const questionRouter = createTRPCRouter({
           },
         },
       });
-      return { items, hasNext, hasPrev, totalCount };
+      let nextCursor: string | undefined = undefined;
+      if (items.length === limit + 1) {
+        const top = items.pop();
+        nextCursor = top!.title;
+      }
+      return { items, hasNext, hasPrev, nextCursor, totalCount };
     }),
   addOne: maintainerProcedure
     .input(questionObject)
