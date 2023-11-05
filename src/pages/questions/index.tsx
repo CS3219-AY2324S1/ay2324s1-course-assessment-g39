@@ -28,6 +28,7 @@ function Questions() {
   const {
     data,
     fetchNextPage,
+    isFetchingNextPage,
   } = api.question.getAllReducedInfinite.useInfiniteQuery(
     {
       limit: pagingLimit,
@@ -35,12 +36,6 @@ function Questions() {
     },
     {
       getNextPageParam: (prevPage) => prevPage.nextCursor,
-      onSuccess: (data) => {
-        const mappedData = data?.pages[page]?.items.map((q) => ({
-          ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
-        }));
-        mappedData && setViewQns(makeMap(mappedData, "id"));
-      },
       onError: () => {
         toast.error("Failed to fetch questions");
       },
@@ -50,8 +45,11 @@ function Questions() {
   const questions = makeMap(data?.pages[page]?.items ?? [], "id");
 
   useEffect(() => {
-    void getAllQuery.invalidate();
-  }, [page]);
+    const mappedData = data?.pages[page]?.items.map((q) => ({
+      ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
+    }));
+    mappedData && setViewQns(makeMap(mappedData, "id"));
+  }, [page, data?.pages]);
 
   const hasChanges = (id: string) => {
     const q1 = questions.get(id);
@@ -228,7 +226,7 @@ function Questions() {
               <div className="flex-1 p-2 tb-border">difficulty</div>
               <div className="flex-[2_2_0%] p-2 tb-border">category</div>
             </div>
-            {viewQns.size ? (
+            {!isFetchingNextPage && viewQns.size ? (
               [...viewQns.entries()].map(([id, q]) => (
                 <QuestionRow
                   key={id}
