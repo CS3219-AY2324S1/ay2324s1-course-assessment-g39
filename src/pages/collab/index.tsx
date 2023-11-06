@@ -6,10 +6,11 @@ import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "react-hot-toast";
 import { RouterOutputs, RouterInputs, api } from "~/utils/api";
+import { type MatchType } from "@prisma-db-psql/client";
 
 import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
 import useMatchUsers from "~/hooks/useMatchUsers";
@@ -17,11 +18,12 @@ import useMatchUsers from "~/hooks/useMatchUsers";
 import { difficulties } from "../../types/global";
 import Head from "next/head";
 import { PageLayout } from "~/components/Layout";
+import { LoadingSpinner } from "~/components/Loading";
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import LoadingIcon from "~/components/LoadingIcon";
-import { LoadingSpinner } from "~/components/Loading";
+import { time } from "console";
+import { deleteAppClientCache } from "next/dist/server/lib/render-server";
 dayjs.extend(relativeTime);
 
 /**
@@ -36,6 +38,56 @@ const MatchRequestPage = () => {
     throw new Error("Session cannot be undefined since AuthWrapper wrapped");
   }
   const curUserId = session.user.id;
+  const timer = useRef<NodeJS.Timer | null>(null);
+  const [timerState, setTimerState] = useState({
+    isTimerActive: false,
+    waitingTime: 0,
+  });
+
+  useEffect(() => {
+    if (timerState.isTimerActive) {
+      if (!timer.current) {
+        timer.current = setInterval(() => {
+          setTimerState((prev) => ({
+            ...prev,
+            isTimerActive: true,
+            waitingTime: prev.waitingTime + 1,
+          }));
+        }, 1000);
+      }
+    }
+  }, [timerState.isTimerActive]);
+
+  const startTimer = () => {
+    setTimerState((prev) => ({
+      ...prev,
+      isTimerActive: true,
+    }));
+  };
+  const stopTimer = () => {
+    if (!timer.current) return;
+    clearInterval(timer.current);
+    setTimerState({
+      waitingTime: 0,
+      isTimerActive: false,
+    });
+    timer.current = null;
+  };
+
+  // remove current request immediately on refresh or change of page
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (curUserMatchRequest) {
+        e.preventDefault();
+        // void handleDeleteMatchRequest();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  });
 
   const matchUsers = useMatchUsers();
   const [isCreatingMatchRequest, setIsCreatingMatchRequest] = useState(false);
@@ -53,8 +105,6 @@ const MatchRequestPage = () => {
     api.matchRequest.getCurrentUserRequest.useQuery(undefined, {
       onSuccess(data) {
         if (data?.matchType === "AUTO") {
-          // TODO: shift to createMatchRequest onSuccess
-          // does it still match an outdated request after being updated?
           automaticallyMatchCurrentUserRequest();
         }
       },
@@ -64,6 +114,7 @@ const MatchRequestPage = () => {
     api.matchRequest.createCurrentUserMatchRequest.useMutation({
       onSuccess() {
         setIsCreatingMatchRequest(false);
+        startTimer();
         toast.success("Successfully created match request");
       },
       onError(err) {
@@ -76,6 +127,7 @@ const MatchRequestPage = () => {
     api.matchRequest.deleteCurrentUserMatchRequest.useMutation({
       onSuccess() {
         toast.success("Successfully deleted match request");
+        stopTimer();
       },
     });
 
@@ -83,6 +135,7 @@ const MatchRequestPage = () => {
     api.matchRequest.updateCurrentUserMatchRequest.useMutation({
       onSuccess() {
         toast.success("Successfully updated match request");
+        startTimer();
         setIsEditingMatchRequest(false);
       },
     });
@@ -99,14 +152,6 @@ const MatchRequestPage = () => {
     },
   });
 
-  // api.matchRequest.subscribeToMatchedRequests.useSubscription(undefined, {
-  //   onData(data) {
-  //     if (curUserId === data.user1Id || curUserId === data.user2Id) {
-  //       matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
-  //     }
-  //   },
-  // });
-
   api.matchRequest.subscribeToAutomaticRequests.useSubscription(undefined, {
     onData(data) {
       if (curUserId === data.user1Id || curUserId === data.user2Id) {
@@ -115,7 +160,6 @@ const MatchRequestPage = () => {
     },
   });
 
-  // TODO: add timer logic
   api.matchRequest.subscribeToConfirmation.useSubscription(undefined, {
     onData(data) {
       if (curUserId === data.user1Id || curUserId === data.user2Id) {
@@ -136,6 +180,7 @@ const MatchRequestPage = () => {
       onSuccess: () => {
         if (!data) throw new Error("matchedIds is undefined");
         matchUsers.setMatchedUsers(curUserId, data.acceptedUserId);
+        stopTimer();
       },
     });
 
@@ -149,6 +194,7 @@ const MatchRequestPage = () => {
   };
 
   const handleDeleteMatchRequest = () => {
+    if (!curUserMatchRequest) return;
     deleteMatchRequest();
   };
 
@@ -163,21 +209,25 @@ const MatchRequestPage = () => {
     toast.success("Successfully matched with user, redirecting to room...", {
       duration: 2000,
     });
-    // TODO: join session
     console.log("Joining session...");
   };
 
-  // Remove current request immediately so that the user doesn't need to wait for timeout to send another request
-  window.onunload = () => {
-    // Only remove request for current page, not other pages with the same user
-    void handleDeleteMatchRequest();
-  };
+  // TODO: replace confirms with a custom confirm modal
+  if (timerState.waitingTime > 300) {
+    const continueWaiting = confirm(
+      "You have been waiting for more than 5 minutes. Do you want to continue waiting?",
+    );
+    if (!continueWaiting) void deleteMatchRequest();
+  }
 
   return (
     <>
       <Head>
         <title>Find practice partner</title>
       </Head>
+      {curUserMatchRequest && (
+        <RequestStatus matchType={curUserMatchRequest.matchType} />
+      )}
       <PageLayout>
         <div className="flex flex-col h-full items-center justify-center bg-slate-800 text-center">
           <div className="space-y-4">
@@ -549,6 +599,39 @@ const UpdateMatchRequestForm = ({
         Update Match Request
       </button>
     </form>
+  );
+};
+
+const RequestStatus = (props: { matchType: MatchType }) => {
+  const msg =
+    props.matchType === "AUTO"
+      ? "Finding a request for you"
+      : "Pending request acceptance";
+  return (
+    <div className="fixed top-0 w-full z-50 animate-pulse flex items-center justify-center p-5">
+      <div className="bg-slate-200 rounded-md text-slate-800 px-6 py-3 flex items-center">
+        <svg
+          className="animate-spin h-5 w-5 text-slate-600 mr-3"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          ></path>
+        </svg>
+        {msg}
+      </div>
+    </div>
   );
 };
 
