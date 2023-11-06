@@ -10,6 +10,7 @@ import { StyledButton } from "../../components/StyledButton";
 import { StyledCheckbox } from "../../components/StyledCheckbox";
 import { Question, type QuestionMap } from "../../types/global";
 import { equals, makeMap } from "../../utils/utils";
+import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
 
 const pagingLimit = 50;
 
