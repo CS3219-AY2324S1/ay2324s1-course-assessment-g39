@@ -545,7 +545,7 @@ const UpdateMatchRequestForm = ({
     resolver: zodResolver(updateMatchRequestSchema),
   });
 
-  const onSubmit: SubmitHandler<CreateMatchRequestData> = (data) => {
+  const onSubmit: SubmitHandler<UpdateMatchRequestData> = (data) => {
     onUpdate(data);
   };
 
