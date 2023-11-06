@@ -12,13 +12,6 @@ export class Question {
 
 export type QuestionMap = Map<string, Question>;
 
-export class QuestionPagination {
-  cursor: string | undefined = undefined;
-  limit = 3;
-  titleFilter: string | undefined = undefined;
-  backwards = false;
-};
-
 // todo: dup code
 export type ModifyQuestionProps = {
   questionTitleList: { id: string; title: string; category: string; difficulty: Difficulty }[];

@@ -11,7 +11,7 @@ import { StyledCheckbox } from "../../components/StyledCheckbox";
 import { Question, type QuestionMap } from "../../types/global";
 import { equals, makeMap } from "../../utils/utils";
 
-const pagingLimit = 2;
+const pagingLimit = 50;
 
 function Questions() {
   const { data: sessionData } = useSession();
