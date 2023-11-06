@@ -5,6 +5,7 @@ type PageSelectorDivProps = {
     currentPage: number;
     totalPages: number;
     displayedRange: number;
+    disabled?: boolean;
 };
 
 const PageSelector = ({
@@ -12,6 +13,7 @@ const PageSelector = ({
     totalPages,
     displayedRange,
     setPage,
+    disabled = false,
 }: PageSelectorDivProps) => {
     const [allPages, setAllPages] = useState<number[]>([]);
     const offset = Math.floor(displayedRange / 2);
@@ -34,7 +36,7 @@ const PageSelector = ({
             <button
                 className="p-1 bg-primary-900 rounded border disabled:bg-gray-600 disabled:text-gray-100"
                 onClick={() => setPage(() => 0)}
-                disabled={currentPage === 0}
+                disabled={currentPage === 0 || disabled}
             >
                 First
             </button>
@@ -44,7 +46,7 @@ const PageSelector = ({
                         className="p-1 bg-primary-900 rounded border disabled:bg-gray-600 disabled:text-gray-100"
                         key={page}
                         onClick={() => setPage(() => page)}
-                        disabled={page === currentPage}
+                        disabled={page === currentPage || disabled}
                     >
                         {page + 1}
                     </button>
@@ -53,7 +55,7 @@ const PageSelector = ({
             <button
                 className="p-1 bg-primary-900 rounded border disabled:bg-gray-600 disabled:text-gray-100"
                 onClick={() => setPage(() => Math.ceil(totalPages) - 1)}
-                disabled={currentPage === Math.ceil(totalPages) - 1}
+                disabled={currentPage === Math.ceil(totalPages) - 1 || disabled}
             >
                 Last
             </button>

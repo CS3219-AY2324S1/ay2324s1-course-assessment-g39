@@ -49,7 +49,7 @@ function Questions() {
       ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
     }));
     mappedData && setViewQns(makeMap(mappedData, "id"));
-  }, [page, data?.pages]);
+  }, [page, data?.pages[page]]);
 
   const hasChanges = (id: string) => {
     const q1 = questions.get(id);
@@ -208,6 +208,7 @@ function Questions() {
                 totalPages={
                   (data?.pages.at(0)?.totalCount ?? 0) / pagingLimit
                 }
+                disabled={isFetchingNextPage || changedQns.size > 0 || deletedQns.size > 0}
               />
               <div className="flex-[50_50_0%]" />
             </div>
