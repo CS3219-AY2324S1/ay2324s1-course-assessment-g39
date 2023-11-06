@@ -262,64 +262,45 @@ export const matchRequestRouter = createTRPCRouter({
     async ({ ctx }) => {
       const curUserId = ctx.session.user.id;
 
-      const curUserMatchRequest = await prismaPostgres.matchRequest.findUnique({
-        where: {
-          userId: curUserId,
-          matchType: "AUTO",
-        },
-      });
-      if (!curUserMatchRequest) return;
-
-      const findMatchingRequest = async () => {
-        const request = await prismaPostgres.matchRequest.findFirst({
-          where: {
-            category: curUserMatchRequest.category,
-            difficulty: curUserMatchRequest.difficulty,
-            matchType: "AUTO",
-            userId: { not: curUserId },
-          },
-        });
-        if (!request) return null;
-        return filterMatchRequestForUser(request);
-      };
-      // minimise the need to enter the mutex by checking if there is a match first
-      const potentialMatchedRequest = await findMatchingRequest();
-      if (!potentialMatchedRequest) return;
-
-      const isRequestInDB = async (request: Request) => {
-        const reqExists = await prismaPostgres.matchRequest.findFirst({
-          where: { ...request },
-        });
-        return reqExists ? true : false;
-      };
-
-      const deleteMatchedRequests = async (
-        userId1: string,
-        userId2: string,
-      ) => {
-        return await prismaPostgres.matchRequest.deleteMany({
-          where: { userId: { in: [userId1, userId2] } },
-        });
-      };
-
-      /**
-       * WARNING: must be run syncronously to avoid race conditions
-       * if request found in DB
-       * (1) delete both users
-       * (2) notify Client by triggering event
-       */
-      const tryMatch = async (potentialRequest: Request) => {
-        const confirmMatch = await isRequestInDB(potentialRequest);
-        if (confirmMatch) {
-          await deleteMatchedRequests(curUserId, potentialRequest.userId);
-          ee.emit("matchedAutomaticRequests", {
-            user1Id: curUserId,
-            user2Id: potentialRequest.userId,
+      // try find a matching request
+      // if found, emit the two users
+      async function findMatchFor({ userId }: { userId: string }) {
+        const curUserMatchRequest =
+          await prismaPostgres.matchRequest.findUnique({
+            where: { userId },
           });
-        }
-      };
+        if (!curUserMatchRequest) return;
 
-      await mutex.runExclusive(async () => tryMatch(potentialMatchedRequest));
+        const toRunSync = async () => {
+          const matchedRequest = await prismaPostgres.matchRequest.findFirst({
+            where: {
+              AND: {
+                category: curUserMatchRequest.category,
+                difficulty: curUserMatchRequest.difficulty,
+                matchType: "AUTO",
+                userId: { not: userId },
+              },
+            },
+          });
+          if (matchedRequest) {
+            await prismaPostgres.matchRequest.deleteMany({
+              where: {
+                userId: { in: [userId, matchedRequest.userId] },
+              },
+            });
+          }
+          return matchedRequest;
+        };
+
+        const matchedRequest = await mutex.runExclusive(toRunSync);
+        if (!matchedRequest) return;
+
+        ee.emit("findAutomatic", {
+          user1Id: userId,
+          user2Id: matchedRequest.userId,
+        });
+      }
+      await findMatchFor({ userId: curUserId });
     },
   ),
 

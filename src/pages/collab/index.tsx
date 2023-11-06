@@ -22,8 +22,6 @@ import { LoadingSpinner } from "~/components/Loading";
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { time } from "console";
-import { deleteAppClientCache } from "next/dist/server/lib/render-server";
 dayjs.extend(relativeTime);
 
 /**
@@ -45,6 +43,7 @@ const MatchRequestPage = () => {
   });
 
   useEffect(() => {
+    setTimerState({ waitingTime: 0, isTimerActive: false });
     if (timerState.isTimerActive) {
       if (!timer.current) {
         timer.current = setInterval(() => {
@@ -56,7 +55,7 @@ const MatchRequestPage = () => {
         }, 1000);
       }
     }
-  }, [timerState.isTimerActive]);
+  }, []);
 
   const startTimer = () => {
     setTimerState((prev) => ({
@@ -79,7 +78,13 @@ const MatchRequestPage = () => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (curUserMatchRequest) {
         e.preventDefault();
-        void handleDeleteMatchRequest();
+        if (
+          confirm(
+            "Are you sure you want to leave this page? Request will be deleted",
+          )
+        ) {
+          void handleDeleteMatchRequest();
+        }
       }
     };
 
@@ -212,12 +217,9 @@ const MatchRequestPage = () => {
     console.log("Joining session...");
   };
 
-  // TODO: replace confirms with a custom confirm modal
-  if (timerState.waitingTime > 300) {
-    const continueWaiting = confirm(
-      "You have been waiting for more than 5 minutes. Do you want to continue waiting?",
-    );
-    if (!continueWaiting) void deleteMatchRequest();
+  // TODO: add custom confirm modal / hot-toast confirm modal
+  if ((timerState.waitingTime = 300)) {
+    // void deleteMatchRequest();
   }
 
   return (
@@ -232,6 +234,7 @@ const MatchRequestPage = () => {
         <div className="flex flex-col h-full items-center justify-center bg-slate-800 text-center">
           <div className="space-y-4">
             <div className="flex flex-row justify-between">
+              <div>{JSON.stringify(timerState)}</div>
               <div className="text-left">Find a practice partner</div>
               <div className="text-right">{`(${
                 numOfMatchRequests ?? 0
