@@ -24,10 +24,6 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);
 
-/**
- * TODO
- * - get rid of BE code for confirmation of join req
- */
 const MatchRequestPage = () => {
   const router = useRouter();
   const utils = api.useContext();
