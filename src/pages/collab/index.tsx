@@ -92,7 +92,7 @@ const MatchRequestPage = () => {
         setIsCreatingMatchRequest(false);
         setIsWaitingIndefinitely(false);
         resetTimer();
-        refetchGetNumOfMatchReqs();
+        void refetchGetNumOfMatchReqs();
         toast.success("Created match request");
       },
       onError(err) {
