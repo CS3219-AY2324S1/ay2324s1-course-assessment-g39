@@ -36,41 +36,17 @@ const MatchRequestPage = () => {
     throw new Error("Session cannot be undefined since AuthWrapper wrapped");
   }
   const curUserId = session.user.id;
-  const timer = useRef<NodeJS.Timer | null>(null);
-  const [timerState, setTimerState] = useState({
-    isTimerActive: false,
-    waitingTime: 0,
-  });
-
-  useEffect(() => {
-    setTimerState({ waitingTime: 0, isTimerActive: false });
-    if (timerState.isTimerActive) {
-      if (!timer.current) {
-        timer.current = setInterval(() => {
-          setTimerState((prev) => ({
-            ...prev,
-            isTimerActive: true,
-            waitingTime: prev.waitingTime + 1,
-          }));
-        }, 1000);
-      }
-    }
-  }, []);
-
-  const startTimer = () => {
-    setTimerState((prev) => ({
-      ...prev,
-      isTimerActive: true,
-    }));
+  const intervalRef = useRef<NodeJS.Timer | null>(null);
+  const [time, setTime] = useState(0);
+  const resetTimer = () => {
+    intervalRef.current = setInterval(() => {
+      setTime((prev) => prev + 1);
+    }, 1000);
+    setTime(0);
   };
   const stopTimer = () => {
-    if (!timer.current) return;
-    clearInterval(timer.current);
-    setTimerState({
-      waitingTime: 0,
-      isTimerActive: false,
-    });
-    timer.current = null;
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setTime(0);
   };
 
   // remove current request immediately on refresh or change of page
@@ -78,11 +54,8 @@ const MatchRequestPage = () => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (curUserMatchRequest) {
         e.preventDefault();
-        if (
-          confirm(
-            "Are you sure you want to leave this page? Request will be deleted",
-          )
-        ) {
+        // confirm("Are you sure you want to leave this page? Request will be deleted")
+        if (true) {
           void handleDeleteMatchRequest();
         }
       }
@@ -119,7 +92,7 @@ const MatchRequestPage = () => {
     api.matchRequest.createCurrentUserMatchRequest.useMutation({
       onSuccess() {
         setIsCreatingMatchRequest(false);
-        startTimer();
+        resetTimer();
         toast.success("Successfully created match request");
       },
       onError(err) {
@@ -140,7 +113,7 @@ const MatchRequestPage = () => {
     api.matchRequest.updateCurrentUserMatchRequest.useMutation({
       onSuccess() {
         toast.success("Successfully updated match request");
-        startTimer();
+        resetTimer();
         setIsEditingMatchRequest(false);
       },
     });
@@ -218,9 +191,9 @@ const MatchRequestPage = () => {
   };
 
   // TODO: add custom confirm modal / hot-toast confirm modal
-  if ((timerState.waitingTime = 300)) {
-    // void deleteMatchRequest();
-  }
+  // if ((timerState.waitingTime = 300)) {
+  // void deleteMatchRequest();
+  // }
 
   return (
     <>
@@ -234,7 +207,6 @@ const MatchRequestPage = () => {
         <div className="flex flex-col h-full items-center justify-center bg-slate-800 text-center">
           <div className="space-y-4">
             <div className="flex flex-row justify-between">
-              <div>{JSON.stringify(timerState)}</div>
               <div className="text-left">Find a practice partner</div>
               <div className="text-right">{`(${
                 numOfMatchRequests ?? 0
