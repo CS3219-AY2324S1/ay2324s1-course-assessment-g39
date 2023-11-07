@@ -19,7 +19,7 @@ import ConfirmModal from "~/components/ConfirmModal";
 // - change password using email link
 // - edit imageURL
 
-const id_z = z.string().min(1); // can add error message
+const id_z = z.string().min(1);
 const name_z = z.string().min(1);
 const email_z = z.string().email().min(1);
 const emailVerified_z = z.date().nullable();
@@ -145,6 +145,7 @@ const ProfilePage: NextPage = () => {
           message="Are you sure you want to delete your account. If you delete your account you will permanently lose your account information and question submissions history."
           onCancel={() => setIsDeletingAccount(false)}
           onConfirm={() => deleteUser({ id: userData.id })}
+          type="warning"
         />
         <div className="relative h-48 bg-slate-600 border-b overscroll-y-scroll w-full border-x md:max-w-2xl">
           <Image

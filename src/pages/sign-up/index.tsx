@@ -21,10 +21,14 @@ const SignUp = () => {
       toast.error("Failed to create account\n Please try again later");
     },
     onSuccess: async () => {
-      toast.success("Successfully created account: ");
-      if (confirm("Sign In?")) {
-        await signIn(undefined, { callbackUrl: "/" });
-      }
+      const DURATION_TO_LOAD = 1200;
+      toast.success("Sign up successful, redirecting...", {
+        duration: DURATION_TO_LOAD,
+      });
+      setTimeout(
+        () => signIn(undefined, { callbackUrl: "/" }),
+        DURATION_TO_LOAD,
+      );
     },
   });
 
