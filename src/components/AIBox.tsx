@@ -33,7 +33,9 @@ const AIBox = ({
               } text-white p-2 my-2`}
             >
               <div className="flex justify-between">
-                <span>{message.role === "user" ? userName : "GPT-3.5"}</span>
+                <span>
+                  {message.role === "user" ? userName : "Code Assistant"}
+                </span>
               </div>
               <p>{message.message}</p>
             </div>
@@ -54,7 +56,7 @@ const AIBox = ({
           {isAIResponding && (
             <input
               className="w-full rounded-md p-2"
-              value="GPT-3.5 is responding..."
+              value="Code Assistant is responding..."
               disabled
             />
           )}
