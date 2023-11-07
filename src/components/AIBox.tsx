@@ -33,9 +33,7 @@ const AIBox = ({
               } text-white p-2 my-2`}
             >
               <div className="flex justify-between">
-                <span>
-                  {message.role === "user" ? userName : "Code Assistant"}
-                </span>
+                <span>{message.role === "user" ? userName : "Code Assistant"}</span>
               </div>
               <p>{message.message}</p>
             </div>

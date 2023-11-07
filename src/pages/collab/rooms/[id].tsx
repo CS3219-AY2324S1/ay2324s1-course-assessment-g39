@@ -131,9 +131,7 @@ const Toolbar = ({
         </select>
       </label>
       <label className="flex flex-row col-span-2">
-        <QuestionToggleModal
-          questionTitleList={modifyQuestionProps.questionTitleList}
-          setQuestionId={modifyQuestionProps.setQuestionId}
+        <QuestionToggleModal questionTitleList={modifyQuestionProps.questionTitleList} setQuestionId={modifyQuestionProps.setQuestionId}
         />
       </label>
       <div className="flex flex-row col-span-2">
