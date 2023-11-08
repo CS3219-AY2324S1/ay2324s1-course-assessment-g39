@@ -1,13 +1,17 @@
 import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 const NavBar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
+  const router = useRouter();
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
   };
+  const { data: session } = useSession();
 
   const closeDropdown = () => setIsDropdownOpen(false);
 
@@ -25,6 +29,13 @@ const NavBar = () => {
       </div>
       {isDropdownOpen && (
         <div className="absolute z-50 bg-slate-800 flex flex-col space-y-1 p-2">
+          <Link
+            href="/"
+            onClick={closeDropdown}
+            className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-4"
+          >
+            PeerPrep
+          </Link>
           <Link
             href="/questions"
             onClick={closeDropdown}
@@ -60,14 +71,14 @@ const NavBar = () => {
           >
             CodeExecution - Judge0
           </Link>
-          <Link
+          {!session && <Link
             href="/sign-up"
             onClick={closeDropdown}
             className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-4"
           >
             SignUp
-          </Link>
-          <Link
+          </Link>}
+          {!session && <Link
             href="/sign-in"
             onClick={closeDropdown}
             className="flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-4"
@@ -84,6 +95,15 @@ const NavBar = () => {
             Test cases
           </Link>
           }
+          </Link>}
+          {session && <div
+            onClick={() => {
+              void signOut();
+            }}
+            className="cursor-pointer flex items-center justify-center font-bold text-white no-underline transition hover:bg-white/20 rounded-md whitespace-nowrap bg-white/10 flex-[1_0_0%] px-4"
+          >
+            Log out
+          </div>}
         </div>
       )}
     </div>

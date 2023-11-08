@@ -1,41 +1,56 @@
 import Head from "next/head";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { useSession } from "next-auth/react";
+import { toast } from "react-hot-toast";
+import PageSelector from "~/components/PageSelector";
 import { api } from "~/utils/api";
-import { Question, type QuestionMap } from "../../types/global";
-import { equals } from "../../utils/utils";
 import { QuestionRow } from "../../components/QuestionRow";
 import { StyledButton } from "../../components/StyledButton";
 import { StyledCheckbox } from "../../components/StyledCheckbox";
-import { makeMap } from "../../utils/utils";
-import { toast } from "react-hot-toast";
-import { useSession } from "next-auth/react";
-import WarningModal from "~/components/WarningModal";
+import { Question, type QuestionMap } from "../../types/global";
+import { equals, makeMap } from "../../utils/utils";
 import { WithAuthWrapper } from "~/components/wrapper/AuthWrapper";
+
+const pagingLimit = 50;
 
 function Questions() {
   const { data: sessionData } = useSession();
   const allowedToModify = sessionData?.user.role === "MAINTAINER";
-  const getAllQuery = api.useContext().question.getAll;
 
   const [viewQns, setViewQns] = useState<QuestionMap>(new Map());
   const [changedQns, setChangedQns] = useState(new Set<string>());
   const [deletedQns, setDeletedQns] = useState(new Set<string>());
 
-  const questions = makeMap(
-    api.question.getAll.useQuery(undefined, {
-      onSuccess: (data) => {
-        const mappedData = data.map((q) => ({
-          ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
-        }));
-        setViewQns(makeMap(mappedData, "id"));
-      },
-      onError: (e) => {
+  const [page, setPage] = useState(0);
+
+  const getAllQuery = api.useContext().question.getAllReducedInfinite;
+
+  const {
+    data,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = api.question.getAllReducedInfinite.useInfiniteQuery(
+    {
+      limit: pagingLimit,
+      // titleFilter: sentFilter === "" ? undefined : sentFilter,
+    },
+    {
+      getNextPageParam: (prevPage) => prevPage.nextCursor,
+      onError: () => {
         toast.error("Failed to fetch questions");
       },
-    }).data ?? [],
-    "id",
+    },
   );
+
+  const questions = makeMap(data?.pages[page]?.items ?? [], "id");
+
+  useEffect(() => {
+    const mappedData = data?.pages[page]?.items.map((q) => ({
+      ...(changedQns.has(q.id) ? viewQns.get(q.id) ?? q : q),
+    }));
+    mappedData && setViewQns(makeMap(mappedData, "id"));
+  }, [page, data?.pages[page]]);
 
   const hasChanges = (id: string) => {
     const q1 = questions.get(id);
@@ -46,8 +61,9 @@ function Questions() {
   const { mutateAsync: addQuestion } = api.question.addOne.useMutation({
     onSuccess: (data) => {
       toast.success(`Successfully added: ${data.title}`);
+      setPage(0);
     },
-    onError: (e) => {
+    onError: () => {
       toast.error(`Failed to add`);
     },
   });
@@ -57,7 +73,7 @@ function Questions() {
       changedQns.delete(id) && setChangedQns(new Set(changedQns));
       toast.success(`Successfully updated: ${title}`);
     },
-    onError: (e) => {
+    onError: () => {
       toast.error(`Failed to update, possible unique violation`);
     },
   });
@@ -66,15 +82,14 @@ function Questions() {
     onSuccess: () => {
       toast.success(`Successfully deleted`);
     },
-    onError: (e, { id }) => {
+    onError: () => {
       toast.error(`Failed to delete`);
     },
   });
 
   const pushNew = () => {
     void addQuestion(new Question()).then(() => {
-
-    void getAllQuery.invalidate();
+      void getAllQuery.invalidate();
     }).catch((e) => {
       return;
     });
@@ -175,6 +190,29 @@ function Questions() {
             Peer<span className="text-[var(--txt-1)]">Prep</span>
           </h1>
           <div className="text-[var(--txt-3)] w-full flex-1 flex flex-col rounded overflow-hidden">
+            <div className="flex-1 flex gap-2 mb-4">
+              <PageSelector
+                displayedRange={5}
+                setPage={(val: (prev: number) => number) => {
+                  // need to fetch first
+                  const fetchPages = async () => {
+                    const newPage = val(page);
+                    for (let i = page; i < newPage; ++i) {
+                      await fetchNextPage();
+                    }
+                    setPage(val);
+                  };
+                  void fetchPages();
+                  return;
+                }}
+                currentPage={page}
+                totalPages={
+                  (data?.pages.at(0)?.totalCount ?? 0) / pagingLimit
+                }
+                disabled={isFetchingNextPage || changedQns.size > 0 || deletedQns.size > 0}
+              />
+              <div className="flex-[50_50_0%]" />
+            </div>
             <div className="flex font-bold bg-black">
               <StyledCheckbox
                 checked={
@@ -190,7 +228,7 @@ function Questions() {
               <div className="flex-1 p-2 tb-border">difficulty</div>
               <div className="flex-[2_2_0%] p-2 tb-border">category</div>
             </div>
-            {viewQns.size ? (
+            {!isFetchingNextPage && viewQns.size ? (
               [...viewQns.entries()].map(([id, q]) => (
                 <QuestionRow
                   key={id}
@@ -246,4 +284,4 @@ function Questions() {
   );
 }
 
-export default Questions;
+export default WithAuthWrapper(Questions);

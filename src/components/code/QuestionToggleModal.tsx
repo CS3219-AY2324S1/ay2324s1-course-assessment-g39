@@ -1,11 +1,8 @@
-import { boolean } from "zod";
-import ModalLayout from "../layout/ModalLayout";
 import { useEffect, useState } from "react";
-import { StyledInput } from "../StyledInput";
-import { Difficulty } from "~/types/global";
-import { StyledButton } from "../StyledButton";
+import { type Difficulty } from "~/types/global";
 import { api } from "~/utils/api";
-import useDebounce from "~/hooks/useDebounce";
+import ModalLayout from "../layout/ModalLayout";
+import PageSelector from "../PageSelector";
 
 type ReducedQuestion = {
   title: string;
@@ -17,66 +14,6 @@ type ReducedQuestion = {
 type QuestionToggleModalProps = {
   questionTitleList: ReducedQuestion[];
   setQuestionId: (questionTitle: string) => void;
-};
-
-type SelectPageDivProps = {
-  setPage: (inputFunc: (val: number) => number) => void;
-  currentPage: number;
-  totalPages: number;
-  displayedRange: number;
-};
-const SelectPageDiv = ({
-  currentPage,
-  totalPages,
-  displayedRange,
-  setPage,
-}: SelectPageDivProps) => {
-  const [allPages, setAllPages] = useState<number[]>([]);
-  const offset = Math.floor(displayedRange / 2);
-  const actualRange = Math.ceil(displayedRange);
-  useEffect(() => {
-    // update the pages range
-    const newPages = [];
-    const startPage = Math.max(currentPage - offset, 0);
-    for (
-      let i = startPage;
-      i < totalPages && i < startPage + actualRange;
-      ++i
-    ) {
-      newPages.push(i);
-    }
-    setAllPages(newPages);
-  }, [totalPages, currentPage, displayedRange]);
-  return (
-    <div className="flex flex-row gap-2 m-3">
-      <button
-        className="p-1 bg-primary-900 rounded border disabled:bg-gray-600 disabled:text-gray-100"
-        onClick={() => setPage(() => 0)}
-        disabled={currentPage === 0}
-      >
-        First
-      </button>
-      {allPages.map((page) => {
-        return (
-          <button
-            className="p-1 bg-primary-900 rounded border disabled:bg-gray-600 disabled:text-gray-100"
-            key={page}
-            onClick={() => setPage(() => page)}
-            disabled={page === currentPage}
-          >
-            {page + 1}
-          </button>
-        );
-      })}
-      <button
-        className="p-1 bg-primary-900 rounded border disabled:bg-gray-600 disabled:text-gray-100"
-        onClick={() => setPage(() => Math.ceil(totalPages) - 1)}
-        disabled={currentPage === Math.ceil(totalPages) - 1}
-      >
-        Last
-      </button>
-    </div>
-  );
 };
 
 const pagingLimit = 50;
@@ -134,7 +71,7 @@ const QuestionToggleModal = ({ setQuestionId }: QuestionToggleModalProps) => {
         </form>
         {/* Table */}
         <div className="overflow-auto max-h-[50vh]">
-          <SelectPageDiv
+          <PageSelector
             displayedRange={5}
             setPage={(val: (prev: number) => number) => {
               // need to fetch first

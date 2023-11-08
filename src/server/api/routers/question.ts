@@ -66,9 +66,18 @@ export const questionRouter = createTRPCRouter({
         const items = await ctx.prismaMongo.question.findMany({
           take: limit + 1,
           where: input.titleFilter ? {
-            title: {
-              contains: input.titleFilter
-            }
+            OR: [
+              {
+                title: {
+                  contains: input.titleFilter
+                },
+              },
+              {
+                body: {
+                  contains: input.titleFilter
+                }
+              }
+            ]
           } : undefined,
           cursor: input.cursor ? {
             title: input.cursor

@@ -8,8 +8,9 @@ export class Question {
   difficulty = "EASY" as Difficulty;
   category = "";
   id = "";
-}
+};
 
+export type QuestionMap = Map<string, Question>;
 
 // todo: dup code
 export type ModifyQuestionProps = {
@@ -63,3 +64,4 @@ export type Environment = {
 }
 
 export type QuestionMap = Map<string, Question>;
+

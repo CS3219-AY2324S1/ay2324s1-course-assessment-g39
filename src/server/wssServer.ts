@@ -2,14 +2,15 @@ import { AppRouter, appRouter } from "./api/root";
 import { applyWSSHandler } from "@trpc/server/adapters/ws";
 import ws, { WebSocketServer } from "ws";
 import { createWSTRPCContext } from "./api/trpc";
+import { env } from "~/env.mjs";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 const wss: WebSocketServer = new ws.Server({
-  port: 3002,
+  port: Number(env.NEXT_PUBLIC_WS_PORT),
 });
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const handler = applyWSSHandler<AppRouter>({
-  wss,
+wss,
   router: appRouter,
   createContext: createWSTRPCContext,
 });
@@ -24,7 +25,7 @@ export const wssEE = wss.on("connection", (ws) => {
     console.log(`➖➖ Connection (${wss.clients.size})`);
   });
 });
-console.log("✅ WebSocket Server listening on ws://localhost:3002");
+console.log("✅ WebSocket Server listening on ws://localhost:${env.NEXT_PUBLIC_WS_PORT}");
 
 process.on("SIGTERM", () => {
   console.log("SIGTERM");
