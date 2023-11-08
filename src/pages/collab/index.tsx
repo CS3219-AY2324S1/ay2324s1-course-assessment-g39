@@ -72,7 +72,8 @@ const MatchRequestPage = () => {
   const [difficultyFilter, setDifficultyFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
 
-  const { data: numOfMatchRequests, refetch: refetchGetNumOfMatchReqs } =
+  // our definition of online users are users who are looking for a match
+  const { data: numOfOnlineUsers = 0, refetch: refetchGetNumOfMatchReqs } =
     api.matchRequest.getNumOfMatchRequests.useQuery();
 
   const { mutate: automaticallyMatchCurrentUserRequest } =
@@ -172,8 +173,7 @@ const MatchRequestPage = () => {
   };
 
   const handleDeleteMatchRequest = () => {
-    if (!curUserMatchRequest) return;
-    deleteMatchRequest();
+    if (curUserMatchRequest) deleteMatchRequest();
   };
 
   type UpdateToMatchRequest =
@@ -189,6 +189,13 @@ const MatchRequestPage = () => {
     });
   };
 
+  const numOfOtherOnlineUsers = curUserMatchRequest
+    ? numOfOnlineUsers - 1
+    : numOfOnlineUsers;
+  const otherUsersManualRequests = manualRequests.filter(
+    (r) => r.user.id !== curUserId,
+  );
+
   return (
     <>
       <Head>
@@ -198,9 +205,9 @@ const MatchRequestPage = () => {
         title="Continue Waiting?"
         isOpen={!isWaitingIndefintely && time > 300}
         message={`You have been waiting for 5 minutes. There ${
-          numOfMatchRequests == 1
+          numOfOtherOnlineUsers === 1
             ? "is 1 other online user"
-            : `are ${numOfMatchRequests} other online users`
+            : `are ${numOfOtherOnlineUsers} other online users`
         } looking for a match. Would you like to continue waiting?`}
         onCancel={() => handleDeleteMatchRequest()}
         onConfirm={() => setIsWaitingIndefinitely(true)}
@@ -216,9 +223,7 @@ const MatchRequestPage = () => {
           <div className="space-y-4">
             <div className="flex flex-row justify-between">
               <div className="text-left">Find a practice partner</div>
-              <div className="text-right">{`(${
-                numOfMatchRequests ?? 0
-              } online users)`}</div>
+              <div className="text-right">{`(${numOfOnlineUsers} online users)`}</div>
             </div>
             {curUserMatchRequest && (
               <>
@@ -293,8 +298,7 @@ const MatchRequestPage = () => {
                     </tr>
                   </thead>
                   <tbody className="space-y-6 bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                    {manualRequests
-                      .filter((r) => r.user.id !== curUserId)
+                    {otherUsersManualRequests
                       .filter(
                         (r) =>
                           !difficultyFilter ||
@@ -328,17 +332,23 @@ const MatchRequestPage = () => {
                       ))}
                   </tbody>
                 </table>
-                {!requestsLoading && manualRequests.length === 0 && (
-                  <>
-                    <div className="py-2" />
-                    <div className="bg-slate-700 rounded-lg block text-center text-sm py-4">
-                      🥲 <br />
-                      Bummer! No requests.
-                      <br />
-                      Maybe ask a friend to come on to code with you?
+                {!requestsLoading &&
+                  otherUsersManualRequests.length === 0 &&
+                  (numOfOtherOnlineUsers == 0 ? (
+                    <>
+                      <div className="py-2" />
+                      <div className="bg-slate-700 rounded-lg block text-center text-sm py-4">
+                        🥲 <br />
+                        Bummer! No other online users.
+                        <br />
+                        Maybe ask a friend to come on to code with you?
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-slate-700 rounded-lg block text-center text-sm py-2 mt-2">
+                      No available public requests.
                     </div>
-                  </>
-                )}
+                  ))}
               </div>
             </div>
           </div>
