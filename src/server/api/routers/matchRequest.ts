@@ -340,22 +340,25 @@ export const matchRequestRouter = createTRPCRouter({
         return reqExists ? true : false;
       };
 
-      const deleteMatchedRequest = async (userId: string) => {
-        return await prismaPostgres.matchRequest.delete({
-          where: { userId },
+      const deleteMatchedRequests = async (
+        userId1: string,
+        userId2: string,
+      ) => {
+        return await prismaPostgres.matchRequest.deleteMany({
+          where: { userId: { in: [userId1, userId2] } },
         });
       };
 
       /**
        * WARNING: must be run syncronously to avoid race conditions
        * if request found in DB
-       * (1) delete request
+       * (1) delete requests of both users
        * (2) notify Client by triggering event
        */
       const tryMatch = async (curUserId: string, acceptedUserId: string) => {
         const confirmMatch = await isRequestInDB(acceptedUserId);
         if (confirmMatch) {
-          await deleteMatchedRequest(acceptedUserId);
+          await deleteMatchedRequests(acceptedUserId, curUserId);
           ee.emit("matchedManualRequest", {
             user1Id: curUserId,
             user2Id: acceptedUserId,
