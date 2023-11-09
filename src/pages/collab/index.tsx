@@ -77,7 +77,11 @@ const MatchRequestPage = () => {
     api.matchRequest.getNumOfMatchRequests.useQuery();
 
   const { data: curUserMatchRequest, refetch: refetchCurrentUserRequest } =
-    api.matchRequest.getCurrentUserRequest.useQuery();
+    api.matchRequest.getCurrentUserRequest.useQuery(undefined, {
+      onError() {
+        toast.error("Error loading current user's match request");
+      },
+    });
 
   const { mutate: createMatchRequest } =
     api.matchRequest.createCurrentUserMatchRequest.useMutation({
@@ -103,6 +107,9 @@ const MatchRequestPage = () => {
         void refetchGetNumOfMatchReqs();
         toast.success("Deleted match request");
       },
+      onError() {
+        toast.error("Error deleting match request");
+      },
     });
 
   const { mutate: updateMatchRequest } =
@@ -113,6 +120,9 @@ const MatchRequestPage = () => {
         resetTimer();
         void refetchCurrentUserRequest();
         toast.success("Updated match request");
+      },
+      onError() {
+        toast.error("Error updating match request");
       },
     });
 
@@ -146,6 +156,9 @@ const MatchRequestPage = () => {
         if (!data) throw new Error("matchedIds is undefined");
         matchUsers.setMatchedUsers(curUserId, data.acceptedUserId);
         stopTimer();
+      },
+      onError: () => {
+        toast.error("Error accepting match request");
       },
     });
 

@@ -8,7 +8,7 @@ import { EventEmitter } from "events";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { prismaPostgres } from "~/server/db";
-import type { MatchRequest } from "@prisma-db-psql/client";
+import type { MatchRequest, MatchType } from "@prisma-db-psql/client";
 
 /**
  * A lock for synchronizing async operations.
@@ -117,17 +117,35 @@ type Request = Omit<MatchRequest, "id" | "cursor" | "createdAt">;
 const mutex = new Mutex();
 const ee = new EventEmitter();
 
-const mutextProtectedTryMatch = async (
-  curUserId: string,
-  potentialRequest: Request,
+const tryAutomaticMatch = async (
+  userId: string,
+  difficulty: Difficulty,
+  category: string,
 ) => {
-  const isRequestInDB = async (request: Request) => {
-    const reqExists = await prismaPostgres.matchRequest.findFirst({
-      where: { ...request },
+  const findMatchedRequest = async () => {
+    return prismaPostgres.matchRequest.findFirst({
+      where: {
+        matchType: "AUTO",
+        category,
+        difficulty,
+        userId: { not: userId },
+      },
+      select: {
+        difficulty: true,
+        category: true,
+        userId: true,
+        matchType: true,
+      },
     });
-    return reqExists ? true : false;
   };
 
+  await mutexProtectedTryMatch(userId, findMatchedRequest);
+};
+
+const mutexProtectedTryMatch = async (
+  userId: string,
+  getMatchedRequest: () => Promise<Request | null>,
+) => {
   const deleteMatchedRequests = async (userId1: string, userId2: string) => {
     return await prismaPostgres.matchRequest.deleteMany({
       where: { userId: { in: [userId1, userId2] } },
@@ -140,42 +158,18 @@ const mutextProtectedTryMatch = async (
    * (1) delete requests of both users
    * (2) notify Client by triggering event
    */
-  const tryMatch = async (curUserId: string, potentialRequest: Request) => {
-    const confirmMatch = await isRequestInDB(potentialRequest);
-    if (confirmMatch) {
+  const tryMatch = async (userId: string) => {
+    const matchedRequest = await getMatchedRequest();
+    if (matchedRequest) {
       ee.emit("confirmedMatch", {
-        userId1: curUserId,
-        userId2: potentialRequest.userId,
+        userId1: userId,
+        userId2: matchedRequest.userId,
       });
-      await deleteMatchedRequests(curUserId, potentialRequest.userId);
+      await deleteMatchedRequests(userId, matchedRequest.userId);
     }
   };
 
-  await mutex.runExclusive(async () => tryMatch(curUserId, potentialRequest));
-};
-
-const tryFindMatchingAutomaticRequest = async (
-  userId: string,
-  difficulty: Difficulty,
-  category: string,
-) => {
-  const potentialMatchedRequest = await prismaPostgres.matchRequest.findFirst({
-    where: {
-      matchType: "AUTO",
-      category,
-      difficulty,
-      userId: { not: userId },
-    },
-    select: {
-      difficulty: true,
-      category: true,
-      userId: true,
-      matchType: true,
-    },
-  });
-  if (!potentialMatchedRequest) return;
-
-  await mutextProtectedTryMatch(userId, potentialMatchedRequest);
+  await mutex.runExclusive(async () => tryMatch(userId));
 };
 
 export const matchRequestRouter = createTRPCRouter({
@@ -214,7 +208,7 @@ export const matchRequestRouter = createTRPCRouter({
       }
 
       // its of type automatic so try find a match
-      void tryFindMatchingAutomaticRequest(curUserId, difficulty, category);
+      void tryAutomaticMatch(curUserId, difficulty, category);
     }),
 
   getCurrentUserRequest: protectedProcedure.query(async ({ ctx }) => {
@@ -241,10 +235,10 @@ export const matchRequestRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const { difficulty, category, matchType } = input;
-      const userId = ctx.session.user.id;
+      const curUserId = ctx.session.user.id;
 
       await ctx.prismaPostgres.matchRequest.update({
-        where: { userId },
+        where: { userId: curUserId },
         data: { difficulty, category, matchType },
       });
 
@@ -254,7 +248,7 @@ export const matchRequestRouter = createTRPCRouter({
       }
 
       // its of type automatic so try find a match
-      void tryFindMatchingAutomaticRequest(userId, difficulty, category);
+      void tryAutomaticMatch(curUserId, difficulty, category);
     }),
 
   deleteCurrentUserMatchRequest: protectedProcedure
@@ -289,8 +283,8 @@ export const matchRequestRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const curUserId = ctx.session.user.id;
       const { acceptedUserId } = input;
-      const matchedRequest =
-        await ctx.prismaPostgres.matchRequest.findUniqueOrThrow({
+      const getMatchedRequest = async () => {
+        return await ctx.prismaPostgres.matchRequest.findUniqueOrThrow({
           where: { userId: acceptedUserId },
           select: {
             difficulty: true,
@@ -299,8 +293,9 @@ export const matchRequestRouter = createTRPCRouter({
             matchType: true,
           },
         });
+      };
 
-      await mutextProtectedTryMatch(curUserId, matchedRequest);
+      await mutexProtectedTryMatch(curUserId, getMatchedRequest);
     }),
 
   subscribeToMyRequestSuccess: protectedProcedure.subscription(() => {
