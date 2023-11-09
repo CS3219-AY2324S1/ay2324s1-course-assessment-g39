@@ -8,7 +8,7 @@ import { EventEmitter } from "events";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { prismaPostgres } from "~/server/db";
-import { type MatchRequest } from "@prisma-db-psql/client";
+import type { MatchRequest } from "@prisma-db-psql/client";
 
 /**
  * A lock for synchronizing async operations.
@@ -116,6 +116,7 @@ type Request = Omit<MatchRequest, "id" | "cursor" | "createdAt">;
 
 const mutex = new Mutex();
 const ee = new EventEmitter();
+
 const mutextProtectedTryMatch = async (
   curUserId: string,
   potentialRequest: Request,
@@ -151,6 +152,30 @@ const mutextProtectedTryMatch = async (
   };
 
   await mutex.runExclusive(async () => tryMatch(curUserId, potentialRequest));
+};
+
+const tryFindMatchingAutomaticRequest = async (
+  userId: string,
+  difficulty: Difficulty,
+  category: string,
+) => {
+  const potentialMatchedRequest = await prismaPostgres.matchRequest.findFirst({
+    where: {
+      matchType: "AUTO",
+      category,
+      difficulty,
+      userId: { not: userId },
+    },
+    select: {
+      difficulty: true,
+      category: true,
+      userId: true,
+      matchType: true,
+    },
+  });
+  if (!potentialMatchedRequest) return;
+
+  await mutextProtectedTryMatch(userId, potentialMatchedRequest);
 };
 
 export const matchRequestRouter = createTRPCRouter({
@@ -189,24 +214,7 @@ export const matchRequestRouter = createTRPCRouter({
       }
 
       // its of type automatic so try find a match
-      const potentialMatchedRequest =
-        await prismaPostgres.matchRequest.findFirst({
-          where: {
-            matchType: "AUTO",
-            category,
-            difficulty,
-            userId: { not: curUserId },
-          },
-          select: {
-            difficulty: true,
-            category: true,
-            userId: true,
-            matchType: true,
-          },
-        });
-
-      if (!potentialMatchedRequest) return;
-      await mutextProtectedTryMatch(curUserId, potentialMatchedRequest);
+      tryFindMatchingAutomaticRequest(curUserId, difficulty, category);
     }),
 
   getCurrentUserRequest: protectedProcedure.query(async ({ ctx }) => {
@@ -230,30 +238,39 @@ export const matchRequestRouter = createTRPCRouter({
       z.object({
         difficulty: difficulties_z,
         category: category_z,
+        matchType: matchType_z,
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { difficulty, category } = input;
+      const { difficulty, category, matchType } = input;
       const userId = ctx.session.user.id;
 
       await ctx.prismaPostgres.matchRequest.update({
         where: { userId },
-        data: { difficulty, category },
+        data: { difficulty, category, matchType },
       });
 
-      ee.emit("manualMatchRequestsChanged");
+      if (matchType == "MANUAL") {
+        ee.emit("manualMatchRequestsChanged");
+        return;
+      }
+
+      // its of type automatic so try find a match
+      tryFindMatchingAutomaticRequest(userId, difficulty, category);
     }),
 
-  deleteCurrentUserMatchRequest: protectedProcedure.mutation(
-    async ({ ctx, input }) => {
+  deleteCurrentUserMatchRequest: protectedProcedure
+    .input(z.object({ matchType: matchType_z }))
+    .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
       await ctx.prismaPostgres.matchRequest.delete({
         where: { userId },
       });
 
-      ee.emit("manualMatchRequestsChanged");
-    },
-  ),
+      if (input.matchType == "MANUAL") {
+        ee.emit("manualMatchRequestsChanged");
+      }
+    }),
 
   subscribeToManualMatchRequestsChange: protectedProcedure.subscription(() => {
     return observable<boolean>((emit) => {

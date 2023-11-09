@@ -159,7 +159,9 @@ const MatchRequestPage = () => {
   };
 
   const handleDeleteMatchRequest = () => {
-    if (curUserMatchRequest) deleteMatchRequest();
+    if (curUserMatchRequest) {
+      deleteMatchRequest({ matchType: curUserMatchRequest.matchType });
+    }
   };
 
   type UpdateToMatchRequest =
@@ -224,6 +226,7 @@ const MatchRequestPage = () => {
                     curData={{
                       category: curUserMatchRequest.category,
                       difficulty: curUserMatchRequest.difficulty,
+                      matchType: curUserMatchRequest.matchType,
                     }}
                   />
                 )}
@@ -498,11 +501,9 @@ const UserOwnMatchRequestView = ({
 const updateMatchRequestSchema = z.object({
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
   category: z.string().min(1),
+  matchType: z.enum(["AUTO", "MANUAL"]),
 });
-type UpdateMatchRequestData = Omit<
-  z.infer<typeof createMatchRequestSchema>,
-  "automaticMatching"
->;
+type UpdateMatchRequestData = z.infer<typeof updateMatchRequestSchema>;
 type UpdateMatchRequestFormProps = {
   onUpdate: (data: UpdateMatchRequestData) => void;
   handleCancel: () => void;
@@ -574,6 +575,20 @@ const UpdateMatchRequestForm = ({
           type="text"
           defaultValue={curData.category}
           {...register("category")}
+        />
+        {errors.category && (
+          <span className="text-red-500">{errors.category.message}</span>
+        )}
+      </div>
+      <div className="hidden">
+        <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+          Match Type
+        </label>
+        <input
+          className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          type="text"
+          defaultValue={curData.matchType}
+          {...register("matchType")}
         />
         {errors.category && (
           <span className="text-red-500">{errors.category.message}</span>
