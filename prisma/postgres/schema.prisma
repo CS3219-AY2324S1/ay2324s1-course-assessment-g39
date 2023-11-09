@@ -102,21 +102,23 @@ model CodeSessionUserAuth {
 }
 
 model User {
-    id                  String                @id @default(cuid())
-    name                String?
-    email               String?               @unique
-    emailVerified       DateTime?
-    image               String?
-    password            String?
-    accounts            Account[]
-    sessions            Session[]
-    codeSpace           CodeSpace[]
-    attempts            QuestionAttempt[]
-    role                Role                  @default(USER)
-    codeSessionAuthRecv CodeSessionUserAuth[] @relation(name: "auth_receiver")
-    matchRequest        MatchRequest?
-    joinRequest         JoinRequest[]
-    sessionMessage      SessionMessage[]
+    id                              String                @id @default(cuid())
+    name                            String?
+    email                           String?               @unique
+    emailVerified                   DateTime?
+    image                           String?
+    password                        String?
+    accounts                        Account[]
+    sessions                        Session[]
+    codeSpace                       CodeSpace[]
+    attempts                        QuestionAttempt[]
+    role                            Role                  @default(USER)
+    codeSessionAuthRecv             CodeSessionUserAuth[] @relation(name: "auth_receiver")
+    matchRequest                    MatchRequest?
+    joinRequest                     JoinRequest[]
+    sessionUserAndUserMessages      SessionUserAndUserMessage[]
+    sessionUserAndAIMessages        SessionUserAndAIMessage[]
+    Submission                      Submission[]
 }
 
 enum Difficulty {
@@ -144,7 +146,6 @@ model MatchRequest {
     difficulty  Difficulty
     category    String
     user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-    // username    String
     userId      String        @unique
     matchType   MatchType     @default(MANUAL)
     createdAt   DateTime      @default(now())
@@ -154,7 +155,7 @@ model MatchRequest {
 model JoinRequest {
     id        Int          @id @default(autoincrement())
     fromUser  User         @relation(fields: [fromId], references: [id], onDelete: Cascade)
-    fromId    String       // a user id todo(gab): rename this to something btr
+    fromId    String // a user id todo(gab): rename this to something btr
     // fromName  String
     toRequest MatchRequest @relation(fields: [toId], references: [id], onDelete: Cascade)
     toId      String
@@ -165,27 +166,54 @@ model JoinRequest {
 }
 
 model QuestionAttempt {
-    userId      String
-    questionId  String
-    language    String
-    answerId    String
-    attemptedOn DateTime     @default(now())
+    userId       String
+    questionId   String
+    language     String
+    answerId     String
+    attemptedOn  DateTime     @default(now())
     // storing result in postgres because its easier to access if we want to list the results
-    result      AnswerResult
-    user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    result       AnswerResult
+    user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    // numebr of passed test cases
+    passed       Int
+    numOfTests   Int
+    submissionId String
 
+    @@unique([userId, submissionId])
     @@unique([userId, questionId, answerId])
-
 }
 
-model SessionMessage {
-    id          String  @id @default(cuid())
-    sessionId   String
+model SessionUserAndUserMessage {
+    id        String   @id @default(cuid())
+    sessionId String
     userId    String
     userName  String
+    message   String
+    createdAt DateTime @default(now())
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([sessionId])
+}
+
+model SessionUserAndAIMessage {
+    id          String  @id @default(cuid())
+    sessionId   String
+    userId      String
     message     String
+    role        String
     createdAt   DateTime    @default(now())
     user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([sessionId])
+}
+
+// temporary submission relation for judge0
+model Submission {
+    id       String   @default(cuid())
+    token    String[]
+    userId   String
+    user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    answerId String
+
+    @@unique([userId, id])
 }

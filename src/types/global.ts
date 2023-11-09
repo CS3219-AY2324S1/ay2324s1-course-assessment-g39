@@ -8,12 +8,13 @@ export class Question {
   difficulty = "EASY" as Difficulty;
   category = "";
   id = "";
-}
+};
 
+export type QuestionMap = Map<string, Question>;
 
 // todo: dup code
 export type ModifyQuestionProps = {
-  questionTitleList: { id: string; title: string }[];
+  questionTitleList: { id: string; title: string; category: string; difficulty: Difficulty }[];
   setQuestionId: (id: string) => void;
   currentQuestion: Question | null | undefined;
 };
@@ -53,5 +54,3 @@ export type CodeOutput = {
   message: string | null;
   status: { id: number; description: string };
 };
-
-export type QuestionMap = Map<string, Question>;

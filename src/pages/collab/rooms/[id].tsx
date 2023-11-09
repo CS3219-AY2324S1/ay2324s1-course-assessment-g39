@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /**
  * A collab room
  */
@@ -25,6 +26,9 @@ import { getLanguage } from "~/utils/utils";
 import { Tabs, TabList, Tab, TabPanel } from "react-tabs";
 import { useSession } from "next-auth/react";
 import Chatbox from "~/components/ChatBox";
+import AIBox from "~/components/AIBox";
+import Submission from "~/components/Submission";
+import QuestionToggleModal from "~/components/code/QuestionToggleModal";
 
 const SharedEditor = ({
   onSave,
@@ -127,23 +131,7 @@ const Toolbar = ({
         </select>
       </label>
       <label className="flex flex-row col-span-2">
-        Question&nbsp;
-        <select
-          name="question"
-          className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-          value={modifyQuestionProps.currentQuestion?.id}
-          onChange={(e) => {
-            modifyQuestionProps.setQuestionId(e.target.value);
-          }}
-        >
-          {modifyQuestionProps.questionTitleList.map((question) => {
-            return (
-              <option key={question.id} value={question.id}>
-                {question.title}
-              </option>
-            );
-          })}
-        </select>
+        <QuestionToggleModal questionTitleList={modifyQuestionProps.questionTitleList} setQuestionId={modifyQuestionProps.setQuestionId} />
       </label>
       <div className="flex flex-row col-span-2">
         <label>
@@ -225,7 +213,7 @@ const Room = () => {
   const { data: session, status } = useSession();
 
   function submit() {
-    // todo: submit code and store the results using the answer router
+    useQuestionObject.submitCode(codeSession[0].toString());
   }
 
   function runTest() {
@@ -267,6 +255,8 @@ const Room = () => {
             <TabList>
               <Tab>Output</Tab>
               <Tab>Chat</Tab>
+              <Tab>GPT-3.5</Tab>
+              {useQuestionObject.submissionStatus && <Tab>Submission</Tab>}
             </TabList>
             <TabPanel>
               <Output
@@ -282,6 +272,19 @@ const Room = () => {
                 className="row-span-2 w-full h-full p-3 flex flex-col text-black"
               />
             </TabPanel>
+            <TabPanel>
+              <AIBox
+                sessionId={roomId as string}
+                userId={session?.user.id ?? ""}
+                userName={session?.user.name ?? ""}
+                className="row-span-2 w-full h-full p-3 flex flex-col text-black"
+              />
+            </TabPanel>
+            {useQuestionObject.submissionStatus && (
+              <TabPanel>
+                <Submission {...useQuestionObject.submissionStatus} />
+              </TabPanel>
+            )}
           </Tabs>
         </div>
         <div className="room-editor-wrapper bg-slate-600">

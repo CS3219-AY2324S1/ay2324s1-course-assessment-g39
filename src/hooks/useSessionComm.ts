@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { useState } from "react";
-import { type Message } from "~/server/api/routers/communication";
+import { type UserAndUserMessage } from "~/server/api/routers/userAndUserComm";
 import { api } from "~/utils/api";
 
 export type SessionCommResult = [
-  Message[],
+  UserAndUserMessage[],
   () => void,
   (value: string) => void,
   currentMessage: string,
@@ -23,16 +26,18 @@ export default function useSessionComm(
 
   const utils = api.useContext();
 
-  const allSessionMessages = api.messages.getAllSessionMessages.useQuery({
-    sessionId,
-  }).data;
+  const allSessionMessages =
+    api.userAndUserMessages.getAllSessionUserAndUserMessages.useQuery({
+      sessionId,
+    }).data;
 
-  const addMessageMutation = api.messages.addMessage.useMutation();
+  const addMessageMutation =
+    api.userAndUserMessages.addUserAndUserMessage.useMutation();
 
-  api.messages.subscribeToSessionMessages.useSubscription(
+  api.userAndUserMessages.subscribeToSessionUserAndUserMessages.useSubscription(
     { sessionId, userId },
     {
-      onData: (data: Message) => {
+      onData: (data: UserAndUserMessage) => {
         if (data.message) {
           if (data.userId !== userId)
             setChatState((state) => ({
@@ -58,12 +63,13 @@ export default function useSessionComm(
       },
       onError(err) {
         console.log("Subscription error: ", err);
-        void Promise.resolve(utils.messages.invalidate());
+        void Promise.resolve(utils.userAndUserMessages.invalidate());
       },
     },
   );
 
-  const addWhoIsTypingMutation = api.messages.addWhoIsTyping.useMutation();
+  const addWhoIsTypingMutation =
+    api.userAndUserMessages.addWhoIsTyping.useMutation();
 
   const sendMessage = () => {
     // Don't send empty messages, or messages with only whitespace. Could change this later
@@ -101,7 +107,7 @@ export default function useSessionComm(
     : "";
 
   return [
-    allSessionMessages as Message[],
+    allSessionMessages as UserAndUserMessage[],
     sendMessage,
     onTyping,
     chatState.currentMessage,
