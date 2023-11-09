@@ -1,18 +1,18 @@
+import type { Answer } from "@prisma-db-mongo/client";
+import type { AnswerResult } from "@prisma-db-psql/client";
+import { TRPCError } from "@trpc/server";
+import axios from "axios";
+import { type Session } from "next-auth";
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
 import {
-  PrismaMongoT,
+  type PrismaMongoT,
+  type PrismaPostgresT,
   prismaMongo,
   prismaPostgres,
-  PrismaPostgresT,
 } from "~/server/db";
-import type { AnswerResult } from "@prisma-db-psql/client";
-import type { Answer } from "@prisma-db-mongo/client";
-import { TRPCError } from "@trpc/server";
 import { appRouter } from "../root";
-import { Session } from "next-auth";
-import { api } from "~/utils/api";
-import axios from "axios";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { env as penv } from "~/env.mjs";
 
 const createAnswerInput = z.object({
   body: z.string(),
@@ -80,7 +80,7 @@ const answerRouter = createTRPCRouter({
       });
 
       const languages = await axios
-        .get("http://localhost:2358/languages")
+        .get(`${penv.J0_URL}:2358/languages`)
         .then((res) => {
           return res.data as { id: number; name: string }[];
         });

@@ -21,6 +21,7 @@ export const env = createEnv({
     NEXTAUTH_URL: z.string().min(1),
     S3_BUCKET_NAME: z.string().min(1),
     S3_ENDPOINT: z.string().min(1),
+    J0_URL: z.string().min(1),
     // Add `.min(1) on ID and SECRET if you want to make sure they're not empty
     GITHUB_ID: z.string().min(1),
     GITHUB_SECRET: z.string().min(1),
@@ -53,6 +54,7 @@ export const env = createEnv({
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
     S3_ENDPOINT: process.env.S3_ENDPOINT,
+    J0_URL: process.env.J0_URL,
     GITHUB_ID: process.env.GITHUB_ID,
     GITHUB_SECRET: process.env.GITHUB_SECRET,
   },

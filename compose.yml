@@ -11,6 +11,8 @@ services:
       - "3000:3000"
       - "3002:3002"
     image: t3-app
+    networks:
+      - network1
   postgres_db:
     image: postgres:12.16
     container_name: postgresdb-dev
@@ -23,6 +25,8 @@ services:
       - "5432:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - network1
   mongo_db:
     image: mongo:7.0.0
     container_name: mongodb-dev
@@ -37,6 +41,8 @@ services:
       - ./data/mongo:/data/db
       - ./.docker/mongo/rs-initiate.js:/docker-entrypoint-initdb.d/rs-initiate.js
       # - ./.docker/mongo/replica.key:/data/replica.key
+    networks:
+      - network1
   s3-bucket:
     build: ./s3/
     restart: always
@@ -46,6 +52,8 @@ services:
       S3_BUCKET_NAME: ${S3_BUCKET_NAME}
     volumes:
       - "./data/s3:/home/app/public/peer-prep"
+    networks:
+      - network1
   rabbitmq:
     image: rabbitmq:3.11.23-management-alpine
     restart: always
@@ -58,9 +66,11 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     command: sh -c "rabbitmq-plugins enable rabbitmq_web_stomp && rabbitmq-server"
-
     networks:
       - rabbitmq_go_net
+      - network1
 networks:
   rabbitmq_go_net:
+    driver: bridge
+  network1:
     driver: bridge
