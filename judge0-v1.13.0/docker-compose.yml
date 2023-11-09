@@ -17,6 +17,7 @@ services:
     privileged: true
     <<: *default-logging
     restart: always
+    container_name: j0-server
 
   workers:
     image: judge0/judge0:1.13.0
