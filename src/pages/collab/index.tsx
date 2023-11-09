@@ -33,17 +33,20 @@ const MatchRequestPage = () => {
 
   const intervalRef = useRef<NodeJS.Timer | null>(null);
   const [time, setTime] = useState(0);
-  const resetTimer = () => {
-    intervalRef.current = setInterval(() => {
-      setTime((prev) => prev + 1);
-    }, 1000);
-    setTime(0);
-  };
+
   const stopTimer = () => {
     if (intervalRef.current) { 
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    setTime(0);
+  };
+
+  const resetTimer = () => {
+    stopTimer();
+    intervalRef.current = setInterval(() => {
+      setTime((prev) => prev + 1);
+    }, 1000);
     setTime(0);
   };
 
