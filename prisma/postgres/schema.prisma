@@ -4,7 +4,6 @@
 generator client {
     provider = "prisma-client-js"
     output   = "../../node_modules/@prisma-db-psql/client"
-    binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

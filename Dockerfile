@@ -1,7 +1,6 @@
 # Dockerfile
 
-FROM node:18-alpine AS deps
-RUN apk add --no-cache libc6-compat openssl1.1-compat
+FROM node:18-alpine
 WORKDIR /app
 
 COPY . .

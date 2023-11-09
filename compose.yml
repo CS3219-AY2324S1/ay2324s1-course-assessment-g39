@@ -9,7 +9,7 @@ services:
     working_dir: /app
     ports:
       - "3000:3000"
-      - "3002:3002"
+      - ${NEXT_PUBLIC_WS_PORT}:${NEXT_PUBLIC_WS_PORT}
     image: t3-app
     networks:
       - network1
