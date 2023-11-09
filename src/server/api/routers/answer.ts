@@ -80,7 +80,7 @@ const answerRouter = createTRPCRouter({
       });
 
       const languages = await axios
-        .get(`${penv.J0_URL}:2358/languages`)
+        .get(`${penv.J0_URL}/languages`)
         .then((res) => {
           return res.data as { id: number; name: string }[];
         });

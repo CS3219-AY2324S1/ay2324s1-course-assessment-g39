@@ -44,7 +44,7 @@ const executionObject = z.object({
 
 export const judgeRouter = createTRPCRouter({
   getLanguages: maintainerProcedure.query(async () => {
-    return axios.get(`${env.J0_URL}:2358/languages`).then((res) => {
+    return axios.get(`${env.J0_URL}/languages`).then((res) => {
       return res.data as Language[];
     });
   }),
@@ -53,7 +53,7 @@ export const judgeRouter = createTRPCRouter({
     .query(async ({ input }) => {
     const languageIdSet = new Set<number>();
     input.languages.forEach((val) => languageIdSet.add(val));
-    return axios.get(`${env.J0_URL}:2358/languages`).then((res) => {
+    return axios.get(`${env.J0_URL}/languages`).then((res) => {
       return (res.data as Language[]).filter((value) => languageIdSet.has(value.id));
     });
   }),
@@ -62,7 +62,7 @@ export const judgeRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       return axios
         .post(
-          `${env.J0_URL}:2358/submissions/?base64_encoded=false&wait=true`,
+          `${env.J0_URL}/submissions/?base64_encoded=false&wait=true`,
           input,
         )
         .then((res) => {
@@ -102,7 +102,7 @@ export const judgeRouter = createTRPCRouter({
       };
       return axios
         .post(
-          `${env.J0_URL}:2358/submissions/?base64_encoded=false&wait=true`,
+          `${env.J0_URL}/submissions/?base64_encoded=false&wait=true`,
           newInput,
         )
         .then((res) => {
