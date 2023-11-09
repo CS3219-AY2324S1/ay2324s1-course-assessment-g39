@@ -33,12 +33,7 @@ const MatchRequestPage = () => {
 
   const intervalRef = useRef<NodeJS.Timer | null>(null);
   const [time, setTime] = useState(0);
-  const resetTimer = () => {
-    intervalRef.current = setInterval(() => {
-      setTime((prev) => prev + 1);
-    }, 1000);
-    setTime(0);
-  };
+
   const stopTimer = () => {
     if (intervalRef.current) { 
       clearInterval(intervalRef.current);
@@ -46,6 +41,7 @@ const MatchRequestPage = () => {
     }
     setTime(0);
   };
+
 
   // remove current request immediately on refresh or change of page
   useEffect(() => {
@@ -125,7 +121,6 @@ const MatchRequestPage = () => {
           toast.success("Created match request");
         }
         setIsCreatingMatchRequest(false);
-        resetTimer();
         void refetchCurrentUserRequest();
         void refetchGetNumOfMatchReqs();
       },
@@ -158,7 +153,6 @@ const MatchRequestPage = () => {
           toast.success("Updated match request");
         }
         setIsEditingMatchRequest(false);
-        resetTimer();
         void refetchCurrentUserRequest();
       },
       onError() {
