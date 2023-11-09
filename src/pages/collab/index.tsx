@@ -185,7 +185,13 @@ const MatchRequestPage = () => {
   // subscprtions api -- END
 
   useEffect(() => {
-    if (!curUserMatchRequest) return;
+    if (!curUserMatchRequest) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
     const timeDiff = new Date().getTime() - curUserMatchRequest.createdAt.getTime();
     const timeLeft = REQUEST_EXPIRY_TIME_SECS - Math.round(timeDiff / 1000);
     if (timeLeft < 0) {
