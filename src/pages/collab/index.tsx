@@ -40,7 +40,10 @@ const MatchRequestPage = () => {
     setTime(0);
   };
   const stopTimer = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (intervalRef.current) { 
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
     setTime(0);
   };
 
@@ -185,8 +188,18 @@ const MatchRequestPage = () => {
     if (!curUserMatchRequest) return;
     const timeDiff = new Date().getTime() - curUserMatchRequest.createdAt.getTime();
     const timeLeft = REQUEST_EXPIRY_TIME_SECS - Math.round(timeDiff / 1000);
-    if (timeLeft < 0) return;
+    if (timeLeft < 0) {
+      setTime(REQUEST_EXPIRY_TIME_SECS);
+      return;
+    }
     setTime(REQUEST_EXPIRY_TIME_SECS - timeLeft);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    intervalRef.current = setInterval(() => {
+      setTime((prev) => prev + 1);
+    }, 1000);
   }, [curUserMatchRequest]);
 
   const {
