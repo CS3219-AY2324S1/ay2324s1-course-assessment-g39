@@ -5,7 +5,6 @@
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "react-hot-toast";
@@ -22,13 +21,10 @@ import { LoadingSpinner } from "~/components/Loading";
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import ConfirmModal from "~/components/ConfirmModal";
 dayjs.extend(relativeTime);
 
+const REQUEST_EXPIRY_TIME_SECS = 30;
 const MatchRequestPage = () => {
-  const utils = api.useContext();
-  const [isWaitingIndefintely, setIsWaitingIndefinitely] = useState(false);
-
   const { data: session } = useSession();
   if (!session || !session.user) {
     throw new Error("Session cannot be undefined since AuthWrapper wrapped");
@@ -65,9 +61,45 @@ const MatchRequestPage = () => {
     };
   });
 
+  useEffect(() => {
+    if (time === REQUEST_EXPIRY_TIME_SECS && curUserMatchRequest) {
+      const { difficulty, category, matchType } = curUserMatchRequest;
+      const sameRequest = { difficulty, category, matchType };
+      deleteMatchRequest({ matchType: curUserMatchRequest.matchType });
+      toast(
+        (t) => (
+          <div className="flex flex-col justify-evenly text-slate-800">
+            <span className="text-center mb-2">No requests found 🫠.</span>
+            <div className="flex justify-stretch">
+              <button
+                className="border bg-blue-500 rounded-md text-slate-100 p-2 mr-1"
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  createMatchRequest(sameRequest);
+                }}
+                type="button"
+              >
+                Recreate again
+              </button>
+              <button
+                className="border bg-stone-500 rounded-md text-slate-100 p-2"
+                onClick={() => toast.dismiss(t.id)}
+                type="button"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: 60000, id: "timeout", position: "top-center" },
+      );
+    }
+  }, [time]);
+
   const matchUsers = useMatchUsers();
   const [isCreatingMatchRequest, setIsCreatingMatchRequest] = useState(false);
   const [isEditingMatchRequest, setIsEditingMatchRequest] = useState(false);
+  const [isDeletingMatchRequest, setIsDeletingMatchRequest] = useState(false);
 
   const [difficultyFilter, setDifficultyFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
@@ -86,12 +118,13 @@ const MatchRequestPage = () => {
   const { mutate: createMatchRequest } =
     api.matchRequest.createCurrentUserMatchRequest.useMutation({
       onSuccess() {
+        if (isCreatingMatchRequest) {
+          toast.success("Created match request");
+        }
         setIsCreatingMatchRequest(false);
-        setIsWaitingIndefinitely(false);
         resetTimer();
         void refetchCurrentUserRequest();
         void refetchGetNumOfMatchReqs();
-        toast.success("Created match request");
       },
       onError(err) {
         toast.error(err.message);
@@ -105,7 +138,10 @@ const MatchRequestPage = () => {
         stopTimer();
         void refetchCurrentUserRequest();
         void refetchGetNumOfMatchReqs();
-        toast.success("Deleted match request");
+        if (isDeletingMatchRequest) {
+          toast.success("Deleted match request");
+        }
+        setIsDeletingMatchRequest(false);
       },
       onError() {
         toast.error("Error deleting match request");
@@ -115,11 +151,12 @@ const MatchRequestPage = () => {
   const { mutate: updateMatchRequest } =
     api.matchRequest.updateCurrentUserMatchRequest.useMutation({
       onSuccess() {
+        if (isEditingMatchRequest) {
+          toast.success("Updated match request");
+        }
         setIsEditingMatchRequest(false);
-        setIsWaitingIndefinitely(false);
         resetTimer();
         void refetchCurrentUserRequest();
-        toast.success("Updated match request");
       },
       onError() {
         toast.error("Error updating match request");
@@ -172,6 +209,7 @@ const MatchRequestPage = () => {
   };
 
   const handleDeleteMatchRequest = () => {
+    setIsDeletingMatchRequest(true);
     if (curUserMatchRequest) {
       deleteMatchRequest({ matchType: curUserMatchRequest.matchType });
     }
@@ -199,22 +237,8 @@ const MatchRequestPage = () => {
       <Head>
         <title>Find practice partner</title>
       </Head>
-      <ConfirmModal
-        title="Continue Waiting?"
-        isOpen={!isWaitingIndefintely && time > 300}
-        message={`You have been waiting for 5 minutes. There ${
-          numOfOtherOnlineUsers === 1
-            ? "is 1 other online user"
-            : `are ${numOfOtherOnlineUsers} other online users`
-        } looking for a match. Would you like to continue waiting?`}
-        onCancel={() => handleDeleteMatchRequest()}
-        onConfirm={() => setIsWaitingIndefinitely(true)}
-        cancelButtonText="No"
-        confirmButtonText="Yes"
-        type="neutral"
-      />
       {curUserMatchRequest && (
-        <RequestStatus matchType={curUserMatchRequest.matchType} />
+        <RequestStatus matchType={curUserMatchRequest.matchType} time={time} />
       )}
       <PageLayout>
         <div className="flex flex-col h-full items-center justify-center bg-slate-800 text-center">
@@ -617,7 +641,7 @@ const UpdateMatchRequestForm = ({
   );
 };
 
-const RequestStatus = (props: { matchType: MatchType }) => {
+const RequestStatus = (props: { matchType: MatchType; time: number }) => {
   const msg =
     props.matchType === "AUTO"
       ? "Finding a request for you"
@@ -646,6 +670,9 @@ const RequestStatus = (props: { matchType: MatchType }) => {
             ></path>
           </svg>
           {msg}
+          <span className="pl-1">{`(${
+            REQUEST_EXPIRY_TIME_SECS - props.time
+          } seconds)`}</span>
         </div>
       </div>
     </div>
