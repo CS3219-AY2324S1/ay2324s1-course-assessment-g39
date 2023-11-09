@@ -10,7 +10,6 @@ export class Question {
   id = "";
 };
 
-export type QuestionMap = Map<string, Question>;
 
 // todo: dup code
 export type ModifyQuestionProps = {
