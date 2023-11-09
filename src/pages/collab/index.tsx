@@ -181,6 +181,14 @@ const MatchRequestPage = () => {
   });
   // subscprtions api -- END
 
+  useEffect(() => {
+    if (!curUserMatchRequest) return;
+    const timeDiff = new Date().getTime() - curUserMatchRequest.createdAt.getTime();
+    const timeLeft = REQUEST_EXPIRY_TIME_SECS - Math.round(timeDiff / 1000);
+    if (timeLeft < 0) return;
+    setTime(REQUEST_EXPIRY_TIME_SECS - timeLeft);
+  }, [curUserMatchRequest]);
+
   const {
     data: manualRequests = [],
     refetch: refetchGetManualRequests,
