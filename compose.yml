@@ -1,16 +1,17 @@
 include:
   - judge0-v1.13.0/docker-compose.yml
 services:
-  # app:
-  #   platform: "linux/amd64"
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   working_dir: /app
-  #   ports:
-  #     - "3000:3000"
-  #     - "3002:3002"
-  #   image: t3-app
+  app:
+    platform: "linux/amd64"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    ports:
+      - "3000:3000"
+      - "3002:3002"
+    image: t3-app
+    network_mode: host
   postgres_db:
     image: postgres:12.16
     container_name: postgresdb-dev
