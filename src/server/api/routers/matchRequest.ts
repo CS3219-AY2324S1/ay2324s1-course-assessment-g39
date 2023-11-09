@@ -12,8 +12,8 @@ import type { MatchRequest, MatchType } from "@prisma-db-psql/client";
 
 // TODO: remove this for project
 // this is for assignment 5 requirements only (advised by fan)
-const log_requests_to_console = () => {
-  prismaPostgres.matchRequest.findMany().then((requests) => {
+const log_requests_to_console = async () => {
+  await prismaPostgres.matchRequest.findMany().then((requests) => {
     console.log("match_requests: ", requests);
   });
 };
@@ -169,13 +169,13 @@ const mutexProtectedTryMatch = async (
   const tryMatch = async (userId: string) => {
     const matchedRequest = await getMatchedRequest();
     if (matchedRequest) {
-      log_requests_to_console();
+      await log_requests_to_console();
       ee.emit("confirmedMatch", {
         userId1: userId,
         userId2: matchedRequest.userId,
       });
       await deleteMatchedRequests(userId, matchedRequest.userId);
-      log_requests_to_console();
+      await log_requests_to_console();
     }
   };
 
