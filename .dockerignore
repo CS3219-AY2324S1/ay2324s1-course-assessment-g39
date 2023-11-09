@@ -5,4 +5,7 @@ node_modules
 npm-debug.log
 README.md
 .next
+.server
+data
+judge0-*
 .git
