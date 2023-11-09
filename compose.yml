@@ -11,7 +11,6 @@ services:
       - "3000:3000"
       - "3002:3002"
     image: t3-app
-    network_mode: host
   postgres_db:
     image: postgres:12.16
     container_name: postgresdb-dev
