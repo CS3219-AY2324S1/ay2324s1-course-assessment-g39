@@ -1,23 +1,8 @@
-import type { Answer } from "@prisma-db-mongo/client";
-import type { AnswerResult } from "@prisma-db-psql/client";
 import { TRPCError } from "@trpc/server";
-import axios from "axios";
-import { type Session } from "next-auth";
 import { z } from "zod";
-import {
-  type PrismaMongoT,
-  type PrismaPostgresT,
-  prismaMongo,
-  prismaPostgres,
-} from "~/server/db";
-import { appRouter } from "../root";
-import { Session } from "next-auth";
-import { api } from "~/utils/api";
-import axios from "axios";
+import { prismaMongo, prismaPostgres } from "~/server/db";
 import { appRouter } from "../root";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { env as penv } from "~/env.mjs";
-
 
 const answerRouter = createTRPCRouter({
   getUserSubmissions: protectedProcedure.query(async ({ ctx }) => {
@@ -25,14 +10,14 @@ const answerRouter = createTRPCRouter({
     // update all the remaining submissions
     const temporarySubmissions = await prismaPostgres.submission.findMany({
       where: {
-        userId: ctx.session.user.id
-      }
+        userId: ctx.session.user.id,
+      },
     });
     const caller = appRouter.createCaller(ctx);
     for (const tmpSubmssion of temporarySubmissions) {
       await caller.judge.checkAnswer({
-        submissionId: tmpSubmssion.id
-      })
+        submissionId: tmpSubmssion.id,
+      });
     }
     const submissions = await prismaPostgres.questionAttempt.findMany({
       where: {
