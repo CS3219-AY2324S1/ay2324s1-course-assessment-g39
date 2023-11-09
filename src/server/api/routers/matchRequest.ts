@@ -214,7 +214,7 @@ export const matchRequestRouter = createTRPCRouter({
       }
 
       // its of type automatic so try find a match
-      tryFindMatchingAutomaticRequest(curUserId, difficulty, category);
+      void tryFindMatchingAutomaticRequest(curUserId, difficulty, category);
     }),
 
   getCurrentUserRequest: protectedProcedure.query(async ({ ctx }) => {
@@ -254,7 +254,7 @@ export const matchRequestRouter = createTRPCRouter({
       }
 
       // its of type automatic so try find a match
-      tryFindMatchingAutomaticRequest(userId, difficulty, category);
+      void tryFindMatchingAutomaticRequest(userId, difficulty, category);
     }),
 
   deleteCurrentUserMatchRequest: protectedProcedure
