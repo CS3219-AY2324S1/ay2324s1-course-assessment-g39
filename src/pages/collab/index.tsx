@@ -85,8 +85,8 @@ const MatchRequestPage = () => {
         setIsCreatingMatchRequest(false);
         setIsWaitingIndefinitely(false);
         resetTimer();
-        void refetchGetNumOfMatchReqs();
         void refetchCurrentUserRequest();
+        void refetchGetNumOfMatchReqs();
         toast.success("Created match request");
       },
       onError(err) {
@@ -100,6 +100,7 @@ const MatchRequestPage = () => {
       onSuccess() {
         stopTimer();
         void refetchCurrentUserRequest();
+        void refetchGetNumOfMatchReqs();
         toast.success("Deleted match request");
       },
     });
