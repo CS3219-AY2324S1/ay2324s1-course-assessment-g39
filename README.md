@@ -39,7 +39,7 @@ Notes:
 
 ```bash
     docker build -t peer-prep --build-arg NEXT_PUBLIC_WS_PORT=3002 .
-    docker run --env-file ./.env -e NODE_ENV=production -e PORT=3000 -p 3000:3000 peer-prep
+    docker run -p 3000:3000 -p 3002:3002 peer-prep
 ```
 
 ## What's next? How do I make an app with this?
