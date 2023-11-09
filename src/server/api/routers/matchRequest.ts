@@ -10,6 +10,14 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { prismaPostgres } from "~/server/db";
 import type { MatchRequest, MatchType } from "@prisma-db-psql/client";
 
+// TODO: remove this for project
+// this is for assignment 5 requirements only (advised by fan)
+const log_requests_to_console = () => {
+  prismaPostgres.matchRequest.findMany().then((requests) => {
+    console.log("match_requests: ", requests);
+  });
+};
+
 /**
  * A lock for synchronizing async operations.
  * Use this to protect a critical section
@@ -161,11 +169,13 @@ const mutexProtectedTryMatch = async (
   const tryMatch = async (userId: string) => {
     const matchedRequest = await getMatchedRequest();
     if (matchedRequest) {
+      log_requests_to_console();
       ee.emit("confirmedMatch", {
         userId1: userId,
         userId2: matchedRequest.userId,
       });
       await deleteMatchedRequests(userId, matchedRequest.userId);
+      log_requests_to_console();
     }
   };
 
