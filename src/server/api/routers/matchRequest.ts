@@ -231,8 +231,6 @@ export const matchRequestRouter = createTRPCRouter({
     return ownRequest;
   }),
 
-  // note: unable to modify type from manual to auto
-  // hence it does not require a check for automatic match requests
   updateCurrentUserMatchRequest: protectedProcedure
     .input(
       z.object({
@@ -285,7 +283,7 @@ export const matchRequestRouter = createTRPCRouter({
     });
   }),
 
-  // accept a match of another user
+  // accept a manual match of another user
   acceptManualMatch: protectedProcedure
     .input(z.object({ acceptedUserId: userId_z }))
     .mutation(async ({ ctx, input }) => {
@@ -305,7 +303,6 @@ export const matchRequestRouter = createTRPCRouter({
       await mutextProtectedTryMatch(curUserId, matchedRequest);
     }),
 
-  // Users listens for confirmation from other user to join the session
   subscribeToMyRequestSuccess: protectedProcedure.subscription(() => {
     return observable<{ userId1: string; userId2: string }>((emit) => {
       const onConfirmedMatch = (data: { userId1: string; userId2: string }) => {
