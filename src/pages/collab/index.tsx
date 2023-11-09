@@ -22,20 +22,19 @@ import { LoadingSpinner } from "~/components/Loading";
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import ConfirmModal from "~/components/ConfirmModal";
 dayjs.extend(relativeTime);
 
-/**
- * TODO
- * - get rid of BE code for confirmation of join req
- */
 const MatchRequestPage = () => {
-  const router = useRouter();
   const utils = api.useContext();
+  const [isWaitingIndefintely, setIsWaitingIndefinitely] = useState(false);
+
   const { data: session } = useSession();
   if (!session || !session.user) {
     throw new Error("Session cannot be undefined since AuthWrapper wrapped");
   }
   const curUserId = session.user.id;
+
   const intervalRef = useRef<NodeJS.Timer | null>(null);
   const [time, setTime] = useState(0);
   const resetTimer = () => {
@@ -53,11 +52,10 @@ const MatchRequestPage = () => {
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (curUserMatchRequest) {
+        handleDeleteMatchRequest();
         e.preventDefault();
-        // confirm("Are you sure you want to leave this page? Request will be deleted")
-        if (true) {
-          void handleDeleteMatchRequest();
-        }
+        e.returnValue = "";
+        return "Are you sure you want to leave this page? Request will be deleted";
       }
     };
 
@@ -74,7 +72,7 @@ const MatchRequestPage = () => {
   const [difficultyFilter, setDifficultyFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
 
-  const { data: numOfMatchRequests } =
+  const { data: numOfMatchRequests, refetch: refetchGetNumOfMatchReqs } =
     api.matchRequest.getNumOfMatchRequests.useQuery();
 
   const { mutate: automaticallyMatchCurrentUserRequest } =
@@ -92,8 +90,10 @@ const MatchRequestPage = () => {
     api.matchRequest.createCurrentUserMatchRequest.useMutation({
       onSuccess() {
         setIsCreatingMatchRequest(false);
+        setIsWaitingIndefinitely(false);
         resetTimer();
-        toast.success("Successfully created match request");
+        void refetchGetNumOfMatchReqs();
+        toast.success("Created match request");
       },
       onError(err) {
         toast.error(err.message);
@@ -104,17 +104,18 @@ const MatchRequestPage = () => {
   const { mutate: deleteMatchRequest } =
     api.matchRequest.deleteCurrentUserMatchRequest.useMutation({
       onSuccess() {
-        toast.success("Successfully deleted match request");
         stopTimer();
+        toast.success("Deleted match request");
       },
     });
 
   const { mutate: updateMatchRequest } =
     api.matchRequest.updateCurrentUserMatchRequest.useMutation({
       onSuccess() {
-        toast.success("Successfully updated match request");
-        resetTimer();
         setIsEditingMatchRequest(false);
+        setIsWaitingIndefinitely(false);
+        resetTimer();
+        toast.success("Updated match request");
       },
     });
 
@@ -125,7 +126,6 @@ const MatchRequestPage = () => {
       void refetchCurrentUserRequest();
     },
     onError(err) {
-      console.log("Subscription error: ", err);
       void Promise.resolve(utils.matchRequest.invalidate());
     },
   });
@@ -184,22 +184,30 @@ const MatchRequestPage = () => {
 
   const handleAcceptRequest = (acceptedUserId: string) => {
     acceptMatch({ acceptedUserId });
-    toast.success("Successfully matched with user, redirecting to room...", {
+    toast.success("Redirecting to room...", {
       duration: 2000,
     });
-    console.log("Joining session...");
   };
-
-  // TODO: add custom confirm modal / hot-toast confirm modal
-  // if ((timerState.waitingTime = 300)) {
-  // void deleteMatchRequest();
-  // }
 
   return (
     <>
       <Head>
         <title>Find practice partner</title>
       </Head>
+      <ConfirmModal
+        title="Continue Waiting?"
+        isOpen={!isWaitingIndefintely && time > 300}
+        message={`You have been waiting for 5 minutes. There ${
+          numOfMatchRequests == 1
+            ? "is 1 other online user"
+            : `are ${numOfMatchRequests} other online users`
+        } looking for a match. Would you like to continue waiting?`}
+        onCancel={() => handleDeleteMatchRequest()}
+        onConfirm={() => setIsWaitingIndefinitely(true)}
+        cancelButtonText="No"
+        confirmButtonText="Yes"
+        type="neutral"
+      />
       {curUserMatchRequest && (
         <RequestStatus matchType={curUserMatchRequest.matchType} />
       )}
