@@ -101,6 +101,7 @@ export class Mutex {
 type ReleaseFunction = () => void;
 import { type Difficulty, difficulties } from "../../../types/global";
 import { id_z } from "./user";
+import { match } from "assert";
 
 const difficulties_z = z.enum(difficulties);
 const matchType_z = z.enum(["AUTO", "MANUAL"]);
@@ -159,25 +160,71 @@ export const matchRequestRouter = createTRPCRouter({
     .input(createReqInput_z)
     .mutation(async ({ ctx, input }) => {
       const { difficulty, category, matchType } = input;
-      const userId = ctx.session.user.id;
+      const curUserId = ctx.session.user.id;
 
-      const existingRequest = await ctx.prismaPostgres.matchRequest.findFirst({
-        where: { userId },
+      await ctx.prismaPostgres.matchRequest.create({
+        data: { userId: curUserId, difficulty, category, matchType },
       });
-      if (existingRequest) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Request already exists",
-        });
+
+      // user has successfully created request
+      if (matchType == "MANUAL") {
+        ee.emit("manualMatchRequestsChanged");
+        return;
       }
 
-      // actually above check not required since
-      // there is already a unique constraint on userId
-      const request = await ctx.prismaPostgres.matchRequest.create({
-        data: { userId, difficulty, category, matchType },
-      });
+      // if its an automatic request, check for a match in the DB
+      const findMatchingRequest = async () => {
+        const request = await prismaPostgres.matchRequest.findFirst({
+          where: {
+            matchType: "AUTO",
+            category,
+            difficulty,
+            userId: { not: curUserId },
+          },
+        });
+        if (request) return filterMatchRequestForUser(request);
+      };
 
-      ee.emit("add", request);
+      // minimise the need to enter the mutex by checking if there is a match first
+      const potentialMatchedRequest = await findMatchingRequest();
+      if (!potentialMatchedRequest) return;
+
+      const isRequestInDB = async (request: Request) => {
+        const reqExists = await prismaPostgres.matchRequest.findFirst({
+          where: { ...request },
+        });
+        return reqExists ? true : false;
+      };
+
+      const deleteMatchedRequests = async (
+        userId1: string,
+        userId2: string,
+      ) => {
+        return await prismaPostgres.matchRequest.deleteMany({
+          where: { userId: { in: [userId1, userId2] } },
+        });
+      };
+
+      /**
+       * WARNING: must be run syncronously to avoid race conditions
+       * if request found in DB
+       * (1) delete both users
+       * (2) notify Client by triggering event
+       */
+      const tryMatch = async (userId: string, potentialRequest: Request) => {
+        const confirmMatch = await isRequestInDB(potentialRequest);
+        if (confirmMatch) {
+          ee.emit("confirmedMatch", {
+            userId1: userId,
+            userId2: potentialRequest.userId,
+          });
+          await deleteMatchedRequests(userId, potentialRequest.userId);
+        }
+      };
+
+      await mutex.runExclusive(async () =>
+        tryMatch(curUserId, potentialMatchedRequest),
+      );
     }),
 
   getCurrentUserRequest: protectedProcedure.query(async ({ ctx }) => {
@@ -194,6 +241,8 @@ export const matchRequestRouter = createTRPCRouter({
     return ownRequest;
   }),
 
+  // note: unable to modify type from manual to auto
+  // hence it does not require a check for automatic match requests
   updateCurrentUserMatchRequest: protectedProcedure
     .input(
       z.object({
@@ -215,110 +264,40 @@ export const matchRequestRouter = createTRPCRouter({
         });
       }
 
-      const updatedRequest = await ctx.prismaPostgres.matchRequest.update({
+      await ctx.prismaPostgres.matchRequest.update({
         where: { userId },
         data: { difficulty, category },
       });
-      ee.emit("update", updatedRequest);
+
+      ee.emit("manualMatchRequestsChanged");
     }),
 
   deleteCurrentUserMatchRequest: protectedProcedure.mutation(
     async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
-      const request = await ctx.prismaPostgres.matchRequest.delete({
+      await ctx.prismaPostgres.matchRequest.delete({
         where: { userId },
       });
 
-      ee.emit("remove", request);
+      ee.emit("manualMatchRequestsChanged");
     },
   ),
 
-  subscribeToAllRequests: protectedProcedure.subscription(() => {
-    return observable<UserRequest & { mode: "add" | "remove" | "update" }>(
-      (emit) => {
-        // todo(gab): Consider using only one since currently the subscription only tells to refetch
-        const onAdd = (data: UserRequest) => {
-          emit.next({ ...data, mode: "add" });
-        };
-        const onRemove = (data: UserRequest) => {
-          emit.next({ ...data, mode: "remove" });
-        };
-        const onUpdate = (data: UserRequest) => {
-          emit.next({ ...data, mode: "update" });
-        };
-        ee.on("update", onUpdate);
-        ee.on("add", onAdd);
-        ee.on("remove", onRemove);
-        return () => {
-          ee.off("add", onAdd);
-          ee.off("remove", onRemove);
-          ee.off("update", onUpdate);
-        };
-      },
-    );
-  }),
-
-  checkAndProcessAutoMatchIfPossible: protectedProcedure.mutation(
-    async ({ ctx }) => {
-      const curUserId = ctx.session.user.id;
-
-      // try find a matching request
-      // if found, emit the two users
-      async function findMatchFor({ userId }: { userId: string }) {
-        const curUserMatchRequest =
-          await prismaPostgres.matchRequest.findUnique({
-            where: { userId },
-          });
-        if (!curUserMatchRequest) return;
-
-        const toRunSync = async () => {
-          const matchedRequest = await prismaPostgres.matchRequest.findFirst({
-            where: {
-              AND: {
-                category: curUserMatchRequest.category,
-                difficulty: curUserMatchRequest.difficulty,
-                matchType: "AUTO",
-                userId: { not: userId },
-              },
-            },
-          });
-          if (matchedRequest) {
-            await prismaPostgres.matchRequest.deleteMany({
-              where: {
-                userId: { in: [userId, matchedRequest.userId] },
-              },
-            });
-          }
-          return matchedRequest;
-        };
-
-        const matchedRequest = await mutex.runExclusive(toRunSync);
-        if (!matchedRequest) return;
-
-        ee.emit("findAutomatic", {
-          user1Id: userId,
-          user2Id: matchedRequest.userId,
-        });
-      }
-      await findMatchFor({ userId: curUserId });
-    },
-  ),
-
-  subscribeToAutomaticRequests: protectedProcedure.subscription(({ ctx }) => {
-    return observable<{ user1Id: string; user2Id: string }>((emit) => {
-      const findSync = (arg1: { user1Id: string; user2Id: string }) => {
-        emit.next(arg1);
+  subscribeToManualMatchRequestsChange: protectedProcedure.subscription(() => {
+    return observable<boolean>((emit) => {
+      const onMatchRequestsChange = () => {
+        emit.next(true);
       };
 
-      ee.on("matchedAutomaticRequests", findSync);
+      ee.on("manualMatchRequestsChanged", onMatchRequestsChange);
       return () => {
-        ee.off("matchedAutomaticRequests", findSync);
+        ee.off("manualMatchRequestsChanged", onMatchRequestsChange);
       };
     });
   }),
 
   // accept a match of another user
-  acceptMatch: protectedProcedure
+  acceptManualMatch: protectedProcedure
     .input(z.object({ acceptedUserId: userId_z }))
     .mutation(async ({ ctx, input }) => {
       const curUserId = ctx.session.user.id;
@@ -358,11 +337,11 @@ export const matchRequestRouter = createTRPCRouter({
       const tryMatch = async (curUserId: string, acceptedUserId: string) => {
         const confirmMatch = await isRequestInDB(acceptedUserId);
         if (confirmMatch) {
-          await deleteMatchedRequests(acceptedUserId, curUserId);
-          ee.emit("matchedManualRequest", {
-            user1Id: curUserId,
-            user2Id: acceptedUserId,
+          ee.emit("confirmedMatch", {
+            userId1: curUserId,
+            userId2: acceptedUserId,
           });
+          await deleteMatchedRequests(acceptedUserId, curUserId);
         }
       };
 
@@ -370,15 +349,15 @@ export const matchRequestRouter = createTRPCRouter({
     }),
 
   // Users listens for confirmation from other user to join the session
-  subscribeToConfirmation: protectedProcedure.subscription(() => {
-    return observable<{ user1Id: string; user2Id: string }>((emit) => {
-      const onConfirm = (data: { user1Id: string; user2Id: string }) => {
+  subscribeToMyRequestSuccess: protectedProcedure.subscription(() => {
+    return observable<{ userId1: string; userId2: string }>((emit) => {
+      const onConfirmedMatch = (data: { userId1: string; userId2: string }) => {
         emit.next(data);
       };
 
-      ee.on("matchedManualRequest", onConfirm);
+      ee.on("confirmedMatch", onConfirmedMatch);
       return () => {
-        ee.off("matchedManualRequest", onConfirm);
+        ee.off("confirmedMatch", onConfirmedMatch);
       };
     });
   }),

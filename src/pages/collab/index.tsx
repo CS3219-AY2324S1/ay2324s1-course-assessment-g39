@@ -76,16 +76,8 @@ const MatchRequestPage = () => {
   const { data: numOfOnlineUsers = 0, refetch: refetchGetNumOfMatchReqs } =
     api.matchRequest.getNumOfMatchRequests.useQuery();
 
-  const { mutate: automaticallyMatchCurrentUserRequest } =
-    api.matchRequest.checkAndProcessAutoMatchIfPossible.useMutation();
   const { data: curUserMatchRequest, refetch: refetchCurrentUserRequest } =
-    api.matchRequest.getCurrentUserRequest.useQuery(undefined, {
-      onSuccess(data) {
-        if (data?.matchType === "AUTO") {
-          automaticallyMatchCurrentUserRequest();
-        }
-      },
-    });
+    api.matchRequest.getCurrentUserRequest.useQuery();
 
   const { mutate: createMatchRequest } =
     api.matchRequest.createCurrentUserMatchRequest.useMutation({
@@ -94,6 +86,7 @@ const MatchRequestPage = () => {
         setIsWaitingIndefinitely(false);
         resetTimer();
         void refetchGetNumOfMatchReqs();
+        void refetchCurrentUserRequest();
         toast.success("Created match request");
       },
       onError(err) {
@@ -106,6 +99,7 @@ const MatchRequestPage = () => {
     api.matchRequest.deleteCurrentUserMatchRequest.useMutation({
       onSuccess() {
         stopTimer();
+        void refetchCurrentUserRequest();
         toast.success("Deleted match request");
       },
     });
@@ -116,34 +110,25 @@ const MatchRequestPage = () => {
         setIsEditingMatchRequest(false);
         setIsWaitingIndefinitely(false);
         resetTimer();
+        void refetchCurrentUserRequest();
         toast.success("Updated match request");
       },
     });
 
   // subscprtions api -- START
-  api.matchRequest.subscribeToAllRequests.useSubscription(undefined, {
-    onData(request) {
-      void refetchGetManualRequests();
-      void refetchCurrentUserRequest();
+  api.matchRequest.subscribeToManualMatchRequestsChange.useSubscription(
+    undefined,
+    {
+      onData() {
+        void refetchGetManualRequests();
+      },
     },
-    onError(err) {
-      void Promise.resolve(utils.matchRequest.invalidate());
-    },
-  });
+  );
 
-  api.matchRequest.subscribeToAutomaticRequests.useSubscription(undefined, {
+  api.matchRequest.subscribeToMyRequestSuccess.useSubscription(undefined, {
     onData(data) {
-      if (curUserId === data.user1Id || curUserId === data.user2Id) {
-        matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
-      }
-    },
-  });
-
-  api.matchRequest.subscribeToConfirmation.useSubscription(undefined, {
-    onData(data) {
-      if (curUserId === data.user1Id || curUserId === data.user2Id) {
-        matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
-      }
+      matchUsers.setMatchedUsers(data.userId1, data.userId2);
+      toast.success("Redirecting to room...");
     },
   });
   // subscprtions api -- END
@@ -154,8 +139,8 @@ const MatchRequestPage = () => {
     isLoading: requestsLoading,
   } = api.matchRequest.getAllManualMatchRequests.useQuery();
 
-  const { mutate: acceptMatch, variables: data } =
-    api.matchRequest.acceptMatch.useMutation({
+  const { mutate: acceptManualMatch, variables: data } =
+    api.matchRequest.acceptManualMatch.useMutation({
       onSuccess: () => {
         if (!data) throw new Error("matchedIds is undefined");
         matchUsers.setMatchedUsers(curUserId, data.acceptedUserId);
@@ -183,10 +168,7 @@ const MatchRequestPage = () => {
   };
 
   const handleAcceptRequest = (acceptedUserId: string) => {
-    acceptMatch({ acceptedUserId });
-    toast.success("Redirecting to room...", {
-      duration: 2000,
-    });
+    acceptManualMatch({ acceptedUserId });
   };
 
   const numOfOtherOnlineUsers = curUserMatchRequest
