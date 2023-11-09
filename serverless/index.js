@@ -43,7 +43,13 @@ const questionsSchema = new Schema({
   updatedAt: {
     type: Date
   },
-  title: String,
+  title: {
+    type: String,
+    index: {
+        unique: true,
+        dropDups: true
+    }
+  },
   body: String,
   difficulty: ["EASY", "MEDIUM", "HARD"],
   category: {
@@ -64,6 +70,8 @@ functions.http('leetcode', async (req, res) => {
       query: questionListQuery(1)
     })
   })
+  
+
   const mgdb = await mongoose.connect(process.env.MONGO_URL);
   const Question = mgdb.model("Question", questionsSchema, "Question");
   
@@ -78,10 +86,14 @@ functions.http('leetcode', async (req, res) => {
       query: questionListQuery(actualNum)
     })
   });
+  let nameMap = new Map();
   // update the data
   const result = await questionList.json();
   const questionListObject = result.data.questionList.questions;
-  const resultMap = questionListObject.filter(d => d.content !== null).map((data) => {
+  questionListObject.forEach(element => {
+    nameMap.set(element.title, nameMap.get(element.title) ?? 0 + 1);
+  });
+  const resultMap = questionListObject.filter(d => d.content !== null && nameMap.get(d.title) < 2).map((data) => {
     return {
       difficulty: data.difficulty,
       title: data.title,
