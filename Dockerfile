@@ -4,6 +4,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 COPY . .
+COPY /production/.env .env
 
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \

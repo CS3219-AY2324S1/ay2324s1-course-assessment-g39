@@ -38,8 +38,8 @@ Notes:
 ## Building and Running Image
 
 ```bash
-    docker build -t peer-prep --build-arg NEXT_PUBLIC_WS_PORT=3002 .
-    docker run -p 3000:3000 -p 3002:3002 peer-prep
+    docker build -t peer-prep .
+    docker compose --profile prod up
 ```
 
 ## What's next? How do I make an app with this?

@@ -15,8 +15,8 @@
     "prisma:generate": "prisma generate --schema prisma/mongodb/schema.prisma && prisma generate --schema prisma/postgres/schema.prisma",
     "prisma:push": "prisma db push --schema prisma/mongodb/schema.prisma && prisma db push --schema prisma/postgres/schema.prisma",
     "prisma:studio": "prisma studio --schema prisma/mongodb/schema.prisma | prisma studio --schema prisma/postgres/schema.prisma -p 5556",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
+    "docker:up": "docker compose up",
+    "docker:down": "docker compose down",
     "start-dev": "./start-dev-script.sh"
   },
   "dependencies": {
