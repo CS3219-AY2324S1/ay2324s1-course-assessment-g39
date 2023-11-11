@@ -44,7 +44,7 @@ function getEndingLink(ctx: NextPageContext | undefined) {
     });
   }
   const client = createWSClient({
-    url: `ws://localhost:${env.NEXT_PUBLIC_WS_PORT ?? 3002}`,
+    url: env.NEXT_PUBLIC_WS_URL,
   });
   return wsLink<AppRouter>({
     client,

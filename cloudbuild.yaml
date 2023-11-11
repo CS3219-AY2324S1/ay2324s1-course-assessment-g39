@@ -1,0 +1,7 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [
+    'build', '-t', 'asia-east1-docker.pkg.dev/$PROJECT_ID/twrepo/peerprep-image', '.'
+  ]
+images:
+- 'asia-east1-docker.pkg.dev/$PROJECT_ID/twrepo/peerprep-image'
