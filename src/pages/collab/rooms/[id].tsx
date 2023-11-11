@@ -255,7 +255,7 @@ const Room = () => {
             <TabList>
               <Tab>Output</Tab>
               <Tab>Chat</Tab>
-              <Tab>GPT-3.5</Tab>
+              <Tab>Code Assistant</Tab>
               {useQuestionObject.submissionStatus && <Tab>Submission</Tab>}
             </TabList>
             <TabPanel>

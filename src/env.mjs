@@ -25,7 +25,6 @@ export const env = createEnv({
     // Add `.min(1) on ID and SECRET if you want to make sure they're not empty
     GITHUB_ID: z.string().min(1),
     GITHUB_SECRET: z.string().min(1),
-    OPENAI_API_KEY: z.string().min(1),
     S3_REGION: z.string().optional(),
     S3_ACCESS_KEY_ID: z.string(),
     S3_SECRET_ACCESS_KEY: z.string()
@@ -62,7 +61,6 @@ export const env = createEnv({
     J0_URL: process.env.J0_URL,
     GITHUB_ID: process.env.GITHUB_ID,
     GITHUB_SECRET: process.env.GITHUB_SECRET,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     NEXT_PUBLIC_WS_URL: process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_WS_URL : `ws://localhost:${process.env.NEXT_PUBLIC_WS_PORT}`,
     S3_REGION: process.env.S3_REGION ?? "us-east-1",
     S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID ?? "S3RVER",
