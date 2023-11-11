@@ -26,6 +26,9 @@ export const env = createEnv({
     GITHUB_ID: z.string().min(1),
     GITHUB_SECRET: z.string().min(1),
     OPENAI_API_KEY: z.string().min(1),
+    S3_REGION: z.string().optional(),
+    S3_ACCESS_KEY_ID: z.string(),
+    S3_SECRET_ACCESS_KEY: z.string()
   },
 
   /**
@@ -60,7 +63,10 @@ export const env = createEnv({
     GITHUB_ID: process.env.GITHUB_ID,
     GITHUB_SECRET: process.env.GITHUB_SECRET,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    NEXT_PUBLIC_WS_URL: process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_WS_URL : `ws://localhost:${process.env.NEXT_PUBLIC_WS_PORT}`
+    NEXT_PUBLIC_WS_URL: process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_WS_URL : `ws://localhost:${process.env.NEXT_PUBLIC_WS_PORT}`,
+    S3_REGION: process.env.S3_REGION ?? "us-east-1",
+    S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID ?? "S3RVER",
+    S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY ?? "S3RVER",
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
