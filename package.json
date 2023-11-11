@@ -52,7 +52,7 @@
     "next": "^14.0.1",
     "next-auth": "^4.22.4",
     "npm-run-all": "^4.1.5",
-    "openai": "^4.14.1",
+    "openai": "^4.16.1",
     "react": "18.2.0",
     "react-codemirror-merge": "^4.21.15",
     "react-dom": "18.2.0",
