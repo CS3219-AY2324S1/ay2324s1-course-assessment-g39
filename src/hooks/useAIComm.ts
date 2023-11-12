@@ -51,9 +51,8 @@ export default function useAIComm(
         if (allSessionMessages)
           allSessionMessages.push({
             ...data,
-            id: data.id!,
             message: data.message,
-            createdAt: data.createdAt!,
+            role: data.role,
           });
 
         setChatState((state) => ({
@@ -73,12 +72,8 @@ export default function useAIComm(
     if (chatState.currentMessage.trim().length === 0) return;
 
     allSessionMessages?.push({
-      id: "",
-      sessionId,
-      userId,
       message: chatState.currentMessage,
       role: "user",
-      createdAt: new Date(),
     });
 
     addMessageMutation.mutate({
