@@ -9,9 +9,10 @@ services:
       dockerfile: Dockerfile
     working_dir: /app
     ports:
-      - "3000:3000"
-      - ${NEXT_PUBLIC_WS_PORT}:${NEXT_PUBLIC_WS_PORT}
+      - "${PORT}:${PORT}"
     image: t3-app
+    env_file:
+      - './.env'
     profiles:
       - prod
   postgres_db:
