@@ -1,15 +1,14 @@
+import { type AnswerResult } from "@prisma-db-psql/client";
+import { TRPCError } from "@trpc/server";
 import axios from "axios";
-import { number, z } from "zod";
+import { z } from "zod";
+import { env } from "~/env.mjs";
+import { prismaMongo, prismaPostgres } from "~/server/db";
 import {
   createTRPCRouter,
   maintainerProcedure,
   protectedProcedure,
-  publicProcedure,
 } from "../trpc";
-import { prismaMongo, prismaPostgres } from "~/server/db";
-import { AnswerResult } from "@prisma-db-psql/client";
-import { TRPCClientError } from "@trpc/client";
-import { TRPCError } from "@trpc/server";
 
 // TODO: Multifile
 
@@ -22,7 +21,6 @@ type BatchSubmissionOutput = {
   token: string;
 }[];
 
-
 type Output = {
   stdout: string | null;
   time: string;
@@ -34,9 +32,8 @@ type Output = {
   status: { id: number; description: string };
 };
 
-
 type BatchSubmissionRequestOutput = {
-  submissions:  Output[]
+  submissions: Output[];
 };
 
 const judgeStatusCodeMap = new Map<number, AnswerResult>([
@@ -45,14 +42,10 @@ const judgeStatusCodeMap = new Map<number, AnswerResult>([
   [5, "TIME_LIMITED_ERROR"],
   [6, "COMPILE_ERROR"],
   [13, "JUDGE_ERROR"],
-  [14, "JUDGE_ERROR"]
+  [14, "JUDGE_ERROR"],
 ]);
 
-
-
 function fromStatusCode(code: number): AnswerResult | "WAITING" {
-  
-  
   if (code == 1 || code == 0) {
     return "WAITING";
   }
@@ -65,16 +58,12 @@ function fromStatusCode(code: number): AnswerResult | "WAITING" {
   return judgeStatusCodeMap.get(code)!;
 }
 
-
 async function getLanguageFromCode(code: number): Promise<string> {
-  const languages = await axios
-    .get("http://localhost:2358/languages")
-    .then((res) => {
-      return res.data as { id: number; name: string }[];
-    });
+  const languages = await axios.get(`${env.J0_URL}/languages`).then((res) => {
+    return res.data as { id: number; name: string }[];
+  });
 
   return languages?.find((l) => l.id === code)?.name ?? "";
-
 }
 
 const testCaseExecutionObject = z.object({
@@ -95,25 +84,27 @@ const executionObject = z.object({
 
 export const judgeRouter = createTRPCRouter({
   getLanguages: maintainerProcedure.query(async () => {
-    return axios.get("http://localhost:2358/languages").then((res) => {
+    return axios.get(`${env.J0_URL}/languages`).then((res) => {
       return res.data as Language[];
     });
   }),
   getSpecificLanguages: protectedProcedure
     .input(z.object({ languages: z.array(z.number()) }))
     .query(async ({ input }) => {
-    const languageIdSet = new Set<number>();
-    input.languages.forEach((val) => languageIdSet.add(val));
-    return axios.get("http://localhost:2358/languages").then((res) => {
-      return (res.data as Language[]).filter((value) => languageIdSet.has(value.id));
-    });
-  }),
+      const languageIdSet = new Set<number>();
+      input.languages.forEach((val) => languageIdSet.add(val));
+      return axios.get(`${env.J0_URL}/languages`).then((res) => {
+        return (res.data as Language[]).filter((value) =>
+          languageIdSet.has(value.id),
+        );
+      });
+    }),
   run: maintainerProcedure
     .input(executionObject)
     .mutation(async ({ input }) => {
       return axios
         .post(
-          "http://localhost:2358/submissions/?base64_encoded=false&wait=true",
+          `${env.J0_URL}/submissions/?base64_encoded=false&wait=true`,
           input,
         )
         .then((res) => {
@@ -153,164 +144,168 @@ export const judgeRouter = createTRPCRouter({
       };
       return axios
         .post(
-          "http://localhost:2358/submissions/?base64_encoded=false&wait=true",
+          `${env.J0_URL}/submissions/?base64_encoded=false&wait=true`,
           newInput,
         )
         .then((res) => {
           return res.data as Output;
         });
     }),
-    checkAnswer: protectedProcedure
-      .input(z.object({ submissionId: z.string() }))
-      .query(async ({ ctx, input }) => {
-        // check if question attempt already exists
-        const questionAttempt = await ctx.prismaPostgres.questionAttempt.findUnique({
+  checkAnswer: protectedProcedure
+    .input(z.object({ submissionId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      // check if question attempt already exists
+      const questionAttempt =
+        await ctx.prismaPostgres.questionAttempt.findUnique({
           where: {
             userId_submissionId: {
               userId: ctx.session.user.id,
-              submissionId: input.submissionId
-            }
-          }
-        })
-        if (questionAttempt) {
-          return {
-            status: questionAttempt.result,
-            complete: true,
-            numOfTests: questionAttempt.numOfTests,
-            passed: questionAttempt.passed
-          };
-        }
-        const submission = await ctx.prismaPostgres.submission.findUnique({
-          where: {
-            userId_id: {
-              userId: ctx.session.user.id,
-              id: input.submissionId
-            }
-          }
-        });
-        const answer = await ctx.prismaMongo.answer.findUnique({
-          where: {
-            id: submission?.answerId
-          },
-          include: {
-            environment: true
-          }
-        });
-        if (!submission || !answer) throw new TRPCError({ code: "BAD_REQUEST", message: "Failed to find submission" });
-        
-        const tokens = submission.token.join(',');
-        const status = await axios.get(`http://localhost:2358/submissions/batch?tokens=${tokens}&base64_encoded=false`);
-        // check if we finished evaluation
-        const result = status.data as BatchSubmissionRequestOutput;
-        let currentStatus: AnswerResult = "ACCEPTED";
-        let passed = 0;
-        for (const submission of result.submissions) {
-          const status = fromStatusCode(submission.status.id);
-          if (status === "WAITING") {
-            return {
-              complete: false,
-              passed,
-              status: "WAITING",
-              numOfTests: result.submissions.length
-            }
-          }
-          if (status !== "ACCEPTED") {
-            // return the first error
-            currentStatus = status;
-            break;
-          }
-          passed += 1;
-        }
-        await prismaPostgres.questionAttempt.create({
-          data: {
-            userId: ctx.session.user.id,
-            answerId: submission.answerId,
-            language: await getLanguageFromCode(answer.environment.languageId),
-            result: currentStatus,
-            questionId: answer.environment.questionId,
-            passed,
-            numOfTests: result.submissions.length,
-            submissionId: input.submissionId,
-          }
-        });
-
-        await prismaPostgres.submission.delete({
-          where: {
-            userId_id: {
-              userId: ctx.session.user.id,
-              id: input.submissionId,
-            }
-          }
-        })
-
-        return {
-          status: currentStatus,
-          passed,
-          complete: true,
-          numOfTests: result.submissions.length
-        }
-
-      }),
-    submitCode: 
-      protectedProcedure
-        .input(z.object({ source_code: z.string(), environmentId: z.string()}))
-        .mutation(async ({ ctx, input }) => {
-          // create a submissions batch for all the test cases
-          // which satisfy the envid
-          const { source_code, environmentId } = input;
-          const environment = await prismaMongo.environment.findUnique({
-            where: {
-              id: environmentId,
-            }
-          });
-          if (!environment) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Invalid environmentId"
-            });
-          }
-          const testCases = await prismaMongo.testCase.findMany({
-            where: {
-              environmentId
-            }
-          });
-          const judgeInput = testCases.map((testCase) => ({
-            source_code: `${environment.prepend}\n${source_code}\n${environment.append}\n${testCase.test}`,
-            language_id: environment.languageId,
-            stdin: testCase.input,
-            expected_output: testCase.output,
-            cpu_time_limit: testCase.timeLimit,
-            memory_limit: testCase.memoryLimit
-              ? Math.max(testCase.memoryLimit, 2048)
-              : undefined,
-          }));
-
-          
-          const result = (await axios
-          .post(
-            "http://localhost:2358/submissions/batch?base64_encoded=false",
-            {
-              submissions: judgeInput
+              submissionId: input.submissionId,
             },
-          )).data as BatchSubmissionOutput;
-          const answer = await prismaMongo.answer.create({
-            data: {
-              body: source_code,
-              envId: environmentId
-            }
-          });
-          // place this submission in memory 
-          const submission = await prismaPostgres
-            .submission.create({
-              data: {
-                token: result.map(({ token }) => token),
-                userId: ctx.session.user.id,
-                answerId: answer.id
-              }
-            });
+          },
+        });
+      if (questionAttempt) {
+        return {
+          status: questionAttempt.result,
+          complete: true,
+          numOfTests: questionAttempt.numOfTests,
+          passed: questionAttempt.passed,
+        };
+      }
+      const submission = await ctx.prismaPostgres.submission.findUnique({
+        where: {
+          userId_id: {
+            userId: ctx.session.user.id,
+            id: input.submissionId,
+          },
+        },
+      });
+      const answer = await ctx.prismaMongo.answer.findUnique({
+        where: {
+          id: submission?.answerId,
+        },
+        include: {
+          environment: true,
+        },
+      });
+      if (!submission || !answer)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Failed to find submission",
+        });
 
+      const tokens = submission.token.join(",");
+      const status = await axios.get(
+        `${env.J0_URL}/submissions/batch?tokens=${tokens}&base64_encoded=false`,
+      );
+      // check if we finished evaluation
+      const result = status.data as BatchSubmissionRequestOutput;
+      let currentStatus: AnswerResult = "ACCEPTED";
+      let passed = 0;
+      for (const submission of result.submissions) {
+        const status = fromStatusCode(submission.status.id);
+        if (status === "WAITING") {
           return {
-            submissionId: submission.id
+            complete: false,
+            passed,
+            status: "WAITING",
+            numOfTests: result.submissions.length,
           };
-        })
+        }
+        if (status !== "ACCEPTED") {
+          // return the first error
+          currentStatus = status;
+          break;
+        }
+        passed += 1;
+      }
+      await prismaPostgres.questionAttempt.create({
+        data: {
+          userId: ctx.session.user.id,
+          answerId: submission.answerId,
+          language: await getLanguageFromCode(answer.environment.languageId),
+          result: currentStatus,
+          questionId: answer.environment.questionId,
+          passed,
+          numOfTests: result.submissions.length,
+          submissionId: input.submissionId,
+        },
+      });
+
+      await prismaPostgres.submission.delete({
+        where: {
+          userId_id: {
+            userId: ctx.session.user.id,
+            id: input.submissionId,
+          },
+        },
+      });
+
+      return {
+        status: currentStatus,
+        passed,
+        complete: true,
+        numOfTests: result.submissions.length,
+      };
+    }),
+  submitCode: protectedProcedure
+    .input(z.object({ source_code: z.string(), environmentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // create a submissions batch for all the test cases
+      // which satisfy the envid
+      const { source_code, environmentId } = input;
+      const environment = await prismaMongo.environment.findUnique({
+        where: {
+          id: environmentId,
+        },
+      });
+      if (!environment) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid environmentId",
+        });
+      }
+      const testCases = await prismaMongo.testCase.findMany({
+        where: {
+          environmentId,
+        },
+      });
+      const judgeInput = testCases.map((testCase) => ({
+        source_code: `${environment.prepend}\n${source_code}\n${environment.append}\n${testCase.test}`,
+        language_id: environment.languageId,
+        stdin: testCase.input,
+        expected_output: testCase.output,
+        cpu_time_limit: testCase.timeLimit,
+        memory_limit: testCase.memoryLimit
+          ? Math.max(testCase.memoryLimit, 2048)
+          : undefined,
+      }));
+
+      const result = (
+        await axios.post(
+          `${env.J0_URL}/submissions/batch?base64_encoded=false`,
+          {
+            submissions: judgeInput,
+          },
+        )
+      ).data as BatchSubmissionOutput;
+      const answer = await prismaMongo.answer.create({
+        data: {
+          body: source_code,
+          envId: environmentId,
+        },
+      });
+      // place this submission in memory
+      const submission = await prismaPostgres.submission.create({
+        data: {
+          token: result.map(({ token }) => token),
+          userId: ctx.session.user.id,
+          answerId: answer.id,
+        },
+      });
+
+      return {
+        submissionId: submission.id,
+      };
+    }),
 });

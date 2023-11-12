@@ -35,6 +35,13 @@ Notes:
 - If postgres is running on 5432, kill the process `sudo pkill -u postgres`
 - If you have trouble starting the `judge0` container, or encounter `Incorrect type. Expected "include".` in `compose.yml`, try updating `docker-compose` to `v2.20` (Docker Desktop `4.42.1`) or later.
 
+## Building and Running Image
+
+```bash
+    docker build -t peer-prep .
+    docker compose --profile prod up
+```
+
 ## What's next? How do I make an app with this?
 
 We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
