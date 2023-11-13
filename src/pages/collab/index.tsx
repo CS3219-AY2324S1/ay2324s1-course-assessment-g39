@@ -180,6 +180,7 @@ const MatchRequestPage = () => {
   }, [time, isCurUserMatchFetching]);
 
   useEffect(() => {
+    if (isCurUserMatchFetching) return;
     if (!curUserMatchRequest) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -201,7 +202,7 @@ const MatchRequestPage = () => {
     intervalRef.current = setInterval(() => {
       setTime((prev) => prev + 1);
     }, 1000);
-  }, [curUserMatchRequest]);
+  }, [curUserMatchRequest, isCurUserMatchFetching]);
 
   const {
     data: manualRequests = [],
