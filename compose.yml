@@ -1,6 +1,18 @@
 include:
   - judge0-v1.13.0/docker-compose.yml
 services:
+  app:
+    platform: "linux/amd64"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    ports:
+      - "3000:3000"
+      - ${NEXT_PUBLIC_WS_PORT}:${NEXT_PUBLIC_WS_PORT}
+    image: t3-app
+    profiles:
+      - prod
   postgres_db:
     image: postgres:12.16
     container_name: postgresdb-dev
@@ -36,6 +48,7 @@ services:
       S3_BUCKET_NAME: ${S3_BUCKET_NAME}
     volumes:
       - "./data/s3:/home/app/public/peer-prep"
+    container_name: s3-bucket
   rabbitmq:
     image: rabbitmq:3.11.23-management-alpine
     restart: always
@@ -48,7 +61,6 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     command: sh -c "rabbitmq-plugins enable rabbitmq_web_stomp && rabbitmq-server"
-
     networks:
       - rabbitmq_go_net
 networks:

@@ -18,18 +18,13 @@ export const env = createEnv({
       process.env.NODE_ENV === "production"
         ? z.string().min(1)
         : z.string().min(1).optional(),
-    NEXTAUTH_URL: z.preprocess(
-      // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
-      // Since NextAuth.js automatically uses the VERCEL_URL if present.
-      (str) => process.env.VERCEL_URL ?? str,
-      // VERCEL_URL doesn't include `https` so it cant be validated as a URL
-      process.env.VERCEL ? z.string().min(1) : z.string().url(),
-    ),
+    NEXTAUTH_URL: z.string().min(1),
     S3_BUCKET_NAME: z.string().min(1),
+    S3_ENDPOINT: z.string().min(1),
+    J0_URL: z.string().min(1),
     // Add `.min(1) on ID and SECRET if you want to make sure they're not empty
     GITHUB_ID: z.string().min(1),
     GITHUB_SECRET: z.string().min(1),
-    OPENAI_API_KEY: z.string().min(1),
   },
 
   /**
@@ -54,13 +49,14 @@ export const env = createEnv({
     MONGO_PASSWORD: process.env.MONGO_PASSWORD,
     MONGO_URL: process.env.MONGO_URL,
     NODE_ENV: process.env.NODE_ENV,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    NEXTAUTH_SECRET: process.env.NEXT_AUTH_SECRET,
     NEXT_PUBLIC_WS_PORT: process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_WS_PORT : "3002",
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
+    S3_ENDPOINT: process.env.S3_ENDPOINT,
+    J0_URL: process.env.J0_URL,
     GITHUB_ID: process.env.GITHUB_ID,
     GITHUB_SECRET: process.env.GITHUB_SECRET,
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

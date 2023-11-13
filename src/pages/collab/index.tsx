@@ -5,7 +5,6 @@
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "react-hot-toast";
@@ -24,40 +23,34 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);
 
-/**
- * TODO
- * - get rid of BE code for confirmation of join req
- */
+const REQUEST_EXPIRY_TIME_SECS = 30;
 const MatchRequestPage = () => {
-  const router = useRouter();
-  const utils = api.useContext();
   const { data: session } = useSession();
   if (!session || !session.user) {
     throw new Error("Session cannot be undefined since AuthWrapper wrapped");
   }
   const curUserId = session.user.id;
+
   const intervalRef = useRef<NodeJS.Timer | null>(null);
   const [time, setTime] = useState(0);
-  const resetTimer = () => {
-    intervalRef.current = setInterval(() => {
-      setTime((prev) => prev + 1);
-    }, 1000);
-    setTime(0);
-  };
+
   const stopTimer = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (intervalRef.current) { 
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
     setTime(0);
   };
+
 
   // remove current request immediately on refresh or change of page
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (curUserMatchRequest) {
+        handleDeleteMatchRequest();
         e.preventDefault();
-        // confirm("Are you sure you want to leave this page? Request will be deleted")
-        if (true) {
-          void handleDeleteMatchRequest();
-        }
+        e.returnValue = "";
+        return "Are you sure you want to leave this page? Request will be deleted";
       }
     };
 
@@ -67,33 +60,69 @@ const MatchRequestPage = () => {
     };
   });
 
+  useEffect(() => {
+    if (time === REQUEST_EXPIRY_TIME_SECS && curUserMatchRequest) {
+      const { difficulty, category, matchType } = curUserMatchRequest;
+      const sameRequest = { difficulty, category, matchType };
+      deleteMatchRequest({ matchType: curUserMatchRequest.matchType });
+      toast(
+        (t) => (
+          <div className="flex flex-col justify-evenly text-slate-800">
+            <span className="text-center mb-2">No requests found 🫠.</span>
+            <div className="flex justify-stretch">
+              <button
+                className="border bg-blue-500 rounded-md text-slate-100 p-2 mr-1"
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  createMatchRequest(sameRequest);
+                }}
+                type="button"
+              >
+                Recreate again
+              </button>
+              <button
+                className="border bg-stone-500 rounded-md text-slate-100 p-2"
+                onClick={() => toast.dismiss(t.id)}
+                type="button"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: 60000, id: "timeout", position: "top-center" },
+      );
+    }
+  }, [time]);
+
   const matchUsers = useMatchUsers();
   const [isCreatingMatchRequest, setIsCreatingMatchRequest] = useState(false);
   const [isEditingMatchRequest, setIsEditingMatchRequest] = useState(false);
+  const [isDeletingMatchRequest, setIsDeletingMatchRequest] = useState(false);
 
   const [difficultyFilter, setDifficultyFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
 
-  const { data: numOfMatchRequests } =
+  // our definition of online users are users who are looking for a match
+  const { data: numOfOnlineUsers = 0, refetch: refetchGetNumOfMatchReqs } =
     api.matchRequest.getNumOfMatchRequests.useQuery();
 
-  const { mutate: automaticallyMatchCurrentUserRequest } =
-    api.matchRequest.checkAndProcessAutoMatchIfPossible.useMutation();
   const { data: curUserMatchRequest, refetch: refetchCurrentUserRequest } =
     api.matchRequest.getCurrentUserRequest.useQuery(undefined, {
-      onSuccess(data) {
-        if (data?.matchType === "AUTO") {
-          automaticallyMatchCurrentUserRequest();
-        }
+      onError() {
+        toast.error("Error loading current user's match request");
       },
     });
 
   const { mutate: createMatchRequest } =
     api.matchRequest.createCurrentUserMatchRequest.useMutation({
       onSuccess() {
+        if (isCreatingMatchRequest) {
+          toast.success("Created match request");
+        }
         setIsCreatingMatchRequest(false);
-        resetTimer();
-        toast.success("Successfully created match request");
+        void refetchCurrentUserRequest();
+        void refetchGetNumOfMatchReqs();
       },
       onError(err) {
         toast.error(err.message);
@@ -104,48 +133,74 @@ const MatchRequestPage = () => {
   const { mutate: deleteMatchRequest } =
     api.matchRequest.deleteCurrentUserMatchRequest.useMutation({
       onSuccess() {
-        toast.success("Successfully deleted match request");
         stopTimer();
+        void refetchCurrentUserRequest();
+        void refetchGetNumOfMatchReqs();
+        if (isDeletingMatchRequest) {
+          toast.success("Deleted match request");
+        }
+        setIsDeletingMatchRequest(false);
+      },
+      onError() {
+        toast.error("Error deleting match request");
       },
     });
 
   const { mutate: updateMatchRequest } =
     api.matchRequest.updateCurrentUserMatchRequest.useMutation({
       onSuccess() {
-        toast.success("Successfully updated match request");
-        resetTimer();
+        if (isEditingMatchRequest) {
+          toast.success("Updated match request");
+        }
         setIsEditingMatchRequest(false);
+        void refetchCurrentUserRequest();
+      },
+      onError() {
+        toast.error("Error updating match request");
       },
     });
 
   // subscprtions api -- START
-  api.matchRequest.subscribeToAllRequests.useSubscription(undefined, {
-    onData(request) {
-      void refetchGetManualRequests();
-      void refetchCurrentUserRequest();
+  api.matchRequest.subscribeToManualMatchRequestsChange.useSubscription(
+    undefined,
+    {
+      onData() {
+        void refetchGetManualRequests();
+      },
     },
-    onError(err) {
-      console.log("Subscription error: ", err);
-      void Promise.resolve(utils.matchRequest.invalidate());
-    },
-  });
+  );
 
-  api.matchRequest.subscribeToAutomaticRequests.useSubscription(undefined, {
+  api.matchRequest.subscribeToMyRequestSuccess.useSubscription(undefined, {
     onData(data) {
-      if (curUserId === data.user1Id || curUserId === data.user2Id) {
-        matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
-      }
-    },
-  });
-
-  api.matchRequest.subscribeToConfirmation.useSubscription(undefined, {
-    onData(data) {
-      if (curUserId === data.user1Id || curUserId === data.user2Id) {
-        matchUsers.setMatchedUsers(data.user1Id, data.user2Id);
-      }
+      matchUsers.setMatchedUsers(data.userId1, data.userId2);
+      toast.success("Redirecting to room...");
     },
   });
   // subscprtions api -- END
+
+  useEffect(() => {
+    if (!curUserMatchRequest) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
+    const timeDiff = new Date().getTime() - curUserMatchRequest.createdAt.getTime();
+    const timeLeft = REQUEST_EXPIRY_TIME_SECS - Math.round(timeDiff / 1000);
+    if (timeLeft < 0) {
+      setTime(REQUEST_EXPIRY_TIME_SECS);
+      return;
+    }
+    setTime(REQUEST_EXPIRY_TIME_SECS - timeLeft);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    intervalRef.current = setInterval(() => {
+      setTime((prev) => prev + 1);
+    }, 1000);
+  }, [curUserMatchRequest]);
 
   const {
     data: manualRequests = [],
@@ -153,12 +208,15 @@ const MatchRequestPage = () => {
     isLoading: requestsLoading,
   } = api.matchRequest.getAllManualMatchRequests.useQuery();
 
-  const { mutate: acceptMatch, variables: data } =
-    api.matchRequest.acceptMatch.useMutation({
+  const { mutate: acceptManualMatch, variables: data } =
+    api.matchRequest.acceptManualMatch.useMutation({
       onSuccess: () => {
         if (!data) throw new Error("matchedIds is undefined");
         matchUsers.setMatchedUsers(curUserId, data.acceptedUserId);
         stopTimer();
+      },
+      onError: () => {
+        toast.error("Error accepting match request");
       },
     });
 
@@ -172,8 +230,10 @@ const MatchRequestPage = () => {
   };
 
   const handleDeleteMatchRequest = () => {
-    if (!curUserMatchRequest) return;
-    deleteMatchRequest();
+    setIsDeletingMatchRequest(true);
+    if (curUserMatchRequest) {
+      deleteMatchRequest({ matchType: curUserMatchRequest.matchType });
+    }
   };
 
   type UpdateToMatchRequest =
@@ -183,17 +243,15 @@ const MatchRequestPage = () => {
   };
 
   const handleAcceptRequest = (acceptedUserId: string) => {
-    acceptMatch({ acceptedUserId });
-    toast.success("Successfully matched with user, redirecting to room...", {
-      duration: 2000,
-    });
-    console.log("Joining session...");
+    acceptManualMatch({ acceptedUserId });
   };
 
-  // TODO: add custom confirm modal / hot-toast confirm modal
-  // if ((timerState.waitingTime = 300)) {
-  // void deleteMatchRequest();
-  // }
+  const numOfOtherOnlineUsers = curUserMatchRequest
+    ? numOfOnlineUsers - 1
+    : numOfOnlineUsers;
+  const otherUsersManualRequests = manualRequests.filter(
+    (r) => r.user.id !== curUserId,
+  );
 
   return (
     <>
@@ -201,16 +259,14 @@ const MatchRequestPage = () => {
         <title>Find practice partner</title>
       </Head>
       {curUserMatchRequest && (
-        <RequestStatus matchType={curUserMatchRequest.matchType} />
+        <RequestStatus matchType={curUserMatchRequest.matchType} time={time} />
       )}
       <PageLayout>
         <div className="flex flex-col h-full items-center justify-center bg-slate-800 text-center">
           <div className="space-y-4">
             <div className="flex flex-row justify-between">
               <div className="text-left">Find a practice partner</div>
-              <div className="text-right">{`(${
-                numOfMatchRequests ?? 0
-              } online users)`}</div>
+              <div className="text-right">{`(${numOfOnlineUsers} online users)`}</div>
             </div>
             {curUserMatchRequest && (
               <>
@@ -228,6 +284,7 @@ const MatchRequestPage = () => {
                     curData={{
                       category: curUserMatchRequest.category,
                       difficulty: curUserMatchRequest.difficulty,
+                      matchType: curUserMatchRequest.matchType,
                     }}
                   />
                 )}
@@ -285,8 +342,7 @@ const MatchRequestPage = () => {
                     </tr>
                   </thead>
                   <tbody className="space-y-6 bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                    {manualRequests
-                      .filter((r) => r.user.id !== curUserId)
+                    {otherUsersManualRequests
                       .filter(
                         (r) =>
                           !difficultyFilter ||
@@ -320,17 +376,23 @@ const MatchRequestPage = () => {
                       ))}
                   </tbody>
                 </table>
-                {!requestsLoading && manualRequests.length === 0 && (
-                  <>
-                    <div className="py-2" />
-                    <div className="bg-slate-700 rounded-lg block text-center text-sm py-4">
-                      🥲 <br />
-                      Bummer! No requests.
-                      <br />
-                      Maybe ask a friend to come on to code with you?
+                {!requestsLoading &&
+                  otherUsersManualRequests.length === 0 &&
+                  (numOfOtherOnlineUsers == 0 ? (
+                    <>
+                      <div className="py-2" />
+                      <div className="bg-slate-700 rounded-lg block text-center text-sm py-4">
+                        🥲 <br />
+                        Bummer! No other online users.
+                        <br />
+                        Maybe ask a friend to come on to code with you?
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-slate-700 rounded-lg block text-center text-sm py-2 mt-2">
+                      No available public requests.
                     </div>
-                  </>
-                )}
+                  ))}
               </div>
             </div>
           </div>
@@ -497,11 +559,9 @@ const UserOwnMatchRequestView = ({
 const updateMatchRequestSchema = z.object({
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
   category: z.string().min(1),
+  matchType: z.enum(["AUTO", "MANUAL"]),
 });
-type UpdateMatchRequestData = Omit<
-  z.infer<typeof createMatchRequestSchema>,
-  "automaticMatching"
->;
+type UpdateMatchRequestData = z.infer<typeof updateMatchRequestSchema>;
 type UpdateMatchRequestFormProps = {
   onUpdate: (data: UpdateMatchRequestData) => void;
   handleCancel: () => void;
@@ -578,6 +638,20 @@ const UpdateMatchRequestForm = ({
           <span className="text-red-500">{errors.category.message}</span>
         )}
       </div>
+      <div className="hidden">
+        <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+          Match Type
+        </label>
+        <input
+          className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+          type="text"
+          defaultValue={curData.matchType}
+          {...register("matchType")}
+        />
+        {errors.category && (
+          <span className="text-red-500">{errors.category.message}</span>
+        )}
+      </div>
       <button
         className="w-full text-white bg-slate-500 hover:bg-slate-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-slate-400 dark:hover:bg-slate-500 dark:focus:ring-primary-800"
         type="submit"
@@ -588,7 +662,7 @@ const UpdateMatchRequestForm = ({
   );
 };
 
-const RequestStatus = (props: { matchType: MatchType }) => {
+const RequestStatus = (props: { matchType: MatchType; time: number }) => {
   const msg =
     props.matchType === "AUTO"
       ? "Finding a request for you"
@@ -617,6 +691,9 @@ const RequestStatus = (props: { matchType: MatchType }) => {
             ></path>
           </svg>
           {msg}
+          <span className="pl-1">{`(${
+            REQUEST_EXPIRY_TIME_SECS - props.time
+          } seconds)`}</span>
         </div>
       </div>
     </div>

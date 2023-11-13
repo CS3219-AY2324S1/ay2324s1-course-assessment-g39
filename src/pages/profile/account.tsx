@@ -12,13 +12,14 @@ import { z } from "zod";
 import { signOut, useSession } from "next-auth/react";
 import { LoadingPage } from "~/components/Loading";
 import UpdatePasswordModal from "~/components/UpdatePasswordOverlayModal";
+import ConfirmModal from "~/components/ConfirmModal";
 
 // TODO:
 // - add email verification
 // - change password using email link
 // - edit imageURL
 
-const id_z = z.string().min(1); // can add error message
+const id_z = z.string().min(1);
 const name_z = z.string().min(1);
 const email_z = z.string().email().min(1);
 const emailVerified_z = z.date().nullable();
@@ -29,6 +30,7 @@ const ProfilePage: NextPage = () => {
   const router = useRouter();
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // session is `null` until nextauth fetches user's session data
   const { data: session, update: updateSession } = useSession({
@@ -137,6 +139,14 @@ const ProfilePage: NextPage = () => {
             updatePassword({ id: userData.id, password: data.password })
           }
         />
+        <ConfirmModal
+          title="Delete Account?"
+          isOpen={isDeletingAccount}
+          message="Are you sure you want to delete your account. If you delete your account you will permanently lose your account information and question submissions history."
+          onCancel={() => setIsDeletingAccount(false)}
+          onConfirm={() => deleteUser({ id: userData.id })}
+          type="warning"
+        />
         <div className="relative h-48 bg-slate-600 border-b overscroll-y-scroll w-full border-x md:max-w-2xl">
           <Image
             src={imageURL ?? "https://picsum.photos/300/300"}
@@ -232,16 +242,8 @@ const ProfilePage: NextPage = () => {
               </div>
               <div>
                 <button
-                  onClick={() => {
-                    if (
-                      confirm(
-                        "WARNING! All accout information will be removed on deletion. Are you sure you want to proceed?",
-                      )
-                    ) {
-                      deleteUser({ id: userData.id });
-                    }
-                  }}
                   className="text-neutral-400 rounded-md underline"
+                  onClick={() => setIsDeletingAccount(true)}
                 >
                   delete account
                 </button>
@@ -264,9 +266,5 @@ const ProfilePage: NextPage = () => {
     </>
   );
 };
-
-// const PasswordChangeModal = ({ isOpen }: { isOpen: boolean }) => {
-//   return <OverlayModal isOpen={isOpen}>hi</OverlayModal>;
-// };
 
 export default ProfilePage;

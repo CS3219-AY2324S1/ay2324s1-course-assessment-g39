@@ -1,6 +1,6 @@
-import { AppRouter, appRouter } from "./api/root";
+import { type AppRouter, appRouter } from "./api/root";
 import { applyWSSHandler } from "@trpc/server/adapters/ws";
-import ws, { WebSocketServer } from "ws";
+import ws, { type WebSocketServer } from "ws";
 import { createWSTRPCContext } from "./api/trpc";
 import { env } from "~/env.mjs";
 
@@ -25,7 +25,7 @@ export const wssEE = wss.on("connection", (ws) => {
     console.log(`➖➖ Connection (${wss.clients.size})`);
   });
 });
-console.log("✅ WebSocket Server listening on ws://localhost:${env.NEXT_PUBLIC_WS_PORT}");
+console.log(`✅ WebSocket Server listening on ws://localhost:${env.NEXT_PUBLIC_WS_PORT}`);
 
 process.on("SIGTERM", () => {
   console.log("SIGTERM");

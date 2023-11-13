@@ -20,11 +20,15 @@ const SignUp = () => {
       // to prevent malicious actors to derive db data (eg. email exists)
       toast.error("Failed to create account\n Please try again later");
     },
-    onSuccess: async () => {
-      toast.success("Successfully created account: ");
-      if (confirm("Sign In?")) {
-        await signIn(undefined, { callbackUrl: "/" });
-      }
+    onSuccess: () => {
+      const DURATION_TO_LOAD = 1200;
+      toast.success("Sign up successful, redirecting...", {
+        duration: DURATION_TO_LOAD,
+      });
+      setTimeout(
+        () => void signIn(undefined, { callbackUrl: "/" }),
+        DURATION_TO_LOAD,
+      );
     },
   });
 
