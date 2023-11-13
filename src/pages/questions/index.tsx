@@ -24,7 +24,7 @@ function Questions() {
 
   const [page, setPage] = useState(0);
 
-  const getAllQuery = api.useUtils().question.getAllReducedInfinite;
+  const getAllQuery = api.useContext().question.getAllReducedInfinite;
 
   const {
     data,

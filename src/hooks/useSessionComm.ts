@@ -24,7 +24,7 @@ export default function useSessionComm(
     partnerIsTyping: false,
   });
 
-  const utils = api.useUtils();
+  const utils = api.useContext();
 
   const allSessionMessages =
     api.userAndUserMessages.getAllSessionUserAndUserMessages.useQuery({

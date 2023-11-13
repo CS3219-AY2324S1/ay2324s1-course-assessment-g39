@@ -23,7 +23,7 @@ export default function useAIComm(
     isAIResponding: false,
   });
 
-  const utils = api.useUtils();
+  const utils = api.useContext();
 
   const allSessionMessages =
     api.userAndAIMessages.getAllSessionUserAndAIMessages.useQuery({
