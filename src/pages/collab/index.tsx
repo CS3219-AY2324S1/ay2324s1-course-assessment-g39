@@ -173,7 +173,6 @@ const MatchRequestPage = () => {
   api.matchRequest.subscribeToMyRequestSuccess.useSubscription(undefined, {
     onData(data) {
       matchUsers.setMatchedUsers(data.userId1, data.userId2);
-      toast.success("Redirecting to room...");
     },
   });
   // subscprtions api -- END
