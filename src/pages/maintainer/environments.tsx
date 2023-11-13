@@ -111,9 +111,13 @@ const CreateEnvironment = () => {
     }));
   };
 
+  const apiContext = api.useUtils();
 
   const updateEnvMutation = api.environment.upsertEnvironment.useMutation(
     {
+        onSuccess() {
+          void apiContext.question.getOneEnvironments.invalidate();
+        },
         onError() {
             toast.error("Failed to update")
         }
@@ -123,7 +127,10 @@ const CreateEnvironment = () => {
     {
         onError() {
             toast.error("Failed to delete")
-        }
+        },
+        onSuccess() {
+          void apiContext.question.getOneEnvironments.invalidate();
+        },
     }
   );
 
@@ -158,15 +165,15 @@ const CreateEnvironment = () => {
 
 
   useEffect(() => {
-    if (useQuestionObject.environment) {
+    if (useQuestionObject.environment
+       && useQuestionObject.environment.languageId === formData.languageId) {
         setFormData({
             ...useQuestionObject.environment,
         });
     }
-  }, [useQuestionObject.environmentId]);
+  }, [useQuestionObject.environmentId, useQuestionObject.environment, formData.languageId]);
 
   useEffect(() => {
-    if (useQuestionObject.environment?.languageId === formData.languageId) return;
     if (!inEnvironments(formData.languageId)) {
       const { languageId, ...empty } = emptyFormState;
       setFormDataWrapper(empty);
