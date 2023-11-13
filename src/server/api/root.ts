@@ -10,6 +10,7 @@ import { userAndUserMessagesRouter } from "./routers/userAndUserComm";
 import { sharedCodeSessionRouter } from "./routers/sharedCodeSession";
 import { userAndAIMessagesRouter } from "./routers/userAndAIComm";
 import { generalRouter } from "~/server/api/routers/general";
+import { environmentRouter } from "./routers/environment";
 
 /**
  * This is the primary router for your server.
@@ -28,6 +29,7 @@ export const appRouter = createTRPCRouter({
   userAndUserMessages: userAndUserMessagesRouter,
   userAndAIMessages: userAndAIMessagesRouter,
   sharedSession: sharedCodeSessionRouter,
+  environment: environmentRouter
 });
 
 // export type definition of API

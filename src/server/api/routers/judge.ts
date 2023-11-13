@@ -45,7 +45,13 @@ const judgeStatusCodeMap = new Map<number, AnswerResult>([
   [14, "JUDGE_ERROR"],
 ]);
 
-function fromStatusCode(code: number): AnswerResult | "WAITING" {
+
+
+function fromStatusCode(code: number): AnswerResult | "WAITING" | "PROCESSING" {
+  
+  if (code === 2) {
+    return "PROCESSING";
+  }
   if (code == 1 || code == 0) {
     return "WAITING";
   }
@@ -204,7 +210,7 @@ export const judgeRouter = createTRPCRouter({
       let passed = 0;
       for (const submission of result.submissions) {
         const status = fromStatusCode(submission.status.id);
-        if (status === "WAITING") {
+        if (status === "WAITING" || status === "PROCESSING") {
           return {
             complete: false,
             passed,
@@ -246,6 +252,7 @@ export const judgeRouter = createTRPCRouter({
         passed,
         complete: true,
         numOfTests: result.submissions.length,
+        values: result
       };
     }),
   submitCode: protectedProcedure

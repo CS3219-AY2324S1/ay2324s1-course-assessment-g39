@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { CodeOutput, Difficulty, Language, Question, TestCase } from "~/types/global";
+import { CodeOutput, Difficulty, Environment, Language, Question, TestCase } from "~/types/global";
 import { api } from "~/utils/api";
 
 type UseQuestionsReturn = {
@@ -39,6 +39,7 @@ type UseQuestionsReturn = {
   currentLanguage: Language | undefined;
   setCurrentLanguage: (lang: Language) => void;
   environmentId: string;
+  environment: Environment | undefined | null;
   /**
    * The submission status
    */
@@ -72,7 +73,6 @@ export default function useQuestions(): UseQuestionsReturn {
       passed: number,
       numOfTests: number
    } | undefined>(undefined);
-  
   const questions =
     api.question.getAllReduced.useQuery(undefined, {
       onError: (e) => {
@@ -166,7 +166,7 @@ export default function useQuestions(): UseQuestionsReturn {
   );
 
   const currentTest = testCases.data?.find((val) => {
-    val.id === testCaseId
+    return val.id === testCaseId
   });
 
   useEffect(() => {
@@ -180,6 +180,7 @@ export default function useQuestions(): UseQuestionsReturn {
     }
   }, [submissionStatus])
 
+  // update testcase related info
   useEffect(() => {
     setTestCaseIdList(
       testCases?.data?.map(({ id, description }) => ({ id, description })) ??
@@ -224,5 +225,10 @@ export default function useQuestions(): UseQuestionsReturn {
       });
     },
     submissionStatus: tempSubmissionStatus,
+    environment: currentEnvironment ?  {
+      ...currentEnvironment,
+      prepend: currentEnvironment?.prepend ?? "",
+      append: currentEnvironment?.append ?? "",
+    } : undefined
   };
 }

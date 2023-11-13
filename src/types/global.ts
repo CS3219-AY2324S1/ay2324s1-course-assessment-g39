@@ -10,7 +10,6 @@ export class Question {
   id = "";
 };
 
-export type QuestionMap = Map<string, Question>;
 
 // todo: dup code
 export type ModifyQuestionProps = {
@@ -54,3 +53,14 @@ export type CodeOutput = {
   message: string | null;
   status: { id: number; description: string };
 };
+
+export type Environment = {
+  template: string;
+  append: string;
+  prepend: string;
+  languageId: number;
+  questionId: string;
+}
+
+export type QuestionMap = Map<string, Question>;
+
