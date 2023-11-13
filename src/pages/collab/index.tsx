@@ -177,7 +177,7 @@ const MatchRequestPage = () => {
         { duration: 60000, id: "timeout", position: "top-center" },
       );
     }
-  }, [time, curUserMatchRequest]);
+  }, [time, isCurUserMatchFetching]);
 
   useEffect(() => {
     if (!curUserMatchRequest) {
