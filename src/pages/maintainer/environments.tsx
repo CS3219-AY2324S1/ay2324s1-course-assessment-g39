@@ -171,7 +171,7 @@ const CreateEnvironment = () => {
 
   useEffect(() => {
     if (useQuestionObject.environment
-       && useQuestionObject.environment.languageId === formData.languageId) {
+       && useQuestionObject.environment.languageId === tempLangID) {
         setFormData({
             ...useQuestionObject.environment,
         });
