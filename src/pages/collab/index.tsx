@@ -73,7 +73,7 @@ const MatchRequestPage = () => {
   const { data: numOfOnlineUsers = 0, refetch: refetchGetNumOfMatchReqs } =
     api.matchRequest.getNumOfMatchRequests.useQuery();
 
-  const { data: curUserMatchRequest, refetch: refetchCurrentUserRequest } =
+  const { data: curUserMatchRequest, refetch: refetchCurrentUserRequest, isFetching: isCurUserMatchFetching } =
     api.matchRequest.getCurrentUserRequest.useQuery(undefined, {
       onError() {
         toast.error("Error loading current user's match request");
@@ -145,8 +145,7 @@ const MatchRequestPage = () => {
 
 
   useEffect(() => {
-    if (time >= REQUEST_EXPIRY_TIME_SECS && curUserMatchRequest) {
-      console.log(curUserMatchRequest);
+    if (time >= REQUEST_EXPIRY_TIME_SECS && curUserMatchRequest && !isCurUserMatchFetching) {
       const { difficulty, category, matchType } = curUserMatchRequest;
       const sameRequest = { difficulty, category, matchType };
       deleteMatchRequest({ matchType: curUserMatchRequest.matchType });
@@ -178,7 +177,7 @@ const MatchRequestPage = () => {
         { duration: 60000, id: "timeout", position: "top-center" },
       );
     }
-  }, [time]);
+  }, [time, curUserMatchRequest]);
 
   useEffect(() => {
     if (!curUserMatchRequest) {
