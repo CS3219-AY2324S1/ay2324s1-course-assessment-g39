@@ -149,6 +149,7 @@ const MatchRequestPage = () => {
       const { difficulty, category, matchType } = curUserMatchRequest;
       const sameRequest = { difficulty, category, matchType };
       deleteMatchRequest({ matchType: curUserMatchRequest.matchType });
+      stopTimer();
       toast(
         (t) => (
           <div className="flex flex-col justify-evenly text-slate-800">
