@@ -111,7 +111,7 @@ const CreateEnvironment = () => {
     }));
   };
 
-  const apiContext = api.useContext();
+  const apiContext = api.useUtils();
 
   const updateEnvMutation = api.environment.upsertEnvironment.useMutation(
     {
