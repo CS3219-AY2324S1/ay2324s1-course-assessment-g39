@@ -192,9 +192,17 @@ const Output = ({
         name="output"
         id="output"
         className="mt-3 h-full min-h-[2rem] w-full p-2 font-mono box-border bg-gray-500 border border-gray-300 text-gray-900 sm:text-sm rounded-lg  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white "
-        value={output?.status.description ?? ""}
+        value={output?.status?.description ?? ""}
         readOnly
       />
+      {output?.compile_output && <><em>Compile output</em>
+      <textarea
+        name="output"
+        id="output"
+        className="mt-3 h-full min-h-[8rem] w-full p-2 font-mono box-border bg-gray-500 border border-gray-300 text-gray-900 sm:text-sm rounded-lg  dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white "
+        value={output?.compile_output ?? ""}
+        readOnly
+      /></>}
     </label>
   </div>
 );
