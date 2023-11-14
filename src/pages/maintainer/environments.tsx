@@ -102,9 +102,14 @@ const CreateEnvironment = () => {
     }
   }, [router]);
   const [formData, setFormData] = useState<FormState>(emptyFormState);
-  const languages = api.judge.getLanguages.useQuery();
+  const [tempLangID, setTempLangID] = useState<number | null>(null);
 
+  const languages = api.judge.getLanguages.useQuery();
+  
   const setFormDataWrapper = (item: Partial<FormState>) => {
+    if (item.languageId) {
+      setTempLangID(item.languageId);
+    }
     setFormData((prev) => ({
       ...prev,
       ...item,
@@ -165,23 +170,31 @@ const CreateEnvironment = () => {
 
 
   useEffect(() => {
-    if (useQuestionObject.environment
-       && useQuestionObject.environment.languageId === formData.languageId) {
-        setFormData({
-            ...useQuestionObject.environment,
-        });
+    if (tempLangID === null && useQuestionObject.environment) {
+      setTempLangID(useQuestionObject.environment.languageId);
+      setFormData(useQuestionObject.environment);
+      return;
     }
-  }, [useQuestionObject.environmentId, useQuestionObject.environment, formData.languageId]);
+    if (tempLangID === null) {
+      return;  
+    }
+    
+    if (useQuestionObject.environment
+       && useQuestionObject.environment.languageId === tempLangID) {
+        setFormData(useQuestionObject.environment);
+    }
+  }, [useQuestionObject.environmentId, tempLangID]);
 
   useEffect(() => {
-    if (!inEnvironments(formData.languageId)) {
+    if (tempLangID === null) return;
+    if (!inEnvironments(tempLangID)) {
       const { languageId, ...empty } = emptyFormState;
       setFormDataWrapper(empty);
       return;
     }
-    useQuestionObject.setCurrentLanguage(useQuestionObject.languages.find((val) => val.id === formData.languageId)!);
+    useQuestionObject.setCurrentLanguage(useQuestionObject.languages.find((val) => val.id === tempLangID)!);
 
-  }, [formData.languageId])
+  }, [tempLangID])
 
   return (
     <div className="flex flex-col bg-slate-600 h-screen text-white">

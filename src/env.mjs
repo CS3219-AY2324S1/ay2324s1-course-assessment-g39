@@ -25,6 +25,9 @@ export const env = createEnv({
     // Add `.min(1) on ID and SECRET if you want to make sure they're not empty
     GITHUB_ID: z.string().min(1),
     GITHUB_SECRET: z.string().min(1),
+    S3_REGION: z.string().optional(),
+    S3_ACCESS_KEY_ID: z.string(),
+    S3_SECRET_ACCESS_KEY: z.string()
   },
 
   /**
@@ -35,6 +38,7 @@ export const env = createEnv({
   client: {
     // NEXT_PUBLIC_CLIENTVAR: z.string().min(1),
     NEXT_PUBLIC_WS_PORT: z.string().min(1),
+    NEXT_PUBLIC_WS_URL: z.string().min(1)
   },
 
   /**
@@ -50,13 +54,17 @@ export const env = createEnv({
     MONGO_URL: process.env.MONGO_URL,
     NODE_ENV: process.env.NODE_ENV,
     NEXTAUTH_SECRET: process.env.NEXT_AUTH_SECRET,
-    NEXT_PUBLIC_WS_PORT: process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_WS_PORT : "3002",
+    NEXT_PUBLIC_WS_PORT: process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_PORT : process.env.NEXT_PUBLIC_WS_PORT,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
     S3_ENDPOINT: process.env.S3_ENDPOINT,
     J0_URL: process.env.J0_URL,
     GITHUB_ID: process.env.GITHUB_ID,
     GITHUB_SECRET: process.env.GITHUB_SECRET,
+    NEXT_PUBLIC_WS_URL: process.env.NODE_ENV === "production" ? process.env.NEXT_PUBLIC_WS_URL : `ws://localhost:${process.env.NEXT_PUBLIC_WS_PORT}`,
+    S3_REGION: process.env.S3_REGION ?? "us-east-1",
+    S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID ?? "S3RVER",
+    S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY ?? "S3RVER",
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

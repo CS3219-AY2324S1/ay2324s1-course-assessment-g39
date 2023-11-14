@@ -1,9 +1,9 @@
 import { appRouter } from "./api/root";
 import { applyWSSHandler } from "@trpc/server/adapters/ws";
-import http from "http";
+import { createServer } from "node:http";
 import next from "next";
 import { parse } from "url";
-import ws from "ws";
+import ws, { WebSocketServer } from "ws";
 import { createWSTRPCContext } from "./api/trpc";
 import { env } from "~/env.mjs";
 
@@ -17,26 +17,19 @@ void app
   .prepare()
   .then(() => {
     console.log("Preparing server");
-    const server = http.createServer((req, res) => {
-      const proto = req.headers["x-forwarded-proto"];
-      if (proto && proto === "http") {
-        // redirect to ssl
-        res.writeHead(303, {
-          // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-          location: `https://` + req.headers.host + (req.headers.url ?? ""),
-        });
-        res.end();
-        return;
-      }
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const parsedUrl = parse(req.url!, true);
-      void handle(req, res, parsedUrl);
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    const server = createServer(async (req, res) => {
+      if (!req.url) return;
+      const parsedUrl = parse(req.url, true);
+      await handle(req, res, parsedUrl).catch((e) => {
+        console.log(e);
+      });
     });
     console.log("Created http server");
     // todo: Can't quite get a http server to pass through to the ws server
     /// const wss = new ws.Server({ server });
-    const wss = new ws.Server({
-      port: Number(env.NEXT_PUBLIC_WS_PORT) ?? 3002,
+    const wss = new WebSocketServer({
+      server,
     });
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const handler = applyWSSHandler({
@@ -45,10 +38,17 @@ void app
       createContext: createWSTRPCContext,
     });
 
-    process.on("SIGTERM", () => {
-      console.log("SIGTERM");
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM');
       handler.broadcastReconnectNotification();
     });
+  
+    server.on('upgrade', (req, socket, head) => {
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req);
+      });
+    });
+    
     server.listen(port);
 
     console.log(
