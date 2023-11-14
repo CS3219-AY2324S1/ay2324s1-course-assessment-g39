@@ -102,7 +102,7 @@ const CreateEnvironment = () => {
     }
   }, [router]);
   const [formData, setFormData] = useState<FormState>(emptyFormState);
-  const [tempLangID, setTempLangID] = useState<number>(0);
+  const [tempLangID, setTempLangID] = useState<number | null>(null);
 
   const languages = api.judge.getLanguages.useQuery();
   
@@ -170,15 +170,23 @@ const CreateEnvironment = () => {
 
 
   useEffect(() => {
+    if (tempLangID === null && useQuestionObject.environment) {
+      setTempLangID(useQuestionObject.environment.languageId);
+      setFormData(useQuestionObject.environment);
+      return;
+    }
+    if (tempLangID === null) {
+      return;  
+    }
+    
     if (useQuestionObject.environment
        && useQuestionObject.environment.languageId === tempLangID) {
-        setFormData({
-            ...useQuestionObject.environment,
-        });
+        setFormData(useQuestionObject.environment);
     }
   }, [useQuestionObject.environmentId, tempLangID]);
 
   useEffect(() => {
+    if (tempLangID === null) return;
     if (!inEnvironments(tempLangID)) {
       const { languageId, ...empty } = emptyFormState;
       setFormDataWrapper(empty);
