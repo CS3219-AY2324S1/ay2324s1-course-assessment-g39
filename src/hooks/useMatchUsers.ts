@@ -1,6 +1,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { api } from "~/utils/api";
 
 type UseMatchUsersResult = {
@@ -23,6 +24,7 @@ export default function useMatchUsers(): UseMatchUsersResult {
           data.user2 === session?.user.id
         ) {
           console.log("Routing");
+          toast.success("Redirecting to room...");
           void router.push(`/collab/rooms/${data.sessionId}`);
         }
       },

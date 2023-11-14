@@ -60,40 +60,6 @@ const MatchRequestPage = () => {
     };
   });
 
-  useEffect(() => {
-    if (time === REQUEST_EXPIRY_TIME_SECS && curUserMatchRequest) {
-      const { difficulty, category, matchType } = curUserMatchRequest;
-      const sameRequest = { difficulty, category, matchType };
-      deleteMatchRequest({ matchType: curUserMatchRequest.matchType });
-      toast(
-        (t) => (
-          <div className="flex flex-col justify-evenly text-slate-800">
-            <span className="text-center mb-2">No requests found 🫠.</span>
-            <div className="flex justify-stretch">
-              <button
-                className="border bg-blue-500 rounded-md text-slate-100 p-2 mr-1"
-                onClick={() => {
-                  toast.dismiss(t.id);
-                  createMatchRequest(sameRequest);
-                }}
-                type="button"
-              >
-                Recreate again
-              </button>
-              <button
-                className="border bg-stone-500 rounded-md text-slate-100 p-2"
-                onClick={() => toast.dismiss(t.id)}
-                type="button"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        ),
-        { duration: 60000, id: "timeout", position: "top-center" },
-      );
-    }
-  }, [time]);
 
   const matchUsers = useMatchUsers();
   const [isCreatingMatchRequest, setIsCreatingMatchRequest] = useState(false);
@@ -107,7 +73,7 @@ const MatchRequestPage = () => {
   const { data: numOfOnlineUsers = 0, refetch: refetchGetNumOfMatchReqs } =
     api.matchRequest.getNumOfMatchRequests.useQuery();
 
-  const { data: curUserMatchRequest, refetch: refetchCurrentUserRequest } =
+  const { data: curUserMatchRequest, refetch: refetchCurrentUserRequest, isFetching: isCurUserMatchFetching } =
     api.matchRequest.getCurrentUserRequest.useQuery(undefined, {
       onError() {
         toast.error("Error loading current user's match request");
@@ -173,12 +139,49 @@ const MatchRequestPage = () => {
   api.matchRequest.subscribeToMyRequestSuccess.useSubscription(undefined, {
     onData(data) {
       matchUsers.setMatchedUsers(data.userId1, data.userId2);
-      toast.success("Redirecting to room...");
     },
   });
   // subscprtions api -- END
 
+
   useEffect(() => {
+    if (time >= REQUEST_EXPIRY_TIME_SECS && curUserMatchRequest && !isCurUserMatchFetching) {
+      const { difficulty, category, matchType } = curUserMatchRequest;
+      const sameRequest = { difficulty, category, matchType };
+      deleteMatchRequest({ matchType: curUserMatchRequest.matchType });
+      stopTimer();
+      toast(
+        (t) => (
+          <div className="flex flex-col justify-evenly text-slate-800">
+            <span className="text-center mb-2">No requests found 🫠.</span>
+            <div className="flex justify-stretch">
+              <button
+                className="border bg-blue-500 rounded-md text-slate-100 p-2 mr-1"
+                onClick={() => {
+                  toast.dismiss(t.id);
+                  createMatchRequest(sameRequest);
+                }}
+                type="button"
+              >
+                Recreate again
+              </button>
+              <button
+                className="border bg-stone-500 rounded-md text-slate-100 p-2"
+                onClick={() => toast.dismiss(t.id)}
+                type="button"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: 60000, id: "timeout", position: "top-center" },
+      );
+    }
+  }, [time, isCurUserMatchFetching]);
+
+  useEffect(() => {
+    if (isCurUserMatchFetching) return;
     if (!curUserMatchRequest) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -200,7 +203,7 @@ const MatchRequestPage = () => {
     intervalRef.current = setInterval(() => {
       setTime((prev) => prev + 1);
     }, 1000);
-  }, [curUserMatchRequest]);
+  }, [curUserMatchRequest, isCurUserMatchFetching]);
 
   const {
     data: manualRequests = [],
