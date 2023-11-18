@@ -1,0 +1,34 @@
+name: CI
+on: [push]
+# Simple CI/CD for building
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: c-hive/gha-yarn-cache@v2
+      - name: Set Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+
+      - name: Run install
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install # will run `yarn install` command
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # if needed
+
+      - name: Copy env
+        run: |
+          cp .env.example .env
+      - name: Run prisma push
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: prisma:generate
+
+      - name: Build production bundle
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: build # will run `yarn build:prod` command

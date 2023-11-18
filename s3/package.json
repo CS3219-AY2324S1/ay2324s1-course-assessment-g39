@@ -1,0 +1,14 @@
+{
+  "name": "s3",
+  "version": "1.0.0",
+  "description": "local dummy s3 server",
+  "main": "s3.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "s3rver": "^3.7.1"
+  }
+}

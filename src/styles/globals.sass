@@ -1,0 +1,322 @@
+@tailwind base
+@tailwind components
+@tailwind utilities
+
+@layer base
+    h1
+        @apply text-4xl
+    h2
+        @apply text-3xl
+    h3
+        @apply text-2xl
+    h4
+        @apply text-xl
+
+:root
+    --bg-1: #1f1f1f
+    --bg-2: #2f2f2f
+    --bg-3: #4e2d10
+    --txt-1: #569cd6
+    --txt-2: #9cdcfe
+    --txt-3: #cccccc
+    --txt-4: #b4843b
+    --txt-5: #44a165
+    --txt-6: #ac4646
+    --check: #1c84da
+
+input[type=number]
+    -moz-appearance: textfield
+    appearance: textfield
+    margin: 0
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button
+    -webkit-appearance: none
+    margin: 0
+
+.tb-border
+    border: solid #444
+    border-width: 0 1px 1px 0
+
+.checkbox
+    display: flex
+    flex: none
+    width: 2.4rem
+    align-items: center
+    justify-content: center
+    position: relative
+
+    span
+        content: ''
+        position: absolute
+        background-color: var(--bg-1)
+        width: 50%
+        aspect-ratio: 1
+        border-radius: 0.25rem
+        transition: background-color 0.2s ease-in-out
+        pointer-events: none
+
+        &::after
+            content: ''
+            position: absolute
+            visibility: hidden
+
+    input[type=checkbox]
+        height: 50%
+        aspect-ratio: 1
+        opacity: 0
+
+        &:checked + span
+            background-color: var(--check)
+            &::after
+                visibility: visible
+                border: solid var(--txt-3)
+                width: 35%
+                height: 70%
+                top: 10%
+                left: 35%
+                border-width: 0 3px 3px 0
+                transform: rotate(45deg)
+
+        &:indeterminate + span
+            background-color: var(--check)
+            &::after
+                visibility: visible
+                background-color: var(--txt-3)
+                width: 50%
+                height: 50%
+                top: 25%
+                left: 25%
+                border-radius: 0.15rem
+
+
+
+
+.generic-button
+    @apply  rounded-lg bg-gray-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700
+    
+    &--delete
+        @apply h-1/2 text-red-500
+
+    &--enter-session
+        @apply h-1/2 text-green-400
+
+.codespace-header
+    @apply dark:bg-slate-600 text-white row-span-1
+@keyframes lds-dual-ring
+  0%
+    transform: rotate(0deg)
+  100%
+    transform: rotate(360deg)
+
+.lds-dual-ring
+  width: 16px
+  height: 16px
+
+  &:after
+    content: " "
+    display: block
+    width: 20px
+    height: 20px
+    margin: -3px
+    border-radius: 50%
+    border: 2px solid #fff
+    border-color: #{#fff} transparent #{#fff} transparent
+    animation: lds-dual-ring 1.2s linear infinite
+
+span.msg,
+span.choose
+  color: white
+  padding: 5px 0 10px
+  display: inherit
+
+/* Styling Selectbox */
+.dropdown
+  width: 100%
+  display: inline-block
+  background-color: #fff
+  border-radius: 0.375rem
+  box-shadow: 0 0 2px rgb(204, 204, 204)
+  transition: all 0.5s ease
+  position: relative
+  font-size: 14px
+  color: #474747
+  text-align: left
+
+  .select
+    cursor: pointer
+    display: block
+    padding: 10px
+    text-align: center
+
+    > i
+      font-size: 13px
+      color: #888
+      cursor: pointer
+      transition: all 0.3s ease-in-out
+      float: right
+      line-height: 20px
+
+  &:hover
+    box-shadow: 0 0 4px rgb(204, 204, 204)
+
+  &:active
+    background-color: #d0cbcb
+
+  &.active:hover,
+  &.active
+    box-shadow: 0 0 4px rgb(204, 204, 204)
+    border-radius: 2px 2px 0 0
+    background-color: #f8f8f8
+
+    .select > i
+      transform: rotate(-90deg)
+
+  .dropdown-menu
+    position: absolute
+    background-color: #fff
+    width: 100%
+    left: 0
+    margin-top: 1px
+    box-shadow: 0 1px 2px rgb(204, 204, 204)
+    border-radius: 0 1px 2px 2px
+    overflow: hidden
+    max-height: 144px
+    overflow-y: auto
+    z-index: 9
+
+    &:not(.active)
+      display: none
+
+    li
+      padding: 10px
+      transition: all 0.2s ease-in-out
+      cursor: pointer
+
+      &:hover
+        background-color: #f2f2f2
+
+      &:active
+        background-color: #e2e2e2
+
+.queue-status-bar
+  display: flex
+  justify-content: space-evenly
+  align-items: center
+  height: 5%
+
+.request
+  display: flex
+  justify-content: space-evenly
+  border-radius: 0.375rem
+  padding: 0.5rem
+
+  .request-dropdown
+    width: 33.333333%
+  
+  .request-select
+    height: 100%
+    width: 100%
+    border-radius: 0.375rem
+    display: flex
+    justify-content: center
+    align-items: center
+    cursor: pointer
+
+    > i
+      color: #888
+      cursor: pointer
+      transition: all 0.3s ease-in-out
+      float: right
+
+  &.active:hover,
+  &.active
+    box-shadow: 0 0 4px rgb(204, 204, 204)
+    border-radius: 2px 2px 0 0
+    background-color: #f8f8f8
+
+    .select > i
+      transform: rotate(-90deg)
+
+  .request-dropdown-menu
+    position: absolute
+    background-color: #fff
+    width: 28.5% 
+    margin-top: 1px
+    box-shadow: 0 1px 2px rgb(204, 204, 204)
+    border-radius: 0 1px 2px 2px
+    overflow: hidden
+    max-height: 100px
+    overflow-y: auto
+    z-index: 9
+
+    &:not(.active)
+      display: none
+
+    li
+      padding: 10px
+      transition: all 0.2s ease-in-out
+      cursor: pointer
+
+      &:hover
+        background-color: #f2f2f2
+
+      &:active
+        background-color: #e2e2e2
+    
+.room-editor-wrapper
+  @apply w-full overflow-auto grid grid-rows-1
+  height: 90vh
+  .cm-content
+    min-height: 90vh
+
+
+.room-question-wrapper
+  @apply w-full border-2 border-black overflow-auto
+  height: 90vh
+  .cm-content
+    min-height: 50px
+
+.react-tabs
+  webkit-tap-highlight-color: transparent
+  height: 25.3rem
+
+.react-tabs__tab-list
+  border-bottom: 1px solid #aaa
+  padding: 0
+
+.react-tabs__tab
+  display: inline-block
+  border: 1px solid transparent
+  border-bottom: none
+  bottom: -1px
+  position: relative
+  list-style: none
+  padding: 6px 12px
+  cursor: pointer
+
+.react-tabs__tab--selected
+  background: #fff
+  border-color: #aaa
+  color: black
+  border-radius: 5px 5px 0 0
+
+.react-tabs__tab--disabled
+  color: GrayText
+  cursor: default
+
+.react-tabs__tab:focus
+  outline: none
+
+.react-tabs__tab:focus:after
+  content: ''
+  position: absolute
+  height: 5px
+  background: #fff
+
+.react-tabs__tab-panel
+  display: none
+
+.react-tabs__tab-panel--selected
+  display: block
+  height: 100%

@@ -1,0 +1,219 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+    output   = "../../node_modules/@prisma-db-psql/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
+    // Further reading:
+    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
+    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+    url      = env("POSTGRES_URL")
+}
+
+// model Example {
+//     id        String   @id @default(cuid())
+//     createdAt DateTime @default(now())
+//     updatedAt DateTime @updatedAt
+// }
+
+enum Role {
+    USER
+    MAINTAINER
+}
+
+enum AnswerResult {
+    COMPILE_ERROR
+    ACCEPTED
+    RUNTIME_ERROR
+    TIME_LIMITED_ERROR
+    WRONG_ANSWER
+    OUTPUT_LIMIT_EXCEEDED
+    MEMORY_LIMITED_EXCEEDED
+    JUDGE_ERROR
+}
+
+// Necessary for Next auth
+model Account {
+    id                String  @id @default(cuid())
+    userId            String
+    type              String
+    provider          String
+    providerAccountId String
+    refresh_token     String? // @db.Text
+    access_token      String? // @db.Text
+    expires_at        Int?
+    token_type        String?
+    scope             String?
+    id_token          String? // @db.Text
+    session_state     String?
+    user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([provider, providerAccountId])
+}
+
+// not sure if we need this since our session is stored in jwt and not in the db
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CodeSpace {
+    id          String       @default(cuid())
+    userId      String
+    code        String
+    name        String       @default("")
+    user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    codeSession CodeSession?
+
+    createdAt DateTime @default(now())
+
+    @@id([id, userId])
+}
+
+model CodeSession {
+    // unique id for session sharing
+    id              String                @id @unique @default(cuid())
+    userId          String // the primary owner of the codeSession
+    codeSpaceId     String                @unique
+    codeSpace       CodeSpace             @relation(fields: [codeSpaceId, userId], references: [id, userId], onDelete: Cascade)
+    codeSessionAuth CodeSessionUserAuth[]
+
+    @@unique([codeSpaceId, userId]) // Can only have one code session per code space
+}
+
+// temporary auth to authorise other users
+// many to many relation for session - users auth
+model CodeSessionUserAuth {
+    codeSessionId    String
+    authorisedUserId String // the user the authorisation is for
+    createdAt        DateTime    @default(now()) // to be updated on timeout
+    authUser         User        @relation(name: "auth_receiver", fields: [authorisedUserId], references: [id], onDelete: Cascade)
+    codeSession      CodeSession @relation(fields: [codeSessionId], references: [id], onDelete: Cascade)
+
+    @@id([codeSessionId, authorisedUserId])
+}
+
+model User {
+    id                              String                @id @default(cuid())
+    name                            String?
+    email                           String?               @unique
+    emailVerified                   DateTime?
+    image                           String?
+    password                        String?
+    accounts                        Account[]
+    sessions                        Session[]
+    codeSpace                       CodeSpace[]
+    attempts                        QuestionAttempt[]
+    role                            Role                  @default(USER)
+    codeSessionAuthRecv             CodeSessionUserAuth[] @relation(name: "auth_receiver")
+    matchRequest                    MatchRequest?
+    joinRequest                     JoinRequest[]
+    sessionUserAndUserMessages      SessionUserAndUserMessage[]
+    sessionAIThreads                SessionAIThread[]
+    Submission                      Submission[]
+}
+
+enum Difficulty {
+    EASY
+    MEDIUM
+    HARD
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}
+
+enum MatchType {
+    AUTO
+    MANUAL
+}
+
+model MatchRequest {
+    id          String        @id @default(cuid())
+    cursor      Int           @unique @default(autoincrement())
+    difficulty  Difficulty
+    category    String
+    user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId      String        @unique
+    matchType   MatchType     @default(MANUAL)
+    createdAt   DateTime      @default(now())
+    joinRequest JoinRequest[]
+}
+
+model JoinRequest {
+    id        Int          @id @default(autoincrement())
+    fromUser  User         @relation(fields: [fromId], references: [id], onDelete: Cascade)
+    fromId    String // a user id todo(gab): rename this to something btr
+    // fromName  String
+    toRequest MatchRequest @relation(fields: [toId], references: [id], onDelete: Cascade)
+    toId      String
+
+    @@unique([fromId, toId])
+    @@index([fromId])
+    @@index([toId])
+}
+
+model QuestionAttempt {
+    userId       String
+    questionId   String
+    language     String
+    answerId     String
+    attemptedOn  DateTime     @default(now())
+    // storing result in postgres because its easier to access if we want to list the results
+    result       AnswerResult
+    user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    // numebr of passed test cases
+    passed       Int
+    numOfTests   Int
+    submissionId String
+
+    @@unique([userId, submissionId])
+    @@unique([userId, questionId, answerId])
+}
+
+model SessionUserAndUserMessage {
+    id        String   @id @default(cuid())
+    sessionId String
+    userId    String
+    userName  String
+    message   String
+    createdAt DateTime @default(now())
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([sessionId])
+}
+
+model SessionAIThread {
+    id          String      @id @default(cuid())
+    sessionId   String
+    userId      String
+    threadId    String
+    createdAt   DateTime    @default(now())
+    user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([sessionId, userId, threadId])
+    @@index([sessionId])
+}
+
+// temporary submission relation for judge0
+model Submission {
+    id       String   @default(cuid())
+    token    String[]
+    userId   String
+    user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    answerId String
+
+    @@unique([userId, id])
+}
